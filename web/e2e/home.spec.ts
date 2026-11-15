@@ -1,4 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+/** A link in the site header. On a phone the links sit in the menu, so it opens first. */
+async function headerLink(page: Page, isMobile: boolean, name: string) {
+  if (isMobile) {
+    // Taps before the page has loaded do nothing, so retry until the menu opens.
+    await expect(async () => {
+      await page.getByRole('button', { name: 'Open menu' }).click({ timeout: 1000 });
+      await expect(page.locator('#site-navbar-panel').getByRole('link', { name, exact: true })).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15_000 });
+    return page.locator('#site-navbar-panel').getByRole('link', { name, exact: true });
+  }
+  return page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
+}
 
 test('home leads with the headline, setup and button', async ({ page }) => {
   await page.goto('/');
@@ -16,11 +29,10 @@ test('home leads with the headline, setup and button', async ({ page }) => {
   await expect(page).toHaveURL(/\/docs\/quickstart$/);
 });
 
-test('nav links and theme toggle are visible and work', async ({ page }) => {
+test('nav links and theme toggle are visible and work', async ({ page, isMobile }) => {
   await page.goto('/');
   const nav = page.getByRole('navigation', { name: 'Main' });
   await expect(nav.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/rjcuff/woolly');
-  await expect(nav.getByRole('link', { name: 'Docs' })).toBeVisible();
 
   const toggle = nav.getByRole('button', { name: /switch to (dark|light) mode/i });
   await expect(toggle).toBeInViewport();
@@ -29,6 +41,8 @@ test('nav links and theme toggle are visible and work', async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
     .toBe(!before);
+
+  await expect(await headerLink(page, isMobile, 'Docs')).toBeVisible();
 });
 
 test('link previews point at the Woolly image', async ({ page, request }) => {
@@ -52,12 +66,12 @@ test('integrations and feature cards are shown', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('One command adds Woolly to the AI tools you already use')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Ollama', exact: true })).toHaveAttribute('href', '/docs/ollama');
-  await expect(page.getByRole('heading', { name: 'Readable' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeVisible();
 });
 
-test('download page offers the Mac and Windows apps and install commands', async ({ page }) => {
+test('download page offers the Mac and Windows apps and install commands', async ({ page, isMobile }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Download', exact: true }).click();
+  await (await headerLink(page, isMobile, 'Download')).click();
   await expect(page).toHaveURL(/\/download$/);
   await page.getByRole('tab', { name: 'macOS' }).click();
   await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute('href', /Woolly-mac\.dmg$/);

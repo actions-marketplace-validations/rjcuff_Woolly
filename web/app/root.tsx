@@ -34,11 +34,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+        {/* Marks a visitor who already saw the hero entrance this session, before first paint. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{sessionStorage.getItem('intro-seen')&&(document.documentElement.dataset.introSeen='')}catch(e){}",
+          }}
+        />
         <Meta />
         <Links />
       </head>
       <body className="flex flex-col min-h-screen">
-        <RootProvider search={{ options: { type: 'static' } }}>{children}</RootProvider>
+        <RootProvider search={{ options: { type: 'static' } }} theme={{ disableTransitionOnChange: true }}>{children}</RootProvider>
         <Analytics />
         <ScrollRestoration />
         <Scripts />

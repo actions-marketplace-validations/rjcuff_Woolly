@@ -33,4 +33,4 @@ export function useSlidingIndicator(active: string) {
 
 /** Classes for the sliding highlight. Combine with a background or border. */
 export const indicatorClass =
-  'pointer-events-none absolute left-0 transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none';
+  'pointer-events-none absolute left-0 transition-[transform,width,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none';

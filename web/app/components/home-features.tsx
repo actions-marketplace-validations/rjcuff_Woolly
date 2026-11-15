@@ -41,22 +41,12 @@ const ICONS: Record<string, string> = {
   list: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
 };
 
-const FEATURES: { icon: string; title: string; body: string; href: string }[] = [
-  {
-    icon: 'link',
-    title: 'Shared',
-    body: 'Claude Code, Cursor and Ollama read and write one memory. Tell one, and the rest know.',
-    href: '/docs/connect',
-  },
-  {
-    icon: 'file',
-    title: 'Readable',
-    body: 'Every memory is a Markdown file. Open it, edit it by hand, grep it or back it up.',
-    href: '/docs/how-it-works',
-  },
+type Feature = { icon: string; title: string; body: string; href: string };
+
+const SMALL: Feature[] = [
   {
     icon: 'refresh',
-    title: 'Current',
+    title: 'Always current',
     body: 'A newer fact replaces the old one, and what you said beats an AI’s guess.',
     href: '/docs/how-it-works',
   },
@@ -72,20 +62,50 @@ const FEATURES: { icon: string; title: string; body: string; href: string }[] = 
     body: 'Project memory lives in your repo, so every teammate’s agent knows the decisions.',
     href: '/docs/project-memory',
   },
-  {
-    icon: 'list',
-    title: 'Auditable',
-    body: 'See which app saved, read or deleted each memory, and when.',
-    href: '/docs/review',
-  },
 ];
 
-/** Why Woolly, as a grid of feature cards. */
+const TILE = 'flex h-full flex-col rounded-2xl bg-fd-background p-6 shadow-[0_0_0_1px_var(--color-fd-border)] sm:p-7';
+
+function Icon({ name }: { name: string }) {
+  return (
+    <span className="flex size-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
+      <svg
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d={ICONS[name]} />
+      </svg>
+    </span>
+  );
+}
+
+function More({ href }: { href: string }) {
+  return (
+    <Link to={href} className="mt-auto pt-6 text-[15px] font-medium text-brand hover:underline">
+      Learn more <span aria-hidden="true">→</span>
+    </Link>
+  );
+}
+
+const FILE_LINES: [string, string][] = [
+  ['key', 'user.location'],
+  ['source', 'user'],
+  ['saved_by', 'Claude Code'],
+  ['updated_at', '2026-11-10'],
+];
+
+/** Why Woolly, as a bento grid: two wide tiles that show it, then three that say it. */
 export function Features() {
   return (
     <section className="flex w-full flex-col items-center gap-14 py-20 sm:py-28">
       <div className="flex max-w-[680px] flex-col items-center gap-5 text-center">
-        <h2 className="text-balance text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] sm:text-[48px]">
+        <h2 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] sm:text-[48px]">
           Built for developers
           <br />
           Designed for privacy
@@ -95,33 +115,71 @@ export function Features() {
           every AI tool shares, and that you can read, check and change.
         </p>
       </div>
-      <ul className="grid w-full gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f) => (
-          <li key={f.title}>
-            <Link
-              to={f.href}
-              className="flex h-full flex-col rounded-xl bg-fd-background p-6 shadow-[0_0_0_1px_var(--color-fd-border)] transition-shadow hover:shadow-[0_0_0_1px_var(--color-brand)]"
-            >
-              <span className="flex size-10 items-center justify-center rounded-lg bg-brand/10 text-brand">
+
+      <div className="grid w-full items-stretch gap-5 lg:grid-cols-3">
+        <div className={`${TILE} lg:col-span-2`}>
+          <Icon name="file" />
+          <h3 className="mt-6 text-[19px] font-semibold">Memory you can read</h3>
+          <p className="mt-2 max-w-[460px] text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">
+            Every memory is a Markdown file. Open it, edit it by hand, grep it or back it up, and see which app saved
+            it.
+          </p>
+          <div
+            role="img"
+            aria-label="A memory file that says Lives in Denver, Colorado"
+            className="pointer-events-none mt-6 select-none overflow-hidden rounded-xl bg-fd-card font-mono text-[13px] leading-[1.9] shadow-[0_0_0_1px_var(--color-fd-border)]"
+          >
+            <p className="border-b border-fd-border px-4 py-2 text-[12px] text-fd-muted-foreground">
+              ~/.woolly/memories/20261110-1a2b3c4d.md
+            </p>
+            <div className="px-4 py-3">
+              {FILE_LINES.map(([k, v]) => (
+                <p key={k} className="truncate">
+                  <span className="text-brand">{k}</span>
+                  <span className="text-fd-muted-foreground">: {v}</span>
+                </p>
+              ))}
+              <p className="mt-2 font-semibold">Lives in Denver, Colorado.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className={TILE}>
+          <Icon name="link" />
+          <h3 className="mt-6 text-[19px] font-semibold">One memory, every tool</h3>
+          <p className="mt-2 text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">
+            Tell one tool something and the rest know it too.
+          </p>
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {integrations.map((app) => (
+              <li
+                key={app.name}
+                className="flex items-center gap-1.5 rounded-md bg-fd-card px-2.5 py-1.5 text-[13px] font-medium shadow-[0_0_0_1px_var(--color-fd-border)]"
+              >
                 <svg
                   viewBox="0 0 24 24"
-                  className="size-5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  className="size-3.5 text-fd-muted-foreground"
+                  fill="currentColor"
                   aria-hidden="true"
                 >
-                  <path d={ICONS[f.icon]} />
+                  <path d={app.path} />
                 </svg>
-              </span>
-              <h3 className="mt-6 text-[17px] font-semibold">{f.title}</h3>
-              <p className="mt-2 text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">{f.body}</p>
-            </Link>
-          </li>
+                {app.name}
+              </li>
+            ))}
+          </ul>
+          <More href="/docs/connect" />
+        </div>
+
+        {SMALL.map((f) => (
+          <div key={f.title} className={TILE}>
+            <Icon name={f.icon} />
+            <h3 className="mt-6 text-[19px] font-semibold">{f.title}</h3>
+            <p className="mt-2 text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">{f.body}</p>
+            <More href={f.href} />
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

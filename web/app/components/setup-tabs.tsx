@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { indicatorClass, useSlidingIndicator } from '@/components/sliding-tabs';
+import { SegmentedTabs } from '@/components/ui';
+import { CrossfadeLabel } from '@/components/easeui/swap-label';
 
 type Tab = {
   id: string;
@@ -136,7 +137,6 @@ function highlight(line: string): ReactNode {
 export function SetupTabs() {
   const [active, setActive] = useState(TABS[0].id);
   const [copied, setCopied] = useState(false);
-  const { register, style } = useSlidingIndicator(active);
   const tab = TABS.find((t) => t.id === active) ?? TABS[0];
   const lines = tab.code.split('\n');
 
@@ -152,32 +152,17 @@ export function SetupTabs() {
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
-      <div
-        role="tablist"
-        aria-label="Set up Woolly for"
-        className="relative flex max-w-full overflow-x-auto rounded-lg bg-fd-background p-1 shadow-[0_0_0_1px_var(--color-fd-border)]"
-      >
-        <span aria-hidden="true" className={`${indicatorClass} inset-y-1 rounded-md bg-brand/10`} style={style} />
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            ref={register(t.id)}
-            role="tab"
-            id={`tab-${t.id}`}
-            aria-selected={t.id === active}
-            aria-controls="setup-panel"
-            onClick={() => {
-              setActive(t.id);
-              setCopied(false);
-            }}
-            className={`relative whitespace-nowrap rounded-md px-4 py-2 text-[15px] font-medium transition-colors duration-300 sm:px-5 ${
-              t.id === active ? 'text-brand' : 'text-fd-muted-foreground hover:text-fd-foreground'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedTabs
+        options={TABS}
+        active={active}
+        onChange={(id) => {
+          setActive(id);
+          setCopied(false);
+        }}
+        label="Set up Woolly for"
+        idPrefix="tab"
+        panelId="setup-panel"
+      />
 
       <div
         id="setup-panel"
@@ -198,7 +183,7 @@ export function SetupTabs() {
             onClick={copy}
             className="rounded-md px-2.5 py-1 text-[13px] font-medium text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-foreground"
           >
-            {copied ? 'Copied' : 'Copy'}
+            <CrossfadeLabel showing={copied ? 'copied' : 'copy'} labels={{ copy: 'Copy', copied: 'Copied' }} />
           </button>
         </div>
         <pre className="overflow-x-auto py-5 font-mono text-[13px] leading-[1.75] sm:text-[14px]">

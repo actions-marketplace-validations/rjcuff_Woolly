@@ -4,6 +4,22 @@
 
 html {
   scrollbar-gutter: stable;
+  /* Overscroll in Safari shows the canvas, so it matches the page. */
+  background-color: var(--color-fd-background);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* No double-tap zoom delay on controls. */
+button,
+a,
+summary {
+  touch-action: manipulation;
 }
 
 html > body[data-scroll-locked] {
@@ -18,23 +34,59 @@ html > body[data-scroll-locked] {
   --color-brand: #0071e3;
   --color-brand-light: #2b8eff;
   --color-brand-foreground: #ffffff;
+  /* The docs use the same blue for links, the active page and buttons. */
+  --color-fd-primary: #0071e3;
+  --color-fd-primary-foreground: #ffffff;
 }
 
 .dark {
   --color-brand: #0a84ff;
   --color-brand-light: #409cff;
+  --color-fd-primary: #0a84ff;
+  --color-fd-primary-foreground: #ffffff;
+}
+
+/* easeUI's token names, mapped onto the site's own so its blocks drop in. */
+:root {
+  --background: var(--color-fd-background);
+  --foreground: var(--color-fd-foreground);
+  --card: var(--color-fd-card);
+  --popover: var(--color-fd-popover);
+  --muted-foreground: var(--color-fd-muted-foreground);
+  --border: var(--color-fd-border);
+  --border-strong: color-mix(in oklch, var(--color-fd-foreground) 15%, transparent);
+  --accent: var(--color-brand);
+  --accent-fg: var(--color-brand-foreground);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-popover: var(--popover);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
 }
 
 /* The main button: a soft blue gradient. */
 .btn-brand {
-  background-image: linear-gradient(180deg, var(--color-brand-light), var(--color-brand));
+  background-color: var(--color-brand);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), transparent);
   color: var(--color-brand-foreground);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.2),
     0 1px 2px rgb(0 0 0 / 0.12);
+  transition:
+    background-color 150ms ease,
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.btn-brand:hover {
-  filter: brightness(1.06);
+/* Hover changes the background only, as a solid tint. */
+@media (hover: hover) and (pointer: fine) {
+  .btn-brand:hover {
+    background-color: color-mix(in oklch, var(--color-brand) 88%, black);
+  }
 }
 
 /* A blue wash that rises toward the bottom of the first screen of the
@@ -44,6 +96,57 @@ html > body[data-scroll-locked] {
     radial-gradient(120% 45% at 50% 100%, color-mix(in oklab, var(--color-brand) 22%, transparent), transparent 75%),
     linear-gradient(180deg, transparent 40%, color-mix(in oklab, var(--color-brand) 10%, transparent));
   mask-image: linear-gradient(180deg, #000 92%, transparent);
+}
+
+/* The hero's entrance plays once a session. The flag is set before first paint
+   by a script in the root, so a returning visitor never sees it start and stop. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.animate-rise {
+  animation: rise 400ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
+}
+
+/* A blue band sweeps across the phrase once, then it settles on the text color.
+   Its resting state is the end of the sweep, so skipping it changes nothing. */
+@keyframes sweep {
+  from {
+    background-position: 100% 0;
+  }
+}
+.text-sweep {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-fd-foreground) 0%,
+    var(--color-fd-foreground) 33%,
+    #5e5ce6 40%,
+    var(--color-brand) 47%,
+    #5ac8fa 54%,
+    transparent 66%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Keeps descenders inside the clip. */
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+  animation: sweep 1400ms cubic-bezier(0.23, 1, 0.32, 1) 450ms backwards;
+}
+:root[data-intro-seen] .animate-rise,
+:root[data-intro-seen] .text-sweep {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .text-sweep {
+    animation: none;
+  }
 }
 
 /* The Woolly wordmark: chunky, playful, a little bouncy. */
@@ -86,8 +189,14 @@ a[role='button'] {
     color 150ms ease;
 }
 button:active:not(:disabled),
-a[role='button']:active {
-  transform: scale(0.96);
+a[role='button']:active,
+.btn-press:active {
+  transform: scale(0.97);
+}
+.btn-press {
+  transition:
+    transform 120ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 150ms ease;
 }
 button:has(> svg.lucide-check),
 button:has(> svg.lucide-check) svg {
@@ -103,8 +212,13 @@ button:has(> svg.lucide-check) svg {
     transition: none;
   }
   button:active:not(:disabled),
-  a[role='button']:active {
+  a[role='button']:active,
+  .btn-press:active {
     transform: none;
+  }
+  .btn-brand,
+  .btn-press {
+    transition: none;
   }
 }
 
