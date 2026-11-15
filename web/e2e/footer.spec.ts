@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('footer shows the trademark and links on one screen', async ({ page }) => {
+test('footer shows the trademark and links', async ({ page }) => {
   await page.goto('/');
   const footer = page.getByRole('contentinfo');
+  await footer.scrollIntoViewIfNeeded();
   await expect(footer).toBeInViewport();
   await expect(footer).toContainText(`© ${new Date().getFullYear()} Woolly™`);
 

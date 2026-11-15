@@ -1,20 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-test('home fits on one screen with the headline and button', async ({ page, isMobile }) => {
+test('home leads with the headline, setup and button', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('Woolly | Local memory for your AI tools');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Memory for your AI, kept on your laptop.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('One memory for every AI tool you use');
+  await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
 
-  // Never sideways. Phones may scroll down a little, to give the top room.
-  const size = await page.evaluate(() => ({
-    extraHeight: document.documentElement.scrollHeight - window.innerHeight,
-    extraWidth: document.documentElement.scrollWidth - window.innerWidth,
-  }));
-  expect(size.extraWidth).toBeLessThanOrEqual(0);
-  expect(size.extraHeight).toBeLessThanOrEqual(isMobile ? 160 : 0);
-  await expect(page.getByRole('link', { name: 'Get started' })).toBeInViewport();
+  // Never sideways, on any screen.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 
-  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('tab', { name: 'Your team' }).click();
+  await expect(page.locator('#setup-panel')).toContainText('woolly init');
+
+  await page.getByRole('main').getByRole('link', { name: 'Get started' }).first().click();
   await expect(page).toHaveURL(/\/docs\/quickstart$/);
 });
 
@@ -50,11 +48,11 @@ test('sitemap, robots and install script are served', async ({ request }) => {
   expect(await (await request.get('/sitemap.xml')).text()).toContain('https://usewoolly.com/docs/quickstart');
 });
 
-test('integration logos name their app on hover', async ({ page }) => {
+test('integrations and feature cards are shown', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('Integrated with')).toBeVisible();
-  await page.getByRole('link', { name: 'Ollama' }).hover();
-  await expect(page.getByRole('tooltip', { name: 'Ollama' })).toBeVisible();
+  await expect(page.getByText('One command adds Woolly to the AI tools you already use')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ollama', exact: true })).toHaveAttribute('href', '/docs/ollama');
+  await expect(page.getByRole('heading', { name: 'Readable' })).toBeVisible();
 });
 
 test('download page offers the Mac and Windows apps and install commands', async ({ page }) => {
@@ -62,9 +60,9 @@ test('download page offers the Mac and Windows apps and install commands', async
   await page.getByRole('link', { name: 'Download', exact: true }).click();
   await expect(page).toHaveURL(/\/download$/);
   await page.getByRole('tab', { name: 'macOS' }).click();
-  await expect(page.getByRole('link', { name: 'Download for Mac' })).toHaveAttribute('href', /Woolly-mac\.dmg$/);
+  await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute('href', /Woolly-mac\.dmg$/);
   await page.getByRole('tab', { name: 'Windows' }).click();
-  await expect(page.getByRole('link', { name: 'Download for Windows' })).toHaveAttribute('href', /Woolly-windows\.exe$/);
+  await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute('href', /Woolly-windows\.exe$/);
   await expect(page.getByText('irm https://usewoolly.com/install.ps1 | iex')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
@@ -74,7 +72,7 @@ test.describe('on Windows', () => {
 
   test('home page offers the Windows app', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Windows' })).toHaveAttribute('href', /Woolly-windows\.exe$/);
+    await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute('href', /Woolly-windows\.exe$/);
   });
 });
 
@@ -83,6 +81,6 @@ test.describe('on a Mac', () => {
 
   test('home page offers the Mac app', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Mac' })).toHaveAttribute('href', /Woolly-mac\.dmg$/);
+    await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute('href', /Woolly-mac\.dmg$/);
   });
 });

@@ -32,15 +32,20 @@ test('search finds pages', async ({ page, isMobile }) => {
 test('copy markdown gives feedback', async ({ page, context, browserName }) => {
   test.skip(browserName !== 'chromium', 'clipboard permissions are Chromium only');
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-  await page.getByRole('button', { name: 'Copy Markdown' }).click();
-  await expect(page.getByRole('button', { name: 'Copied Markdown' })).toBeVisible();
+  // Clicks before the page has loaded do nothing, so retry until one lands.
+  await expect(async () => {
+    await page.getByRole('button', { name: /Cop(y|ied) Markdown/ }).click();
+    await expect(page.getByRole('button', { name: 'Copied Markdown' })).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain('# Quickstart');
 });
 
 test('open menu lists the page actions', async ({ page }) => {
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
-  await expect(page.getByRole('link', { name: /Open in Claude/ })).toBeVisible();
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Open', exact: true }).click();
+    await expect(page.getByRole('link', { name: /Open in Claude/ })).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
   await expect(page.getByRole('link', { name: /View as Markdown/ })).toBeVisible();
 });
 
@@ -51,10 +56,15 @@ test('markdown copy of the page is served', async ({ request }) => {
 });
 
 test('sidebar navigates between pages', async ({ page, isMobile }) => {
+  const link = page.getByRole('link', { name: 'Import your history' });
   if (isMobile) {
-    await page.getByRole('button', { name: /open sidebar|toggle sidebar/i }).first().click();
+    // Taps before the page has loaded do nothing, so retry until the menu opens.
+    await expect(async () => {
+      await page.getByRole('button', { name: /open sidebar|toggle sidebar/i }).first().click();
+      await expect(link).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 15_000 });
   }
-  await page.getByRole('link', { name: 'Import your history' }).click();
+  await link.click();
   await expect(page).toHaveURL(/\/docs\/import$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Import your history');
 });
