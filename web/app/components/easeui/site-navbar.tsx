@@ -55,8 +55,11 @@ export function SiteNavbar({
   const bar = useRef<HTMLElement>(null);
 
   // Passive, because this only ever reads scrollY and never cancels the scroll.
+  // Two thresholds, so iOS bounce scrolling near the top can't flip the bar on
+  // and off every frame.
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () =>
+      setScrolled((was) => (was ? window.scrollY > 4 : window.scrollY > 16));
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -103,8 +106,11 @@ export function SiteNavbar({
     <header
       ref={bar}
       className={cn(
-        "sticky top-0 z-50 w-full transition-[background-color,box-shadow,backdrop-filter] duration-200",
-        scrolled ? "bg-background/80 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md" : "bg-transparent",
+        // The blur stays on and only the color fades: animating backdrop-filter
+        // repaints every frame and stutters on phones. Its own layer keeps the
+        // sticky bar steady while the page scrolls under it.
+        "sticky top-0 z-50 w-full transform-gpu backdrop-blur-md transition-[background-color,box-shadow] duration-200 ease-out",
+        scrolled ? "bg-background/80 shadow-[0_1px_0_0_var(--border)]" : "bg-transparent",
         className,
       )}
     >

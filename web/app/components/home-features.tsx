@@ -9,7 +9,7 @@ export function Integrations() {
         <p className="rounded-md bg-fd-foreground px-3 py-1.5 font-mono text-[20px] font-semibold text-fd-background sm:text-[24px]">
           woolly connect
         </p>
-        <p className="text-[17px]">One command adds Woolly to the AI tools you already use</p>
+        <p className="text-[17px]">One command, and the tools you already use share a memory</p>
       </div>
       <ul className="grid w-full grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-4">
         {integrations.map((app) => (
@@ -46,20 +46,20 @@ type Feature = { icon: string; title: string; body: string; href: string };
 const SMALL: Feature[] = [
   {
     icon: 'refresh',
-    title: 'Always current',
-    body: 'A newer fact replaces the old one, and what you said beats an AI’s guess.',
+    title: 'Decisions stick',
+    body: 'When a session ends, Woolly saves what you decided and what you ruled out, so no agent pitches it again.',
     href: '/docs/how-it-works',
   },
   {
     icon: 'shield',
     title: 'Private',
-    body: 'Runs on your computer. No account, no cloud, and passwords and keys are refused.',
+    body: 'Runs on your laptop. No account, no cloud, no telemetry. Passwords and API keys get turned away.',
     href: '/docs/security',
   },
   {
     icon: 'users',
     title: 'Team ready',
-    body: 'Project memory lives in your repo, so every teammate’s agent knows the decisions.',
+    body: 'Commit .woolly and every teammate’s agent starts with the same stack, conventions and gotchas.',
     href: '/docs/project-memory',
   },
 ];
@@ -106,13 +106,13 @@ export function Features() {
     <section className="flex w-full flex-col items-center gap-14 py-20 sm:py-28">
       <div className="flex max-w-[680px] flex-col items-center gap-5 text-center">
         <h2 className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] sm:text-[48px]">
-          Built for developers
+          Stop re-explaining
           <br />
-          Designed for privacy
+          your project
         </h2>
         <p className="text-pretty text-[17px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
-          Most AI memory is a black box on someone else&apos;s servers. Woolly&apos;s is a folder on your computer that
-          every AI tool shares, and that you can read, check and change.
+          You switch from Cursor to Claude Code and start over. Again. Woolly is the memory they share, a folder on your
+          laptop that you can read, grep and fix.
         </p>
       </div>
 
@@ -121,8 +121,7 @@ export function Features() {
           <Icon name="file" />
           <h3 className="mt-6 text-[19px] font-semibold">Memory you can read</h3>
           <p className="mt-2 max-w-[460px] text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">
-            Every memory is a Markdown file. Open it, edit it by hand, grep it or back it up, and see which app saved
-            it.
+            Every memory is a Markdown file. Open it, edit it by hand, grep it, back it up, and see which tool saved it.
           </p>
           <div
             role="img"
@@ -146,9 +145,9 @@ export function Features() {
 
         <div className={TILE}>
           <Icon name="link" />
-          <h3 className="mt-6 text-[19px] font-semibold">One memory, every tool</h3>
+          <h3 className="mt-6 text-[19px] font-semibold">One brain, every tool</h3>
           <p className="mt-2 text-pretty text-[15px] leading-relaxed text-fd-muted-foreground">
-            Tell one tool something and the rest know it too.
+            Tell Claude Code once. Cursor, Codex and Gemini already know.
           </p>
           <ul className="mt-6 flex flex-wrap gap-2">
             {integrations.map((app) => (

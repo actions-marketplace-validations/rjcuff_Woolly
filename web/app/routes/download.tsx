@@ -49,7 +49,7 @@ export default function Download({ loaderData }: Route.ComponentProps) {
   };
 
   return (
-    <div className="relative isolate flex min-h-dvh flex-col overflow-x-clip px-[max(20px,env(safe-area-inset-left))]">
+    <div className="relative isolate flex min-h-svh flex-col overflow-x-clip px-[max(20px,env(safe-area-inset-left))]">
       <SiteHeader stars={loaderData?.stars} />
 
       <main className="flex flex-1 items-center justify-center py-12">

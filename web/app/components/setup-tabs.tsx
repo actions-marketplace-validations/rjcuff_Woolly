@@ -59,41 +59,30 @@ git add .woolly .gitattributes && git commit -m "Add project memory"
 - Start everything with \`make dev\``,
   },
   {
-    id: 'app',
-    label: 'Your app',
-    title: 'reply.ts',
-    copy: 'npm install woolly-ai',
-    code: `// npm install woolly-ai ai @ai-sdk/openai   (or: pip install woolly-ai)
-import { Woolly } from 'woolly-ai';
-import { woollyMemory } from 'woolly-ai/ai-sdk';
-import { generateText, wrapLanguageModel } from 'ai';
-import { openai } from '@ai-sdk/openai';
+    id: 'local',
+    label: 'Ollama',
+    title: 'Terminal',
+    copy: 'woolly proxy',
+    code: `# Give every local model your memory
+woolly proxy
 
-const woolly = new Woolly({ app: 'My app' });
+# Point Ollama at the proxy instead of port 11434
+OLLAMA_HOST=127.0.0.1:11436 ollama run llama3.2
 
-// Every call starts with the memories that matter for this message
-const model = wrapLanguageModel({
-  model: openai('gpt-5'),
-  middleware: woollyMemory({ client: woolly }),
-});
+>>> where should I go hiking this weekend?
+# The model already knows you moved to Denver.
 
-export async function reply(message: string) {
-  const { text } = await generateText({ model, prompt: message });
+# Apps that use the OpenAI or Anthropic API work too.
+# Set their base URL to http://127.0.0.1:11436/v1
 
-  // Keep the facts worth remembering. Newer ones replace older ones.
-  await woolly.learn([
-    { role: 'user', content: message },
-    { role: 'assistant', content: text },
-  ]);
-
-  return text;
-}`,
+# Facts you state in chat are saved for every other tool
+woolly recall "where do I live"`,
   },
 ];
 
 const KEYWORDS = new Set(['import', 'from', 'const', 'await', 'export', 'async', 'function', 'return']);
 // Shell commands get their first word colored.
-const COMMAND = /^(curl|woolly|git)(?= )/;
+const COMMAND = /^(curl|woolly|git|ollama)(?= )/;
 
 function tokens(text: string): ReactNode[] {
   return text.split(/('[^']*'|"[^"]*"|`[^`]*`|\b[a-z]+\b)/g).map((part, i) => {
@@ -190,7 +179,10 @@ export function SetupTabs() {
           <code className="grid">
             {lines.map((line, i) => (
               <span key={`${tab.id}-${i}`} className="flex min-h-[1lh]">
-                <span aria-hidden="true" className="w-12 shrink-0 select-none pr-4 text-right text-fd-muted-foreground/60 tabular-nums">
+                <span
+                  aria-hidden="true"
+                  className="w-12 shrink-0 select-none pr-4 text-right text-fd-muted-foreground/60 tabular-nums"
+                >
                   {i + 1}
                 </span>
                 <span className="pr-5 whitespace-pre">{highlight(line)}</span>

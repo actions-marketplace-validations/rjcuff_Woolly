@@ -1,4 +1,4 @@
-import { BlueskyIcon, GitHubIcon, LinkedInIcon, SiteThemeToggle, Wordmark } from '@/components/brand';
+import { BlueskyIcon, GitHubIcon, LinkedInIcon, Mammoth, SiteThemeToggle, Wordmark } from '@/components/brand';
 import { SiteFooter as Footer } from '@/components/easeui/site-footer';
 import { SiteNavbar } from '@/components/easeui/site-navbar';
 import { formatStars, STAR_THRESHOLD } from '@/lib/github';
@@ -20,7 +20,9 @@ function GitHubButton({ stars }: { stars?: number | null }) {
         <span className="max-sm:hidden">{showStars ? 'Star' : 'GitHub'}</span>
       </span>
       {showStars ? (
-        <span className="flex h-full items-center border-l border-fd-border px-2.5 tabular-nums">{formatStars(stars)}</span>
+        <span className="flex h-full items-center border-l border-fd-border px-2.5 tabular-nums">
+          {formatStars(stars)}
+        </span>
       ) : null}
     </a>
   );
@@ -52,8 +54,16 @@ export function SiteFooter() {
   return (
     <Footer
       className={BLEED}
-      brand={{ label: <Wordmark className="text-[26px]" />, href: '/' }}
-      tagline="One memory for every AI tool you use. Local, private and open source."
+      brand={{
+        label: (
+          <span className="inline-flex items-center gap-2">
+            <Mammoth className="size-7" />
+            <Wordmark className="text-[26px]" />
+          </span>
+        ),
+        href: '/',
+      }}
+      tagline="Your AI agents share one brain. Local, private and MIT licensed."
       columns={[
         {
           title: 'Product',
@@ -71,6 +81,7 @@ export function SiteFooter() {
             { label: 'Connect your apps', href: '/docs/connect' },
             { label: 'JavaScript', href: '/docs/javascript' },
             { label: 'Python', href: '/docs/python' },
+            { label: 'Contributing', href: `${githubUrl}/blob/main/CONTRIBUTING.md` },
           ],
         },
         {

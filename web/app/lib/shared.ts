@@ -1,9 +1,9 @@
 import { createGetUrl } from 'fumadocs-core/source';
 
 export const appName = 'Woolly';
-export const tagline = 'Local memory for your AI tools';
+export const tagline = 'One memory for your AI coding tools';
 export const siteDescription =
-  'Woolly gives Claude, Cursor and your own tools one shared memory that lives in plain files on your laptop. Open source, private, and free.';
+  'Every AI coding tool starts from zero. Woolly gives Claude Code, Cursor, Codex and Ollama one shared memory that lives in plain files on your laptop. Open source, private and free.';
 // The public URL of the site. Update this once the domain is live.
 export const siteUrl = 'https://usewoolly.com';
 export const docsRoute = '/docs';

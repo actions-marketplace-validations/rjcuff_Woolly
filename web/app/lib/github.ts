@@ -1,8 +1,8 @@
 import { gitConfig } from './shared';
 
-// Show the star count only once it's big enough to help. Below this the nav
-// just says "GitHub".
-export const STAR_THRESHOLD = 100;
+// Show the star count from the first star. It is shipped in public, so the
+// real number goes up front.
+export const STAR_THRESHOLD = 1;
 
 // getStars reads the repo's star count. It runs when the site is built, so
 // it's as fresh as the latest deploy, and visitors' browsers never call GitHub.

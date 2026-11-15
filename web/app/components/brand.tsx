@@ -42,3 +42,18 @@ export function LinkedInIcon({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** The mammoth from the favicon, drawn in the current text color. */
+export function Mammoth({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" className={className}>
+      <g fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 30 C9 16 16 8 24 8 C32 8 39 16 39 30" />
+        <path d="M24 21 V36 C24 41 29 42 30 38" />
+        <path d="M17 29 C14 33 15 38 19 40 M31 29 C34 33 33 37 32.5 38" />
+      </g>
+      <circle cx="18" cy="20" r="2" fill="currentColor" />
+      <circle cx="30" cy="20" r="2" fill="currentColor" />
+    </svg>
+  );
+}

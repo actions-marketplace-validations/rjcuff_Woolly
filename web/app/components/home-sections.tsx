@@ -2,8 +2,10 @@ import { useInView, useReducedMotion } from 'motion/react';
 import { useRef } from 'react';
 import { FaqWall, type FaqItem } from '@/components/easeui/faq-wall';
 import { NumberTicker } from '@/components/easeui/number-ticker';
-import { PrimaryButton } from '@/components/ui';
+import { Mammoth } from '@/components/brand';
+import { PrimaryButton, SecondaryButton } from '@/components/ui';
 import { EASE_OUT_CSS } from '@/lib/ease';
+import type { Release } from '@/lib/releases';
 import { githubUrl } from '@/lib/shared';
 
 const RESULTS: { label: string; score: number }[] = [
@@ -66,16 +68,58 @@ export function Benchmark() {
   );
 }
 
+const DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/** The newest releases from the changelog, so visitors can see how fast it moves. */
+export function Shipping({ releases }: { releases: Release[] }) {
+  if (releases.length === 0) return null;
+  return (
+    <section className="flex w-full flex-col items-center gap-10 py-20 sm:py-28">
+      <div className="flex max-w-[640px] flex-col items-center gap-5 text-center">
+        <Mammoth className="size-10 text-brand" />
+        <h2 className="text-[32px] font-semibold leading-tight tracking-[-0.02em] sm:text-[48px]">Shipping weekly</h2>
+        <p className="text-pretty text-[17px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
+          Built in public, one release at a time. Here is what landed lately.
+        </p>
+      </div>
+      <ol className="grid w-full items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {releases.map((r) => (
+          <li key={r.version}>
+            <a
+              href={r.href}
+              className="flex h-full flex-col gap-3 rounded-2xl bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)] transition-colors hover:bg-fd-accent"
+            >
+              <span className="flex items-baseline justify-between gap-3">
+                <span className="font-mono text-[15px] font-semibold text-brand">v{r.version}</span>
+                {r.date ? (
+                  <time dateTime={r.date} className="text-[13px] text-fd-muted-foreground tabular-nums">
+                    {DATE.format(new Date(r.date))}
+                  </time>
+                ) : null}
+              </span>
+              <span className="line-clamp-3 text-pretty text-[15px] leading-relaxed">{r.summary}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <SecondaryButton href={`${githubUrl}/blob/main/CHANGELOG.md`} size="md">
+        Read the changelog
+      </SecondaryButton>
+    </section>
+  );
+}
+
 const FAQ: FaqItem[] = [
   {
     question: 'Does Woolly send my data anywhere?',
-    answer: 'No. Woolly has no servers, no accounts and no tracking. Your memories stay in ~/.woolly on your computer.',
+    answer:
+      'No. There are no servers, no accounts and no telemetry. Your memories live in ~/.woolly on your laptop, and that is the whole story.',
     keywords: ['privacy', 'cloud', 'server', 'tracking', 'data', 'offline'],
   },
   {
     question: 'Which apps work with Woolly?',
     answer:
-      'Any app that supports MCP, including Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode. Run woolly connect to set them all up at once.',
+      'Anything that speaks MCP. Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode are one woolly connect away. Ollama and other local models get memory through woolly proxy.',
     keywords: ['claude', 'cursor', 'vscode', 'windsurf', 'codex', 'gemini', 'mcp', 'apps', 'tools'],
   },
   {
@@ -87,7 +131,7 @@ const FAQ: FaqItem[] = [
   {
     question: 'How is this different from ChatGPT or Claude memory?',
     answer:
-      "Those memories live inside one app, on that company's servers. Woolly is shared by every app you connect, and it lives on your computer in files you can read.",
+      "Those memories are locked inside one app, on that company's servers. Claude never hears what you told Cursor. Woolly is one memory every tool shares, and it lives on your laptop in files you can read.",
     keywords: ['chatgpt', 'openai', 'mem0', 'different', 'compare'],
   },
   {
@@ -103,8 +147,14 @@ const FAQ: FaqItem[] = [
     keywords: ['team', 'git', 'repo', 'project', 'share'],
   },
   {
+    question: 'Is this a memory API for my app?',
+    answer:
+      'No, and that is on purpose. Woolly makes your own AI workflow better. There are JavaScript and Python packages for scripts and side projects, but if you are adding memory to a product with thousands of users, a hosted memory API is the better fit.',
+    keywords: ['api', 'sdk', 'mem0', 'app', 'product', 'build'],
+  },
+  {
     question: 'Is Woolly free?',
-    answer: 'Yes. Woolly is open source under the MIT license.',
+    answer: 'Yes. It is MIT licensed and built in public on GitHub. Issues and pull requests are welcome.',
     keywords: ['price', 'cost', 'license', 'mit', 'open', 'pay'],
   },
 ];

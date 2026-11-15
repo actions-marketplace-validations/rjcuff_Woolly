@@ -6,7 +6,9 @@ async function headerLink(page: Page, isMobile: boolean, name: string) {
     // Taps before the page has loaded do nothing, so retry until the menu opens.
     await expect(async () => {
       await page.getByRole('button', { name: 'Open menu' }).click({ timeout: 1000 });
-      await expect(page.locator('#site-navbar-panel').getByRole('link', { name, exact: true })).toBeVisible({ timeout: 1000 });
+      await expect(page.locator('#site-navbar-panel').getByRole('link', { name, exact: true })).toBeVisible({
+        timeout: 1000,
+      });
     }).toPass({ timeout: 15_000 });
     return page.locator('#site-navbar-panel').getByRole('link', { name, exact: true });
   }
@@ -15,8 +17,8 @@ async function headerLink(page: Page, isMobile: boolean, name: string) {
 
 test('home leads with the headline, setup and button', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('Woolly | Local memory for your AI tools');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('One memory for every AI tool you use');
+  await expect(page).toHaveTitle('Woolly | One memory for your AI coding tools');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your AI agents share one brain');
   await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
 
   // Never sideways, on any screen.
@@ -38,9 +40,7 @@ test('nav links and theme toggle are visible and work', async ({ page, isMobile 
   await expect(toggle).toBeInViewport();
   const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
   await toggle.click();
-  await expect
-    .poll(() => page.evaluate(() => document.documentElement.classList.contains('dark')))
-    .toBe(!before);
+  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
 
   await expect(await headerLink(page, isMobile, 'Docs')).toBeVisible();
 });
@@ -64,7 +64,7 @@ test('sitemap, robots and install script are served', async ({ request }) => {
 
 test('integrations and feature cards are shown', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('One command adds Woolly to the AI tools you already use')).toBeVisible();
+  await expect(page.getByText('One command, and the tools you already use share a memory')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Ollama', exact: true })).toHaveAttribute('href', '/docs/ollama');
   await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeVisible();
 });
@@ -74,27 +74,54 @@ test('download page offers the Mac and Windows apps and install commands', async
   await (await headerLink(page, isMobile, 'Download')).click();
   await expect(page).toHaveURL(/\/download$/);
   await page.getByRole('tab', { name: 'macOS' }).click();
-  await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute('href', /Woolly-mac\.dmg$/);
+  await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute(
+    'href',
+    /Woolly-mac\.dmg$/,
+  );
   await page.getByRole('tab', { name: 'Windows' }).click();
-  await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute('href', /Woolly-windows\.exe$/);
+  await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute(
+    'href',
+    /Woolly-windows\.exe$/,
+  );
   await expect(page.getByText('irm https://usewoolly.com/install.ps1 | iex')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
 
 test.describe('on Windows', () => {
-  test.use({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' });
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+  });
 
   test('home page offers the Windows app', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute('href', /Woolly-windows\.exe$/);
+    await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute(
+      'href',
+      /Woolly-windows\.exe$/,
+    );
   });
 });
 
 test.describe('on a Mac', () => {
-  test.use({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15' });
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+  });
 
   test('home page offers the Mac app', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute('href', /Woolly-mac\.dmg$/);
+    await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute(
+      'href',
+      /Woolly-mac\.dmg$/,
+    );
   });
+});
+
+test('home shows what shipped lately', async ({ page }) => {
+  await page.goto('/');
+  const main = page.getByRole('main');
+  await expect(page.getByRole('heading', { name: 'Shipping weekly' })).toBeVisible();
+  const releases = main.getByRole('list').filter({ hasText: /^v\d/ }).first().getByRole('listitem');
+  expect(await releases.count()).toBe(4);
+  await expect(releases.first()).toContainText(/v\d+\.\d+\.\d+/);
 });
