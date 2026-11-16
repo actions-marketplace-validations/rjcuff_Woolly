@@ -103,11 +103,15 @@ export function SiteNavbar({
     );
 
   return (
-    <header
+    <>
+      {/* Holds the bar's place in the page, since the bar itself is fixed. */}
+      <div aria-hidden="true" className="h-16 shrink-0" />
+      <header
       ref={bar}
-      // No transform on the sticky bar itself: Safari lets a transformed sticky
-      // element lag a frame behind the scroll, which reads as jitter.
-      className={cn("sticky top-0 z-50 w-full", className)}
+      // Fixed to the window, not sticky: Safari moves a sticky bar with the
+      // page during momentum scrolling and the bounce at the top, which reads
+      // as jitter. A fixed bar never moves.
+      className={cn("fixed inset-x-0 top-0 z-50", className)}
     >
       {/* The blur and color live on their own layer behind the bar and only its
           opacity fades, which the compositor handles without repainting. While
@@ -311,6 +315,7 @@ export function SiteNavbar({
           </div>
         </div>
       </div>
-    </header>
+      </header>
+    </>
   );
 }

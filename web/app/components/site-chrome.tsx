@@ -31,7 +31,6 @@ function GitHubButton({ stars }: { stars?: number | null }) {
 export function SiteHeader({ stars }: { stars?: number | null }) {
   return (
     <SiteNavbar
-      className={BLEED}
       brand={{ label: <Wordmark className="text-[26px] sm:text-[30px]" />, href: '/' }}
       links={[
         { label: 'Docs', href: '/docs' },
