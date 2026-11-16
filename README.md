@@ -2,7 +2,7 @@
 
 # Woolly
 
-**Your AI agents share one brain.**
+**Your agents share one brain.**
 
 Every AI coding tool starts from zero. Woolly gives Claude Code, Cursor, Codex and Ollama one memory, so you explain your project once. It lives on your laptop, in files you can read.
 

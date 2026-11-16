@@ -154,8 +154,7 @@ function Hero({ download, latest }: { download: { href: string; label: string };
       ) : null}
 
       <h1 className="mt-8 text-[34px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[46px]">
-        your ai agents <br />
-        share one brain
+        your agents share one brain
       </h1>
       <p className="mt-6 max-w-[560px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
         Claude Code, Cursor, Codex and Ollama read and write one memory. It lives on your laptop, in Markdown files you

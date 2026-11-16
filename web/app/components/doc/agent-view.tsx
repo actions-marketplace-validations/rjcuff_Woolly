@@ -10,7 +10,7 @@ import { githubUrl, siteUrl } from '@/lib/shared';
 export function homeMarkdown(releases: Release[]): string {
   const shipped = releases.map((r) => `- v${r.version}: ${r.summary} (${r.href})`).join('\n');
   const questions = FAQ.map((q) => `### ${q.question}\n\n${q.answer}`).join('\n\n');
-  return `# Woolly: your AI agents share one brain
+  return `# Woolly: your agents share one brain
 
 Claude Code, Cursor, Codex and Ollama read and write one memory. It lives on your laptop, in Markdown files you can read.
 
