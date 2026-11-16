@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- A memory layer API for the agents you build, with mem0's routes and field names: `POST /v1/memories` turns a conversation into memories, and `POST /v1/search` finds them. For each fact a local model decides whether it's new, updates an older memory, says one is no longer true, or is already known, and reports `ADD`, `UPDATE`, `DELETE` or `NONE`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
+- Memories can belong to a `user_id`, `agent_id` or `run_id`, so one user's memories are never shown to or changed by another.
+- Nothing is overwritten. A replaced memory keeps its text with an `invalid_at` time, a fact that's no longer true is marked `expired`, and `GET /v1/memories/{id}/history` shows every version.
+- Your version still wins: a model's change to something you said yourself is saved as a conflict for you to review, not applied.
+- The API also accepts the token as `Authorization: Token ...`, the way mem0's clients send it.
+
 ## 0.13.1
 
 - A Windows app. [Download Woolly-windows.exe](https://github.com/rjcuff/woolly/releases/latest/download/Woolly-windows.exe), run it, and Woolly starts in the background with an icon in the system tray. It has the same screens as the Mac app and installs for your account without admin rights. It isn't signed yet, so SmartScreen may ask you to choose More info, then Run anyway.

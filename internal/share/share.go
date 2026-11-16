@@ -230,7 +230,7 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 		m, isLocal := local[ln.id]
 		t, isTrashed := trashed[ln.id]
 		switch {
-		case ln.id != "" && isLocal && m.Status != memory.StatusSuperseded:
+		case ln.id != "" && isLocal && m.Live():
 			inFile[ln.id] = true
 			if m.UpdatedAt.After(st.SyncedAt) {
 				continue // changed here since the last sync
@@ -266,7 +266,7 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 	// doesn't show up as a conflict with the note it replaced.
 	for _, m := range all {
 		id := suffix(m.ID)
-		if m.Project != r.Project || m.Status == memory.StatusSuperseded || inFile[id] || held[id] || !had[id] || m.UpdatedAt.After(st.SyncedAt) {
+		if m.Project != r.Project || !m.Live() || inFile[id] || held[id] || !had[id] || m.UpdatedAt.After(st.SyncedAt) {
 			continue
 		}
 		if _, err := store.Forget(m.ID); err != nil {
@@ -312,7 +312,7 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 		ids = append(ids, id)
 	}
 	for _, m := range all {
-		if m.Project != r.Project || m.Status == memory.StatusSuperseded || m.Key == handoffKey || strings.HasPrefix(m.Key, "user.") {
+		if m.Project != r.Project || !m.Live() || m.Key == handoffKey || strings.HasPrefix(m.Key, "user.") {
 			continue
 		}
 		id := suffix(m.ID)

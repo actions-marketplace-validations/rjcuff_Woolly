@@ -316,6 +316,7 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		writeJSON(w, http.StatusOK, map[string]any{"activity": entries})
 	})
 
+	registerV1(mux, store, engine, opts, record)
 	registerManage(mux, store, version, opts)
 	registerImport(mux, store, log, opts.Ollama)
 

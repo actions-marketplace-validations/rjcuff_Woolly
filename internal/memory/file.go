@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -41,6 +42,17 @@ func encode(m *Memory) []byte {
 	w("via", m.Via)
 	w("project", m.Project)
 	w("commit", m.Commit)
+	w("user_id", m.User)
+	w("agent_id", m.Agent)
+	w("run_id", m.Session)
+	if m.InvalidAt != nil {
+		w("invalid_at", m.InvalidAt.UTC().Format(time.RFC3339Nano))
+	}
+	if len(m.Metadata) > 0 {
+		if j, err := json.Marshal(m.Metadata); err == nil {
+			w("metadata", string(j))
+		}
+	}
 	b.WriteString("---\n\n")
 	b.WriteString(strings.TrimSpace(m.Content))
 	b.WriteString("\n")
@@ -93,6 +105,18 @@ func decode(data []byte) (*Memory, error) {
 			m.Project = NormalizeProject(v)
 		case "commit":
 			m.Commit = v
+		case "user_id":
+			m.User = CleanScopeID(v)
+		case "agent_id":
+			m.Agent = CleanScopeID(v)
+		case "run_id":
+			m.Session = CleanScopeID(v)
+		case "invalid_at":
+			if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+				m.InvalidAt = &t
+			}
+		case "metadata":
+			_ = json.Unmarshal([]byte(v), &m.Metadata)
 		}
 	}
 	if m.ID == "" {
@@ -102,7 +126,7 @@ func decode(data []byte) (*Memory, error) {
 		m.Source = SourceUser
 	}
 	switch m.Status {
-	case StatusActive, StatusSuperseded, StatusConflict:
+	case StatusActive, StatusSuperseded, StatusConflict, StatusExpired:
 	default:
 		m.Status = StatusActive
 	}

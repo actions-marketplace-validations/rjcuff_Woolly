@@ -43,6 +43,8 @@ Prefer an app? [Download Woolly for Mac or Windows](https://usewoolly.com/downlo
 
 **Facts stay current.** A newer fact replaces the old one. When an AI guesses something that contradicts you, your version wins and the guess is flagged for review.
 
+**Build agents that remember.** A memory layer API with mem0's routes: send a conversation, and a local model adds, updates or retires facts per user, keeping every old version as history. [Memory API](https://usewoolly.com/docs/memory-api)
+
 **Your local models remember too.** `woolly proxy` adds memory to Ollama, or any app that uses the OpenAI or Anthropic API. [Proxy](https://usewoolly.com/docs/proxy)
 
 **Memory you can read.** Every memory is a Markdown file. Open it, grep it, edit it by hand, and see which tool saved it. The Woolly app shows the same thing with search. [The app](https://usewoolly.com/docs/review)

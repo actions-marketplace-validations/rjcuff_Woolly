@@ -206,6 +206,10 @@ type RememberInput struct {
 	// ID, if set and free, is used instead of a new one, so a note shared
 	// through a repo keeps the same ID on every computer.
 	ID string
+	// User, Agent and Session scope the memory for apps built on Woolly.
+	User, Agent, Session string
+	// Metadata is free-form data an app attaches to the memory.
+	Metadata map[string]any
 }
 
 // RememberResult reports what Remember did.
@@ -242,6 +246,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 	key := NormalizeKey(in.Key)
 	tags := NormalizeTags(in.Tags)
 	project := NormalizeProject(in.Project)
+	slot := &Memory{Project: project, User: CleanScopeID(in.User), Agent: CleanScopeID(in.Agent), Session: CleanScopeID(in.Session)}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -252,7 +257,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 
 	// Duplicate: same key and same text as a live memory.
 	for _, ex := range s.mems {
-		if ex.Status == StatusSuperseded || ex.Key != key || ex.Project != project || !sameText(ex.Content, content) {
+		if ex.Status == StatusSuperseded || ex.Status == StatusExpired || ex.Key != key || !sameSlot(ex, slot) || !sameText(ex.Content, content) {
 			continue
 		}
 		ex.UpdatedAt = now
@@ -281,6 +286,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 		ID: id, Content: content, Key: key, Tags: tags,
 		Source: src, Status: StatusActive, CreatedAt: now, UpdatedAt: now,
 		Via: CleanApp(in.Via), Project: project, Commit: in.Commit,
+		User: slot.User, Agent: slot.Agent, Session: slot.Session, Metadata: in.Metadata,
 	}
 	res := &RememberResult{}
 
@@ -288,7 +294,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 		var same []*Memory
 		var stronger *Memory
 		for _, ex := range s.mems {
-			if ex.Key != key || ex.Project != project || ex.Status == StatusSuperseded {
+			if ex.Key != key || !sameSlot(ex, m) || ex.Status == StatusSuperseded || ex.Status == StatusExpired {
 				continue
 			}
 			same = append(same, ex)
@@ -308,6 +314,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 				ex.SupersededBy = m.ID
 				ex.ConflictsWith = ""
 				ex.UpdatedAt = now
+				ex.InvalidAt = &now
 				if err := s.write(ex); err != nil {
 					return nil, err
 				}
@@ -572,13 +579,14 @@ func (s *Store) resolveLocked(keep *Memory, now time.Time) ([]Memory, error) {
 	var replaced []Memory
 	if keep.Key != "" {
 		for _, ex := range s.mems {
-			if ex.ID == keep.ID || ex.Key != keep.Key || ex.Project != keep.Project || ex.Status == StatusSuperseded {
+			if ex.ID == keep.ID || ex.Key != keep.Key || !sameSlot(ex, keep) || ex.Status == StatusSuperseded || ex.Status == StatusExpired {
 				continue
 			}
 			ex.Status = StatusSuperseded
 			ex.SupersededBy = keep.ID
 			ex.ConflictsWith = ""
 			ex.UpdatedAt = now
+			ex.InvalidAt = &now
 			if err := s.write(ex); err != nil {
 				return nil, err
 			}
@@ -588,9 +596,137 @@ func (s *Store) resolveLocked(keep *Memory, now time.Time) ([]Memory, error) {
 	keep.Status = StatusActive
 	keep.ConflictsWith = ""
 	keep.SupersededBy = ""
+	keep.InvalidAt = nil
 	keep.UpdatedAt = now
 	if err := s.write(keep); err != nil {
 		return nil, err
 	}
 	return replaced, nil
+}
+
+// ListIn returns the memories in a scope, newest first. Without includeAll
+// it returns only active memories.
+func (s *Store) ListIn(sc Scope, includeAll bool) ([]Memory, error) {
+	sc = sc.Normalized()
+	return s.filter(func(m *Memory) bool {
+		return (includeAll || m.Status == StatusActive) && sc.Matches(m)
+	})
+}
+
+// Replace saves in as the newer version of the memory with ID old: the old
+// one is kept as history, marked superseded from now on. The new memory
+// takes the old one's scope unless in sets its own.
+func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
+	prev, err := s.Get(old)
+	if err != nil {
+		return nil, err
+	}
+	if prev.Status == StatusSuperseded || prev.Status == StatusExpired {
+		return nil, fmt.Errorf("memory %s is no longer current", prev.ID)
+	}
+	if in.Project == "" {
+		in.Project = prev.Project
+	}
+	if in.User == "" && in.Agent == "" && in.Session == "" {
+		in.User, in.Agent, in.Session = prev.User, prev.Agent, prev.Session
+	}
+	if in.Key == "" {
+		in.Key = prev.Key
+	}
+	if in.Metadata == nil {
+		in.Metadata = prev.Metadata
+	}
+	res, err := s.Remember(in)
+	if err != nil {
+		return nil, err
+	}
+	if res.Memory.ID == prev.ID {
+		return res, nil // the same text again
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return nil, err
+	}
+	ex, ok := s.mems[prev.ID]
+	if !ok || ex.Status == StatusSuperseded {
+		return res, nil // already replaced, through its key
+	}
+	now := time.Now().UTC()
+	ex.Status = StatusSuperseded
+	ex.SupersededBy = res.Memory.ID
+	ex.ConflictsWith = ""
+	ex.UpdatedAt = now
+	ex.InvalidAt = &now
+	if err := s.write(ex); err != nil {
+		return nil, err
+	}
+	res.Superseded = append(res.Superseded, ex.clone())
+	return res, nil
+}
+
+// Expire marks a memory as no longer true, with nothing to replace it. It
+// stays on disk as history, so a recall of the past can still find it.
+func (s *Store) Expire(id string) (Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, err
+	}
+	m, err := s.find(id)
+	if err != nil {
+		return Memory{}, err
+	}
+	if m.Status == StatusExpired {
+		return m.clone(), nil
+	}
+	now := time.Now().UTC()
+	m.Status = StatusExpired
+	m.ConflictsWith = ""
+	m.UpdatedAt = now
+	m.InvalidAt = &now
+	if err := s.write(m); err != nil {
+		return Memory{}, err
+	}
+	return m.clone(), nil
+}
+
+// History returns every version of a memory, oldest first: the memories it
+// replaced, the memory itself, and the ones that replaced it.
+func (s *Store) History(id string) ([]Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return nil, err
+	}
+	m, err := s.find(id)
+	if err != nil {
+		return nil, err
+	}
+	// Walk back to the first version: whatever was superseded by the one we have.
+	first := m
+	for seen := map[string]bool{first.ID: true}; ; {
+		var prev *Memory
+		for _, ex := range s.mems {
+			if ex.SupersededBy == first.ID && !seen[ex.ID] {
+				prev = ex
+				break
+			}
+		}
+		if prev == nil {
+			break
+		}
+		seen[prev.ID] = true
+		first = prev
+	}
+	var out []Memory
+	for cur, seen := first, map[string]bool{}; cur != nil && !seen[cur.ID]; cur = s.mems[cur.SupersededBy] {
+		seen[cur.ID] = true
+		out = append(out, cur.clone())
+		if cur.SupersededBy == "" {
+			break
+		}
+	}
+	return out, nil
 }

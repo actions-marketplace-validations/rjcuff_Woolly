@@ -19,6 +19,7 @@
     "import",
     "benchmark",
     "---Build with Woolly---",
+    "memory-api",
     "python",
     "javascript",
     "---Reference---",

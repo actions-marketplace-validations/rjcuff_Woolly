@@ -1,0 +1,98 @@
+---
+title: Memory API for agents
+description: Give the agents you build a memory that learns, with mem0's API on your own machine.
+---
+
+Woolly's memory layer API lets the agents and apps you build remember their users. Send it a conversation and it pulls out the facts worth keeping, then decides for each one whether it's new, changes something it already knows, or says something is no longer true. Search it before your agent answers.
+
+It uses mem0's routes and field names, so code written for mem0 needs little more than a new address. Everything runs on your machine with a local model in [Ollama](/docs/ollama).
+
+```sh
+woolly serve
+TOKEN=$(cat ~/.woolly/token)
+```
+
+Every request needs the token, as `Authorization: Bearer $TOKEN` or mem0's `Authorization: Token $TOKEN`.
+
+## Add a conversation
+
+```sh
+curl -X POST localhost:11435/v1/memories \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "I just moved to Austin, and I stopped using Vim"},
+      {"role": "assistant", "content": "Got it"}
+    ],
+    "user_id": "alice"
+  }'
+```
+
+```json
+{
+  "results": [
+    {"id": "20261116-...", "memory": "Lives in Austin", "event": "UPDATE", "previous_memory": "Lives in Denver"},
+    {"id": "20261110-...", "memory": "Uses Vim", "event": "DELETE"}
+  ]
+}
+```
+
+For each fact, the local model sees the closest memories in the same scope and picks an event:
+
+| Event | What happened |
+|---|---|
+| `ADD` | A new fact was saved. |
+| `UPDATE` | The fact replaced an older one about the same thing. The old one is kept as history. |
+| `DELETE` | An existing memory is no longer true. It's kept as history, marked with when it stopped. |
+| `NONE` | Woolly already knew it. |
+| `CONFLICT` | The fact disagrees with something the user said themselves, so it waits for them to review it. |
+
+Your version always wins. The model can change what it inferred, but never what a person stated directly: that becomes a `CONFLICT` you resolve in the [review page](/docs/review).
+
+Send `"infer": false` to save each user message as it is, without a model. Add `"metadata": {...}` to attach your own data to every memory saved.
+
+## Scopes
+
+`user_id`, `agent_id` and `run_id` keep memories apart, the same way mem0 uses them. A memory saved for `alice` is never shown to, or changed by, `bob`. Add `project` to keep a fact to one codebase. Leave them all out to use your own personal memory.
+
+## Search
+
+```sh
+curl -X POST localhost:11435/v1/search \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"query": "where does she live", "filters": {"user_id": "alice"}, "top_k": 5}'
+```
+
+Results are scored by meaning, keywords and how recent they are. `threshold` drops weak matches, and `show_expired` includes memories that are no longer true, for questions about the past. The scope fields also work at the top level, as older mem0 clients send them.
+
+## Memories over time
+
+Nothing is overwritten. When a fact changes, the old version stays on disk with `status: superseded` and an `invalid_at` time, and an expired fact gets `status: expired`. Ask for the whole story of a memory:
+
+```sh
+curl localhost:11435/v1/memories/ID/history -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "results": [
+    {"memory_id": "...", "event": "ADD", "old_memory": null, "new_memory": "Lives in Denver"},
+    {"memory_id": "...", "event": "UPDATE", "old_memory": "Lives in Denver", "new_memory": "Lives in Austin"}
+  ]
+}
+```
+
+## All routes
+
+| Method | Path | Does |
+|---|---|---|
+| `POST` | `/v1/memories` | Add a conversation: `messages`, scope, `metadata`, `infer` |
+| `GET` | `/v1/memories` | List memories in a scope: `user_id`, `agent_id`, `run_id`, `project`, `top_k`, `show_expired` |
+| `GET` | `/v1/memories/{id}` | One memory |
+| `PUT` | `/v1/memories/{id}` | Change `text` or `metadata`, keeping the old version as history |
+| `DELETE` | `/v1/memories/{id}` | Move a memory to the trash |
+| `DELETE` | `/v1/memories` | Move every memory in a scope to the trash. Needs a `user_id`, `agent_id` or `run_id` |
+| `GET` | `/v1/memories/{id}/history` | Every version, oldest first |
+| `POST` | `/v1/search` | Search: `query`, `filters`, `top_k`, `threshold`, `show_expired` |
+
+Every memory is still a Markdown file in `~/.woolly/memories`, with its scope in the header, so you can read and fix what your agents learned.

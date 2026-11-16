@@ -48,6 +48,7 @@ const (
 	StatusActive     Status = "active"     // current and used for recall
 	StatusSuperseded Status = "superseded" // replaced by a newer memory with the same key
 	StatusConflict   Status = "conflict"   // disagrees with a more trusted memory; needs review
+	StatusExpired    Status = "expired"    // no longer true, with nothing to replace it; kept as history
 )
 
 // Memory is a single remembered fact.
@@ -70,6 +71,17 @@ type Memory struct {
 	// Commit is the git commit a project note was saved at, so Woolly can
 	// tell when the code it describes has changed since.
 	Commit string `json:"commit,omitempty"`
+	// User, Agent and Session scope a memory for apps built on Woolly, the
+	// way mem0's user_id, agent_id and run_id do. Personal memories leave
+	// them empty.
+	User    string `json:"user_id,omitempty"`
+	Agent   string `json:"agent_id,omitempty"`
+	Session string `json:"run_id,omitempty"`
+	// InvalidAt is when the memory stopped being true: when a newer fact
+	// replaced it or it was marked as no longer true. Nil while current.
+	InvalidAt *time.Time `json:"invalid_at,omitempty"`
+	// Metadata is free-form data an app attaches to a memory.
+	Metadata map[string]any `json:"metadata,omitempty"`
 
 	file string // path on disk; empty until saved
 }
@@ -77,7 +89,69 @@ type Memory struct {
 func (m *Memory) clone() Memory {
 	c := *m
 	c.Tags = append([]string(nil), m.Tags...)
+	if m.InvalidAt != nil {
+		t := *m.InvalidAt
+		c.InvalidAt = &t
+	}
+	if m.Metadata != nil {
+		c.Metadata = make(map[string]any, len(m.Metadata))
+		for k, v := range m.Metadata {
+			c.Metadata[k] = v
+		}
+	}
 	return c
+}
+
+// Live reports whether the memory is still current: not replaced by a newer
+// one and not marked as no longer true.
+func (m *Memory) Live() bool {
+	return m.Status != StatusSuperseded && m.Status != StatusExpired
+}
+
+// Scope picks out the memories of one user, agent, session or project.
+// Empty fields match anything.
+type Scope struct {
+	User    string
+	Agent   string
+	Session string
+	Project string
+}
+
+// CleanScopeID tidies a user, agent or session ID: one line, at most 128 characters.
+func CleanScopeID(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if r := []rune(s); len(r) > 128 {
+		s = string(r[:128])
+	}
+	return s
+}
+
+// Normalized returns the scope with its IDs tidied.
+func (sc Scope) Normalized() Scope {
+	return Scope{
+		User:    CleanScopeID(sc.User),
+		Agent:   CleanScopeID(sc.Agent),
+		Session: CleanScopeID(sc.Session),
+		Project: NormalizeProject(sc.Project),
+	}
+}
+
+// Empty reports whether the scope has no user, agent or session.
+func (sc Scope) Empty() bool { return sc.User == "" && sc.Agent == "" && sc.Session == "" }
+
+// Matches reports whether m is in the scope. A user, agent or session must
+// match exactly when set; the project follows In.
+func (sc Scope) Matches(m *Memory) bool {
+	return (sc.User == "" || m.User == sc.User) &&
+		(sc.Agent == "" || m.Agent == sc.Agent) &&
+		(sc.Session == "" || m.Session == sc.Session) &&
+		m.In(sc.Project)
+}
+
+// sameSlot reports whether two memories are in exactly the same scope, so
+// one can repeat or replace the other.
+func sameSlot(a, b *Memory) bool {
+	return a.Project == b.Project && a.User == b.User && a.Agent == b.Agent && a.Session == b.Session
 }
 
 // NormalizeKey lowercases a key and joins whitespace with underscores, so

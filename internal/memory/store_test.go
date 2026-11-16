@@ -234,3 +234,48 @@ func TestNormalizeProject(t *testing.T) {
 		}
 	}
 }
+
+func TestScopeMetadataAndExpiryRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := s.Remember(RememberInput{
+		Content: "Prefers short answers", User: "alice", Agent: "helper", Session: "run-1",
+		Metadata: map[string]any{"team": "web", "priority": 2.0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Expire(res.Memory.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	// A fresh store reads everything back from the Markdown file.
+	again, _ := Open(dir)
+	got, err := again.Get(res.Memory.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.User != "alice" || got.Agent != "helper" || got.Session != "run-1" ||
+		got.Metadata["team"] != "web" || got.Metadata["priority"] != 2.0 ||
+		got.Status != StatusExpired || got.InvalidAt == nil || got.Live() {
+		t.Fatalf("round trip: %+v", got)
+	}
+}
+
+func TestScopesKeepKeysApart(t *testing.T) {
+	s, _ := Open(t.TempDir())
+	a, _ := s.Remember(RememberInput{Content: "Lives in Denver", Key: "user.location", User: "alice"})
+	b, _ := s.Remember(RememberInput{Content: "Lives in Austin", Key: "user.location", User: "bob"})
+	if len(b.Superseded) != 0 {
+		t.Fatalf("bob's fact must not replace alice's: %+v", b.Superseded)
+	}
+	if got, _ := s.Get(a.Memory.ID); !got.Live() {
+		t.Fatalf("alice's fact should still be current: %+v", got)
+	}
+	if mems, _ := s.ListIn(Scope{User: "alice"}, false); len(mems) != 1 || mems[0].Content != "Lives in Denver" {
+		t.Fatalf("alice's scope: %+v", mems)
+	}
+}

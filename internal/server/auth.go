@@ -39,19 +39,20 @@ func EnsureToken(home string) (string, error) {
 
 func validToken(r *http.Request, token string) bool {
 	got := ""
-	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
-		got = strings.TrimPrefix(h, "Bearer ")
+	// "Token" is how mem0's clients send their key.
+	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") || strings.HasPrefix(h, "Token ") {
+		got = strings.TrimSpace(h[strings.Index(h, " ")+1:])
 	} else if c, err := r.Cookie(tokenCookie); err == nil {
 		got = c.Value
 	}
 	return got != "" && subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
 }
 
-// requireToken protects /api/ routes. /api/version stays open so tools can
-// check whether Woolly is running.
+// requireToken protects the /api/ and /v1/ routes. /api/version stays open
+// so tools can check whether Woolly is running.
 func requireToken(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/version" && !validToken(r, token) {
+		if (strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/version" || isV1(r.URL.Path)) && !validToken(r, token) {
 			writeError(w, http.StatusUnauthorized,
 				"missing or wrong token. Open the page with `woolly ui`, or send the token from ~/.woolly/token as a Bearer token")
 			return

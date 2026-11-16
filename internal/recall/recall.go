@@ -75,6 +75,12 @@ func (e *Engine) Recall(ctx context.Context, query string, limit int, includeAll
 // user plus that project's memories, and leaves other projects out. An empty
 // project searches everything.
 func (e *Engine) RecallIn(ctx context.Context, query string, limit int, includeAll bool, project string) ([]Result, Mode, error) {
+	return e.RecallScoped(ctx, query, limit, includeAll, memory.Scope{Project: project})
+}
+
+// RecallScoped is Recall inside a scope: one user, agent, session or
+// project, as apps built on Woolly keep them apart.
+func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, includeAll bool, scope memory.Scope) ([]Result, Mode, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, ModeKeyword, errors.New("query is empty")
@@ -86,10 +92,10 @@ func (e *Engine) RecallIn(ctx context.Context, query string, limit int, includeA
 	if err != nil {
 		return nil, ModeKeyword, err
 	}
-	project = memory.NormalizeProject(project)
+	scope = scope.Normalized()
 	var mems []memory.Memory
 	for i := range all {
-		if all[i].In(project) {
+		if scope.Matches(&all[i]) {
 			mems = append(mems, all[i])
 		}
 	}
