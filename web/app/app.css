@@ -188,7 +188,9 @@ a[role='button'] {
     background-color 150ms ease,
     color 150ms ease;
 }
-button:active:not(:disabled),
+/* Disclosures (FAQ rows, menus) are left out: a full-width row that shrinks
+   reads as a jitter, not a press. */
+button:active:not(:disabled):not([aria-expanded]),
 a[role='button']:active,
 .btn-press:active {
   transform: scale(0.97);

@@ -105,15 +105,20 @@ export function SiteNavbar({
   return (
     <header
       ref={bar}
-      className={cn(
-        // The blur stays on and only the color fades: animating backdrop-filter
-        // repaints every frame and stutters on phones. Its own layer keeps the
-        // sticky bar steady while the page scrolls under it.
-        "sticky top-0 z-50 w-full transform-gpu backdrop-blur-md transition-[background-color,box-shadow] duration-200 ease-out",
-        scrolled ? "bg-background/80 shadow-[0_1px_0_0_var(--border)]" : "bg-transparent",
-        className,
-      )}
+      // No transform on the sticky bar itself: Safari lets a transformed sticky
+      // element lag a frame behind the scroll, which reads as jitter.
+      className={cn("sticky top-0 z-50 w-full", className)}
     >
+      {/* The blur and color live on their own layer behind the bar and only its
+          opacity fades, which the compositor handles without repainting. While
+          the bar is clear the layer is hidden, so nothing blurs under the hero. */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 -z-10 bg-background/80 shadow-[0_1px_0_0_var(--border)] backdrop-blur-md transition-opacity duration-200 ease-out motion-reduce:transition-none",
+          scrolled || open ? "opacity-100" : "opacity-0",
+        )}
+      />
       <nav aria-label="Main" className="mx-auto flex h-16 max-w-[1200px] items-center gap-3 px-[max(20px,env(safe-area-inset-left))]">
         <A
           href={brand.href}

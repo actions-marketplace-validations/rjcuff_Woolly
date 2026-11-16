@@ -165,6 +165,8 @@ export function Faq() {
       className="px-0 sm:px-0"
       title="Questions"
       items={FAQ}
+      // Opening one never closes another, so the row you tapped stays put.
+      multiple
       ask={{ label: 'Ask your own', placeholder: 'Type a question, like "does it work offline"' }}
       contact={{
         title: 'Still have a question?',
