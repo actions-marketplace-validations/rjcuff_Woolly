@@ -30,19 +30,23 @@ html > body[data-scroll-locked] {
 @theme {
   --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  /* Woolly blue, close to Apple's system blue. */
-  --color-brand: #0071e3;
-  --color-brand-light: #2b8eff;
+  /* EASE_OUT from lib/ease.ts, as a Tailwind class: ease-ui. */
+  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Woolly red: Apple's system red (#ff3b30), deepened the way Apple's web
+     blue #0071e3 deepens #007aff, so white text on it and links on white pass AA. */
+  --color-brand: #de3329;
+  --color-brand-light: #ff3b30;
   --color-brand-foreground: #ffffff;
-  /* The docs use the same blue for links, the active page and buttons. */
-  --color-fd-primary: #0071e3;
+  /* The docs use the same red for links, the active page and buttons. */
+  --color-fd-primary: #de3329;
   --color-fd-primary-foreground: #ffffff;
 }
 
 .dark {
-  --color-brand: #0a84ff;
-  --color-brand-light: #409cff;
-  --color-fd-primary: #0a84ff;
+  /* The same red reads on dark too (4.6:1), so buttons keep white text. */
+  --color-brand: #de3329;
+  --color-brand-light: #ff453a;
+  --color-fd-primary: #de3329;
   --color-fd-primary-foreground: #ffffff;
 }
 
@@ -68,85 +72,6 @@ html > body[data-scroll-locked] {
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-accent: var(--accent);
-}
-
-/* The main button: a soft blue gradient. */
-.btn-brand {
-  background-color: var(--color-brand);
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), transparent);
-  color: var(--color-brand-foreground);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.2),
-    0 1px 2px rgb(0 0 0 / 0.12);
-  transition:
-    background-color 150ms ease,
-    transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-/* Hover changes the background only, as a solid tint. */
-@media (hover: hover) and (pointer: fine) {
-  .btn-brand:hover {
-    background-color: color-mix(in oklch, var(--color-brand) 88%, black);
-  }
-}
-
-/* A blue wash that rises toward the bottom of the first screen of the
-   homepage and stops there, so it never runs into the next section. */
-.hero-wash {
-  background:
-    radial-gradient(120% 45% at 50% 100%, color-mix(in oklab, var(--color-brand) 22%, transparent), transparent 75%),
-    linear-gradient(180deg, transparent 40%, color-mix(in oklab, var(--color-brand) 10%, transparent));
-  mask-image: linear-gradient(180deg, #000 92%, transparent);
-}
-
-/* The hero's entrance plays once a session. The flag is set before first paint
-   by a script in the root, so a returning visitor never sees it start and stop. */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-.animate-rise {
-  animation: rise 400ms cubic-bezier(0.23, 1, 0.32, 1) backwards;
-}
-
-/* A blue band sweeps across the phrase once, then it settles on the text color.
-   Its resting state is the end of the sweep, so skipping it changes nothing. */
-@keyframes sweep {
-  from {
-    background-position: 100% 0;
-  }
-}
-.text-sweep {
-  background-image: linear-gradient(
-    90deg,
-    var(--color-fd-foreground) 0%,
-    var(--color-fd-foreground) 33%,
-    #5e5ce6 40%,
-    var(--color-brand) 47%,
-    #5ac8fa 54%,
-    transparent 66%,
-    transparent 100%
-  );
-  background-size: 300% 100%;
-  background-position: 0 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  /* Keeps descenders inside the clip. */
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
-  animation: sweep 1400ms cubic-bezier(0.23, 1, 0.32, 1) 450ms backwards;
-}
-:root[data-intro-seen] .animate-rise,
-:root[data-intro-seen] .text-sweep {
-  animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-rise,
-  .text-sweep {
-    animation: none;
-  }
 }
 
 /* The Woolly wordmark: chunky, playful, a little bouncy. */
@@ -260,4 +185,54 @@ button:has(> svg.lucide-check) svg {
   border-radius: 6px;
   background: var(--color-fd-secondary);
   border: 1px solid var(--color-fd-border);
+}
+
+/* The homepage reads like a document: pure white in light mode. */
+:root:not(.dark) .home-doc {
+  --color-fd-background: #ffffff;
+  --color-fd-muted: #f4f4f5;
+  --color-fd-card: #fafafa;
+}
+:root:not(.dark):has(.home-doc),
+:root:not(.dark):has(.home-doc) body {
+  background-color: #ffffff;
+}
+
+/* Sections rise in the first time they scroll into view. Set by a script, so
+   the page reads fine with JavaScript off. */
+.reveal {
+  transition:
+    opacity 600ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 600ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.reveal[data-shown='false'] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal[data-shown='false'] {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+/* A link's underline draws in from the left on hover and slides out the right. */
+.link-draw {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 100% 100%;
+  background-size: 0% 1px;
+  transition: background-size 260ms cubic-bezier(0.23, 1, 0.32, 1);
+  padding-bottom: 1px;
+}
+.group:hover .link-draw,
+.group:focus-visible .link-draw {
+  background-position: 0% 100%;
+  background-size: 100% 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .link-draw {
+    transition: none;
+  }
 }

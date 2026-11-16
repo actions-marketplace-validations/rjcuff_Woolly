@@ -1,7 +1,6 @@
 import type { Route } from './+types/not-found';
-import { Mammoth } from '@/components/brand';
-import { SiteFooter, SiteHeader } from '@/components/site-chrome';
-import { PrimaryButton, SecondaryButton } from '@/components/ui';
+import { BlockButton, FrameButton, Label } from '@/components/doc/parts';
+import { DocShell } from '@/components/doc/shell';
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: 'Not Found | Woolly' }];
@@ -9,23 +8,20 @@ export function meta({}: Route.MetaArgs) {
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-svh flex-col px-[max(20px,env(safe-area-inset-left))]">
-      <SiteHeader />
-      <main className="flex flex-1 flex-col items-center justify-center gap-5 py-16 text-center">
-        <Mammoth className="size-12 text-brand" />
-        <p className="font-mono text-[15px] font-semibold text-brand">404</p>
-        <h1 className="text-[32px] font-semibold tracking-[-0.03em] sm:text-[44px]">
+    <DocShell>
+      <section className="pb-24 pt-14">
+        <Label className="text-brand">404</Label>
+        <h1 className="mt-4 text-[40px] font-normal leading-[1.06] tracking-[-0.035em] sm:text-[56px]">
           Even a mammoth forgets sometimes
         </h1>
-        <p className="max-w-[440px] text-pretty text-[17px] text-fd-muted-foreground">
+        <p className="mt-6 max-w-[480px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground">
           This page doesn&apos;t exist, or it moved. The docs or the homepage will get you back on track.
         </p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-          <PrimaryButton href="/docs">Read the docs</PrimaryButton>
-          <SecondaryButton href="/">Go home</SecondaryButton>
+        <div className="mt-9 flex flex-wrap gap-3">
+          <BlockButton href="/docs">Read the docs</BlockButton>
+          <FrameButton href="/">Go home</FrameButton>
         </div>
-      </main>
-      <SiteFooter />
-    </div>
+      </section>
+    </DocShell>
   );
 }

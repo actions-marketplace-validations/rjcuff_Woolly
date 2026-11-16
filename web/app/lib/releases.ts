@@ -23,7 +23,8 @@ const MIN_SUMMARY = 60;
 
 /** The opening sentences of a bullet, at least MIN_SUMMARY characters when it has them. */
 function opening(text: string): string {
-  const sentences = text.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) ?? [text];
+  // A sentence ends at a stop followed by a space or the end, so a name like Woolly-windows.exe stays whole.
+  const sentences = text.match(/.+?[.!?]+(?=\s|$)\s*|.+$/g) ?? [text];
   let out = '';
   for (const sentence of sentences) {
     out += sentence;

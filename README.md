@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="web/public/favicon.svg" width="56" height="56" alt="">
-
 # Woolly
 
 **Your AI agents share one brain.**

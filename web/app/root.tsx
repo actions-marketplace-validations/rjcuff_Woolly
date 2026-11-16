@@ -19,9 +19,16 @@ export const links: Route.LinksFunction = () => [
     href: 'https://fonts.gstatic.com',
     crossOrigin: 'anonymous',
   },
+  // Text fonts never swap in mid-load, so nothing reflows on arrival: if Geist
+  // isn't ready in time the first visit keeps the fallback, and later visits use it.
   {
     rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Shrikhand&display=swap',
+    href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=optional',
+  },
+  // The wordmark always shows in its own face, even if it arrives late.
+  {
+    rel: 'stylesheet',
+    href: 'https://fonts.googleapis.com/css2?family=Shrikhand&display=swap',
   },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
 ];
@@ -34,12 +41,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
-        {/* Marks a visitor who already saw the hero entrance this session, before first paint. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: "try{sessionStorage.getItem('intro-seen')&&(document.documentElement.dataset.introSeen='')}catch(e){}",
-          }}
-        />
         <Meta />
         <Links />
       </head>

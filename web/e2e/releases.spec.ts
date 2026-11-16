@@ -32,3 +32,10 @@ test('the changelog becomes a short plain summary per release', () => {
   ]);
   expect(parseChangelog(md, 1)).toHaveLength(1);
 });
+
+test('a file name with a dot does not end the sentence', () => {
+  const md = ['## 2.0.0', '', '- A Windows app. [Download Woolly-windows.exe](https://example.com), run it, and Woolly starts.'].join('\n');
+  expect(parseChangelog(md, 1)[0].summary).toBe(
+    'A Windows app. Download Woolly-windows.exe, run it, and Woolly starts.',
+  );
+});

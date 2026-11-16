@@ -1,56 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
-import { Link } from 'react-router';
 import { indicatorClass, useSlidingIndicator } from '@/components/sliding-tabs';
-
-type ButtonProps = {
-  /** Site paths use the router; anything else is a plain link. */
-  href: string;
-  children: ReactNode;
-  size?: 'md' | 'lg';
-  className?: string;
-};
-
-function SmartLink({ href, className, children }: { href: string; className: string; children: ReactNode }) {
-  return href.startsWith('/') ? (
-    <Link to={href} className={className}>
-      {children}
-    </Link>
-  ) : (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  );
-}
-
-/** The main call to action: Woolly blue, with a small arrow box. */
-export function PrimaryButton({ href, children, size = 'lg', className = '' }: ButtonProps) {
-  const sizes = size === 'lg' ? 'py-2.5 pr-2.5 pl-5 text-[16px]' : 'py-2 pr-2 pl-4 text-[15px]';
-  const box = size === 'lg' ? 'size-7 text-[15px]' : 'size-6 text-[13px]';
-  return (
-    <SmartLink
-      href={href}
-      className={`btn-brand btn-press inline-flex items-center gap-2 rounded-md font-medium ${sizes} ${className}`}
-    >
-      {children}
-      <span aria-hidden="true" className={`flex items-center justify-center rounded bg-black/20 ${box}`}>
-        →
-      </span>
-    </SmartLink>
-  );
-}
-
-/** The quieter button that sits next to a primary one. */
-export function SecondaryButton({ href, children, size = 'lg', className = '' }: ButtonProps) {
-  const sizes = size === 'lg' ? 'px-5 py-3 text-[16px]' : 'px-4 py-2 text-[15px]';
-  return (
-    <SmartLink
-      href={href}
-      className={`btn-press inline-flex items-center rounded-md bg-fd-background font-medium shadow-[0_0_0_1px_var(--color-fd-border)] transition-colors hover:bg-fd-accent ${sizes} ${className}`}
-    >
-      {children}
-    </SmartLink>
-  );
-}
 
 export type TabOption<T extends string> = { id: T; label: string };
 
