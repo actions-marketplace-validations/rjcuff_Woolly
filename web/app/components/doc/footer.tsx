@@ -41,7 +41,7 @@ export function DocFooter() {
       <nav aria-label="Footer">
       <div className="grid gap-10 sm:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div>
-          <Wordmark className="text-[22px]" />
+          <Wordmark className="text-[20px]" />
           <p className="mt-3 max-w-[220px] text-[14px] leading-relaxed text-fd-muted-foreground">
             Your agents share one brain. Local, private and MIT licensed.
           </p>

@@ -17,7 +17,7 @@ export default function NotFound() {
         <p className="mt-6 max-w-[480px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground">
           This page doesn&apos;t exist, or it moved. The docs or the homepage will get you back on track.
         </p>
-        <div className="mt-9 flex flex-wrap gap-3">
+        <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <BlockButton href="/docs">Read the docs</BlockButton>
           <FrameButton href="/">Go home</FrameButton>
         </div>

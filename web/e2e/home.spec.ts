@@ -1,7 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** A link in the main nav. It floats at the left on a wide screen and sits on top otherwise, but it is always on screen. */
-function navLink(page: Page, name: string) {
+/** Opens the menu drawer on a phone; elsewhere the nav is already on screen. */
+async function openNav(page: Page, isMobile: boolean) {
+  if (!isMobile) return;
+  // Taps before the page has loaded do nothing, so retry until the drawer opens.
+  const button = page.getByRole('button', { name: 'Open menu' });
+  await expect(async () => {
+    // Only tap while it's closed; once open, the drawer covers the button.
+    if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click({ timeout: 1000 });
+    await expect(button).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+}
+
+/** A link in the main nav, opening the drawer first on a phone. */
+async function navLink(page: Page, isMobile: boolean, name: string) {
+  await openNav(page, isMobile);
   return page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
 }
 
@@ -18,17 +32,20 @@ test('home leads with the headline and buttons', async ({ page }) => {
   await expect(page).toHaveURL(/\/docs\/quickstart$/);
 });
 
-test('raw .md shows the page as Markdown and back', async ({ page }) => {
+test('raw .md shows the page as Markdown and back', async ({ page, isMobile }) => {
   await page.goto('/');
+  await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Raw .md' }).click();
   await expect(page.getByRole('main')).toContainText('# Woolly: your agents share one brain');
   await expect(page.getByRole('main')).toContainText('woolly connect');
+  await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Page' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
-test('nav links and theme toggle are visible and work', async ({ page }) => {
+test('nav links and theme toggle are visible and work', async ({ page, isMobile }) => {
   await page.goto('/');
+  await openNav(page, isMobile);
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /GitHub/ })).toHaveAttribute(
     'href',
     'https://github.com/rjcuff/woolly',
@@ -40,7 +57,7 @@ test('nav links and theme toggle are visible and work', async ({ page }) => {
   await toggle.click();
   await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
 
-  await expect(navLink(page, 'Docs')).toBeVisible();
+  await expect(await navLink(page, isMobile, 'Docs')).toBeVisible();
 });
 
 test('link previews point at the Woolly image', async ({ page, request }) => {
@@ -68,9 +85,9 @@ test('works with logos and features are shown', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeAttached();
 });
 
-test('download page offers the Mac and Windows apps and install commands', async ({ page }) => {
+test('download page offers the Mac and Windows apps and install commands', async ({ page, isMobile }) => {
   await page.goto('/');
-  await navLink(page, 'Download').click();
+  await (await navLink(page, isMobile, 'Download')).click();
   await expect(page).toHaveURL(/\/download$/);
   await page.getByRole('tab', { name: 'macOS' }).click();
   await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute(

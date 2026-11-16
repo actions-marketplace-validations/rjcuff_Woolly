@@ -124,9 +124,6 @@ function Brain() {
   return (
     <figure className="mt-14">
       <PixelBrain />
-      <figcaption className="mt-5 text-[13px] text-fd-muted-foreground">
-        Every square is a memory.<span className="hidden [@media(hover:hover)]:inline"> Hover to recall one.</span>
-      </figcaption>
     </figure>
   );
 }
@@ -161,7 +158,7 @@ function Hero({ download, latest }: { download: { href: string; label: string };
         can read.
       </p>
 
-      <div className="mt-9 flex flex-wrap gap-3">
+      <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <BlockButton href="/docs/quickstart">Get started</BlockButton>
         <FrameButton href={download.href}>{download.label}</FrameButton>
       </div>

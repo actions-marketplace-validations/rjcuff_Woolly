@@ -25,11 +25,6 @@ export const links: Route.LinksFunction = () => [
     rel: 'stylesheet',
     href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=optional',
   },
-  // The wordmark always shows in its own face, even if it arrives late.
-  {
-    rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=Shrikhand&display=swap',
-  },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
 ];
 

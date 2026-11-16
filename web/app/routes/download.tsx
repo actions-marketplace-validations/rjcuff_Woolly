@@ -64,14 +64,14 @@ export default function Download({ loaderData }: Route.ComponentProps) {
 
         <div id="os-panel" role="tabpanel" aria-labelledby={`os-${os}`} className="mt-8 flex flex-col gap-8">
           {os === 'mac' && (
-            <div className="flex flex-col items-start gap-3">
+            <div className="flex flex-col items-stretch gap-3 sm:items-start">
               <BlockButton href={macApp}>Download for Mac</BlockButton>
               <p className="text-[14px] text-fd-muted-foreground">Apple Silicon and Intel · macOS 11 or later</p>
             </div>
           )}
 
           {os === 'windows' && (
-            <div className="flex flex-col items-start gap-3">
+            <div className="flex flex-col items-stretch gap-3 sm:items-start">
               <BlockButton href={windowsApp}>Download for Windows</BlockButton>
               <p className="text-[14px] text-fd-muted-foreground">Windows 10 or later</p>
             </div>

@@ -5,7 +5,7 @@ import { githubUrl } from './shared';
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: <Wordmark className="text-[30px]" />,
+      title: <Wordmark className="text-[22px]" />,
     },
     githubUrl,
     slots: {

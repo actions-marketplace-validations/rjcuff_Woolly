@@ -49,7 +49,7 @@ export function BlockButton({ href, children, className }: { href: string; child
         <ArrowRight className="size-[18px] transition-transform duration-300 ease-ui group-hover:translate-x-[38px] motion-reduce:transition-none" />
         <ArrowRight className="absolute size-[18px] -translate-x-[38px] transition-transform duration-300 ease-ui group-hover:translate-x-0 motion-reduce:transition-none" />
       </span>
-      <span className="flex items-center px-4 font-mono text-[13px] font-medium uppercase tracking-[0.12em]">{children}</span>
+      <span className="flex flex-1 items-center justify-center px-4 font-mono text-[13px] font-medium uppercase tracking-[0.12em]">{children}</span>
     </SmartLink>
   );
 }
@@ -73,7 +73,7 @@ export function FrameButton({ href, children, className }: { href: string; child
     <SmartLink
       href={href}
       className={cn(
-        'btn-press group relative inline-flex h-11 items-center gap-2 bg-brand/[0.07] px-4 font-mono text-[13px] font-medium uppercase tracking-[0.12em] text-fd-foreground outline-none transition-colors hover:bg-brand/[0.12] focus-visible:ring-2 focus-visible:ring-brand',
+        'btn-press group relative inline-flex h-11 items-center justify-center gap-2 bg-brand/[0.07] px-4 font-mono text-[13px] font-medium uppercase tracking-[0.12em] text-fd-foreground outline-none transition-colors hover:bg-brand/[0.12] focus-visible:ring-2 focus-visible:ring-brand',
         className,
       )}
     >

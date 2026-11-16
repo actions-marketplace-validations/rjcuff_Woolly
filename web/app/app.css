@@ -32,6 +32,8 @@ html > body[data-scroll-locked] {
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   /* EASE_OUT from lib/ease.ts, as a Tailwind class: ease-ui. */
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  /* EASE_DRAWER from lib/ease.ts: ease-drawer. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   /* Woolly red: Apple's system red (#ff3b30), deepened the way Apple's web
      blue #0071e3 deepens #007aff, so white text on it and links on white pass AA. */
   --color-brand: #de3329;
@@ -74,16 +76,14 @@ html > body[data-scroll-locked] {
   --color-accent: var(--accent);
 }
 
-/* The Woolly wordmark: chunky, playful, a little bouncy. */
+/* The wordmark: lowercase, set like the homepage headline. */
 .wordmark {
-  font-family: 'Shrikhand', 'Cooper Black', Georgia, serif;
+  font-family: var(--font-sans);
   font-weight: 400;
   line-height: 1;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.03em;
   color: var(--color-fd-foreground);
   display: inline-block;
-  transform: rotate(-2deg);
-  padding-bottom: 0.08em;
 }
 
 /* Roomier docs: more air between blocks and headings. */

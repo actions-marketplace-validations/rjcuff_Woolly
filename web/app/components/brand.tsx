@@ -2,7 +2,7 @@ import { ThemeToggle } from '@/components/motion/theme-toggle';
 import { cn } from '@/lib/utils';
 
 export function Wordmark({ className }: { className?: string }) {
-  return <span className={cn('wordmark', className)}>Woolly</span>;
+  return <span className={cn('wordmark', className)}>woolly</span>;
 }
 
 // The easeUI toggle, sized to sit in Fumadocs' nav and sidebar.
