@@ -1,0 +1,15 @@
+Woolly
+Copyright (c) 2026 Ryan Cuff. MIT License, see LICENSE.
+
+Woolly contains no code from other memory projects. Some of its designs were
+adapted from these Apache-2.0 projects, with thanks:
+
+- claude-mem (https://github.com/thedotmack/claude-mem): capturing coding
+  sessions through lifecycle hooks, and a small brief at session start with
+  details fetched on demand.
+- Mem0 (https://github.com/mem0ai/mem0): the add, update, delete and no-op
+  decision for each new fact, and the shape of its memory API.
+- Graphiti by Zep (https://github.com/getzep/graphiti): facts that record when
+  they became true and when they stopped being true.
+- Letta (https://github.com/letta-ai/letta): editing memory in the background
+  while the agent is idle, which Woolly calls dreaming.

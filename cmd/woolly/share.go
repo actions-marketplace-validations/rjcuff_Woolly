@@ -21,6 +21,8 @@ func cmdInit(args []string) error {
 	capture := fs.Bool("capture", false, "save decisions when a Claude Code session ends (the default)")
 	noCapture := fs.Bool("no-capture", false, "don't save decisions when a session ends")
 	stop := fs.Bool("stop", false, "stop keeping memory in this repo and remove .woolly/")
+	hooks := fs.Bool("hooks", false, "check project memory against the code after every commit")
+	noHooks := fs.Bool("no-hooks", false, "stop checking after every commit")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
@@ -33,6 +35,7 @@ func cmdInit(args []string) error {
 		if err := r.Disable(); err != nil {
 			return err
 		}
+		_, _ = removeHook(r.Dir)
 		fmt.Println("Removed .woolly/ from this repo. Your memories are still on this computer.")
 		return nil
 	}
@@ -88,6 +91,23 @@ func cmdInit(args []string) error {
 	}
 	if cfg.Capture {
 		fmt.Println("Decisions from Claude Code sessions are saved here when they end (turn off with --no-capture).")
+	}
+	switch {
+	case *hooks:
+		if _, err := installHook(r.Dir); err != nil {
+			return fmt.Errorf("adding the git hook: %w", err)
+		}
+		fmt.Println("Every commit now checks project memory against the code, in the background. Run woolly review when facts go stale.")
+	case *noHooks:
+		if changed, err := removeHook(r.Dir); err != nil {
+			return err
+		} else if changed {
+			fmt.Println("Removed the post-commit check.")
+		}
+	case hasHook(r.Dir):
+		fmt.Println("Every commit checks project memory against the code.")
+	default:
+		fmt.Println("Tip: woolly init --hooks checks project memory against the code after every commit.")
 	}
 	return nil
 }

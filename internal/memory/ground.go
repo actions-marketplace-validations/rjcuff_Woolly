@@ -288,8 +288,9 @@ func (s *Store) MarkStale(id string, in StaleInput) (Memory, error) {
 
 // Confirm says a stale fact is still true. It becomes current again, and
 // its sources are replaced by refs when refs isn't nil (with fresh
-// fingerprints, from the caller).
-func (s *Store) Confirm(id string, refs []Ref) (Memory, error) {
+// fingerprints, from the caller). commit, when set, is the commit the code
+// was checked at, so later checks compare against it.
+func (s *Store) Confirm(id string, refs []Ref, commit string) (Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.refresh(); err != nil {
@@ -304,6 +305,9 @@ func (s *Store) Confirm(id string, refs []Ref) (Memory, error) {
 	}
 	if refs != nil {
 		m.Sources = cleanRefs(refs)
+	}
+	if commit != "" {
+		m.Commit = commit
 	}
 	m.Status = StatusActive
 	m.StaleReason, m.StaleCommit, m.StaleAt = "", "", nil
@@ -320,8 +324,9 @@ func (s *Store) Confirm(id string, refs []Ref) (Memory, error) {
 
 // SetSources replaces a fact's sources without changing its status, as when
 // a check finds a symbol that moved to another file or records a missing
-// fingerprint.
-func (s *Store) SetSources(id string, refs []Ref) (Memory, error) {
+// fingerprint. commit is saved too when the fact has none, so later checks
+// have code to compare against.
+func (s *Store) SetSources(id string, refs []Ref, commit string) (Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.refresh(); err != nil {
@@ -332,6 +337,9 @@ func (s *Store) SetSources(id string, refs []Ref) (Memory, error) {
 		return Memory{}, err
 	}
 	m.Sources = cleanRefs(refs)
+	if m.Commit == "" {
+		m.Commit = commit
+	}
 	if err := s.write(m); err != nil {
 		return Memory{}, err
 	}

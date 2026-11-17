@@ -6,6 +6,13 @@
 - A new `stale` status for facts whose code changed or is gone. Stale facts stay on disk with the reason and the commit, but leave search and session briefs until you review them.
 - `.woolly/woolly.md` lines show `src=` for the code a fact points at and `stale=` with the commit that made it stale, so teammates see both in the diff. New Bugs and Hardware headings show up when they have facts; existing files don't change.
 - When each memory was last used is kept in `~/.woolly/usage.json`, not in the memory files.
+- `woolly check` checks every project fact that points at code against the code as it is now. A renamed or removed function, a deleted file, or a value the fact states that's no longer there marks the fact stale, with the reason and the commit that did it. Code that moved to another file, a renamed file and lines that shifted just move the fact's sources along. Comments and spacing never count. It exits with status 1 when a fact went stale, so it works in CI. Woolly finds definitions in Go, C, C++, Python, JavaScript, TypeScript and Rust, and checks that names still appear in other files. See [Stale facts](https://usewoolly.com/docs/stale-facts).
+- The first `woolly check` in a repo adds sources to existing project facts from the files and code names they mention.
+- `woolly review` goes through stale facts one at a time, so you can confirm, fix or retire each one. Nothing is deleted.
+- `woolly init --hooks` adds a git post-commit hook that checks project memory after every commit, in the background, so the commit returns right away. Existing hooks are kept.
+- The session brief leaves stale facts out and tells the agent how many went stale since the last session. It runs a quick check first.
+- Facts that agents save with sources are checked against the repo, so a source that doesn't exist is dropped.
+- A stale-fact benchmark, `bench/stale/run.py`. On 50 scripted changes to a small ESP32 firmware repo, Woolly flagged 28 of the 30 facts that went wrong and none of the 20 that didn't, in a median of 35 ms. Every number Woolly publishes is in `bench/RESULTS.md`.
 
 ## 0.14.1
 

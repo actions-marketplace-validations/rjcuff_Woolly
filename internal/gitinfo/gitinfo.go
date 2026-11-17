@@ -65,3 +65,88 @@ func Changes(dir, commit string, paths []string) int {
 	}
 	return n
 }
+
+// Show returns a file as it was at commit, if git has it.
+func Show(dir, commit, path string) ([]byte, bool) {
+	if commit == "" {
+		return nil, false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "-C", dir, "show", commit+":"+path).Output()
+	if err != nil {
+		return nil, false
+	}
+	return out, true
+}
+
+// LastTouch returns the short hash of the last commit that changed path,
+// including the one that deleted it.
+func LastTouch(dir, path string) string {
+	out, err := git(dir, "log", "-1", "--format=%h", "--", path)
+	if err != nil {
+		return ""
+	}
+	return out
+}
+
+// Removed returns the short hash of the last commit that added or removed
+// text in path (git log -S), or "" if git can't tell.
+func Removed(dir, text, path string) string {
+	out, err := git(dir, "log", "-1", "--format=%h", "-S"+text, "--", path)
+	if err != nil {
+		return ""
+	}
+	return out
+}
+
+// RenamedTo returns where git thinks path moved to since commit, or "".
+func RenamedTo(dir, commit, path string) string {
+	if commit == "" {
+		return ""
+	}
+	out, err := git(dir, "diff", "--name-status", "-M", commit, "--")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(out, "\n") {
+		f := strings.Split(line, "\t")
+		if len(f) == 3 && strings.HasPrefix(f[0], "R") && f[1] == path {
+			return f[2]
+		}
+	}
+	return ""
+}
+
+// Files lists the files git tracks in the repo, plus new ones it would.
+func Files(dir string) []string {
+	out, err := git(dir, "ls-files", "--cached", "--others", "--exclude-standard")
+	if err != nil || out == "" {
+		return nil
+	}
+	return strings.Split(out, "\n")
+}
+
+// Dirty reports whether path has changes that aren't committed.
+func Dirty(dir, path string) bool {
+	out, err := git(dir, "status", "--porcelain", "--", path)
+	return err == nil && out != ""
+}
+
+// Since lists the commits after base that touched path, oldest first, at
+// most 100.
+func Since(dir, base, path string) []string {
+	args := []string{"rev-list", "--reverse", "--abbrev-commit", "HEAD", "--", path}
+	if base != "" {
+		args = []string{"rev-list", "--reverse", "--abbrev-commit", base + "..HEAD", "--", path}
+	}
+	out, err := git(dir, args...)
+	if err != nil || out == "" {
+		return nil
+	}
+	list := strings.Split(out, "\n")
+	if len(list) > 100 {
+		list = list[len(list)-100:]
+	}
+	return list
+}

@@ -541,8 +541,8 @@ func (s *Server) sources(project string, refs []string) []memory.Ref {
 			out = append(out, ref)
 		}
 	}
-	if s.Ground != nil && s.Repo != nil && s.Repo.Project == project {
-		out = s.Ground(s.Repo.Dir, out)
+	if s.Ground != nil && s.Root != "" && project == s.Project {
+		out = s.Ground(s.Root, out)
 	}
 	return out
 }

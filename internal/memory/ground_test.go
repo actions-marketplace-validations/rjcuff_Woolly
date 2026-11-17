@@ -132,8 +132,8 @@ func TestStaleLifecycle(t *testing.T) {
 		t.Fatalf("Stale(other) = %d", len(st))
 	}
 
-	m, err = s.Confirm(id, []Ref{{Path: "main/imu.c", Symbol: "imu_read_accel_g", Hash: "abcd"}})
-	if err != nil || m.Status != StatusActive || m.StaleReason != "" || m.StaleAt != nil || m.Sources[0].Symbol != "imu_read_accel_g" {
+	m, err = s.Confirm(id, []Ref{{Path: "main/imu.c", Symbol: "imu_read_accel_g", Hash: "abcd"}}, "4e1c9a2")
+	if err != nil || m.Status != StatusActive || m.StaleReason != "" || m.StaleAt != nil || m.Sources[0].Symbol != "imu_read_accel_g" || m.Commit != "4e1c9a2" {
 		t.Fatalf("confirm: %v %+v", err, m)
 	}
 
@@ -145,7 +145,7 @@ func TestStaleLifecycle(t *testing.T) {
 	if _, err := s.MarkStale(id, StaleInput{Reason: "x"}); err == nil {
 		t.Fatal("an expired fact can't go stale")
 	}
-	if _, err := s.Confirm(id, nil); err == nil {
+	if _, err := s.Confirm(id, nil, ""); err == nil {
 		t.Fatal("an expired fact can't be confirmed")
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/rjcuff/woolly/internal/activity"
 	"github.com/rjcuff/woolly/internal/decision"
+	"github.com/rjcuff/woolly/internal/gitinfo"
 	"github.com/rjcuff/woolly/internal/handoff"
 	"github.com/rjcuff/woolly/internal/memory"
 	"github.com/rjcuff/woolly/internal/profile"
@@ -39,15 +40,21 @@ func cmdContext(args []string) error {
 		return nil
 	}
 	a.syncRepo(cwd)
+	repoDir := ""
+	project := projectName(cwd)
+	if r := share.Find(cwd); r != nil {
+		repoDir = r.Dir
+		// A quick check first, so facts the code no longer backs up stay
+		// out of the brief. It stops after a second and a half.
+		if r.Project == project && gitinfo.Head(r.Dir) != "" {
+			_, _ = a.checkRepo(r.Dir, project, checkOptions{deadline: time.Now().Add(1500 * time.Millisecond)})
+		}
+	}
 	mems, err := a.store.List(false)
 	if err != nil || len(mems) == 0 {
 		return nil
 	}
-	repoDir := ""
-	if r := share.Find(cwd); r != nil {
-		repoDir = r.Dir
-	}
-	text, ids := buildContext(mems, projectName(cwd), repoDir)
+	text, ids := buildContext(mems, project, repoDir, a.staleLine(memory.NormalizeProject(project)))
 	if text == "" {
 		return nil
 	}
@@ -61,7 +68,7 @@ func cmdContext(args []string) error {
 }
 
 // buildContext lists the project's memories, then the profile.
-func buildContext(mems []memory.Memory, project, repoDir string) (string, []string) {
+func buildContext(mems []memory.Memory, project, repoDir, staleLine string) (string, []string) {
 	var b strings.Builder
 	header := "Notes about the user from Woolly, their local memory."
 	if project != "" {
@@ -98,6 +105,9 @@ func buildContext(mems []memory.Memory, project, repoDir string) (string, []stri
 		case m.Project == "":
 			rest = append(rest, m)
 		}
+	}
+	if staleLine != "" {
+		b.WriteString("# Stale facts\n\n" + staleLine + "\n\n")
 	}
 	b.WriteString(handoffText)
 	decided, decidedIDs := decision.Section(mems, p)

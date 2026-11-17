@@ -55,6 +55,9 @@ const usage = `Woolly: project memory your coding agents can trust. Local, and i
 
 Usage:
   woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]
+                               [--type hardware] [--source-ref main/pins.h:12-18]
+  woolly check [--json] [--quiet]  check this repo's facts against the code and flag stale ones
+  woolly review                confirm, fix or retire stale facts
   woolly learn [text]          pick out facts from text or a conversation with a local model
   woolly dream [--project p] [--dry-run]  tidy memory and learn lessons from past sessions
   woolly recall <query> [-n 5] [--project p] [--all] [--json]
@@ -69,7 +72,7 @@ Usage:
   woolly log [--app name] [-n 50]  what each app saved, read and deleted
   woolly context               print what Woolly knows, for an app to read at startup
   woolly handoff               where you left off in this project
-  woolly init [--export claude,agents] [--no-capture]  keep project memory in this repo for your team
+  woolly init [--hooks] [--export claude,agents] [--no-capture]  keep project memory in this repo for your team
   woolly project [edit]        show or edit this repo's project memory
   woolly decide <choice> [--why ...] [--rejected "X: reason"]  save a decision
   woolly resolve <id>          keep this memory as the current fact for its key
@@ -96,6 +99,10 @@ func main() {
 	if err := run(os.Args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return // the help was printed
+		}
+		var code exitError
+		if errors.As(err, &code) {
+			os.Exit(int(code))
 		}
 		fmt.Fprintln(os.Stderr, "woolly:", err)
 		os.Exit(1)
@@ -147,6 +154,10 @@ func run(args []string) error {
 		return cmdContext(rest)
 	case "handoff":
 		return cmdHandoff(rest)
+	case "check":
+		return cmdCheck(rest)
+	case "review":
+		return cmdReview(rest)
 	case "init", "share":
 		return cmdInit(rest)
 	case "project":
@@ -909,7 +920,7 @@ func cmdMCP(args []string) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject()}
+	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject(), Ground: groundRefs}
 	if cwd, err := os.Getwd(); err == nil {
 		if r := share.Find(cwd); r != nil {
 			s.Root = r.Dir
