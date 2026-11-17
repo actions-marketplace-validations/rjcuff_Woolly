@@ -1,9 +1,9 @@
-import { ArrowUpRight, Bot, FileText, History, Moon, Pin, Sunrise, Users, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, FileText, GitCommitHorizontal, History, Moon, Pin, ShieldAlert, Sunrise, Users, type LucideIcon } from 'lucide-react';
 import { useInView, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { BlockButton, FrameButton, Label, MoreLink, SmartLink } from '@/components/doc/parts';
-import { PixelBrain } from '@/components/doc/pixel-brain';
+import { PixelMammoth } from '@/components/doc/pixel-mammoth';
 import type { DocSection } from '@/components/doc/rail';
 import { InsightCard } from '@/components/motion/insight-card';
 import { NumberTicker } from '@/components/motion/number-ticker';
@@ -18,22 +18,23 @@ export const SECTIONS: DocSection[] = [
   { id: 'top', label: 'Overview' },
   { id: 'why', label: 'Why Woolly' },
   { id: 'what', label: 'What it does' },
-  { id: 'build', label: 'Build with it' },
   { id: 'numbers', label: 'By the numbers' },
   { id: 'anywhere', label: 'Runs anywhere' },
+  { id: 'build', label: 'For your own agents' },
   { id: 'private', label: 'Private' },
   { id: 'shipping', label: 'Shipping weekly' },
   { id: 'questions', label: 'Questions' },
 ];
 
 /** Setup steps a coding agent can follow on its own, shown in the Raw .md view. */
-export const SETUP_PROMPT = `Set up Woolly, the local memory shared by my AI tools.
+export const SETUP_PROMPT = `Set up Woolly, the project memory my coding agents share.
 
 1. Install it with curl -fsSL https://usewoolly.com/install.sh | sh
    (on Windows, irm https://usewoolly.com/install.ps1 | iex)
 2. Connect my AI apps with woolly connect
 3. Keep it running at login with woolly service install
-4. Check it works with woolly doctor
+4. In this repo, run woolly init so every agent shares its memory
+5. Check it works with woolly doctor, and check facts against the code with woolly check
 
 Docs for agents are at https://usewoolly.com/llms.txt`;
 
@@ -121,10 +122,10 @@ function WorksWith() {
   );
 }
 
-function Brain() {
+function Mammoth() {
   return (
     <figure className="mt-14">
-      <PixelBrain />
+      <PixelMammoth />
     </figure>
   );
 }
@@ -151,12 +152,12 @@ function Hero({ download, latest }: { download: { href: string; label: string };
         </SmartLink>
       ) : null}
 
-      <h1 className="mt-8 text-[34px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[46px]">
-        memory and learning for your agents
+      <h1 className="mt-8 text-balance text-[34px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[46px]">
+        Memory that knows when it’s wrong.
       </h1>
       <p className="mt-6 max-w-[560px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
-        Woolly is the open memory engine for agents. It keeps facts current and learns from every session, through an API,
-        Python and JavaScript SDKs, plugins and MCP. It runs on your own machine by default, in Markdown you can read.
+        One local memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones that
+        go stale.
       </p>
 
       <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -168,16 +169,43 @@ function Hero({ download, latest }: { download: { href: string; label: string };
         <WorksWith />
       </div>
 
-      <Brain />
+      <Mammoth />
     </header>
   );
 }
 
 const FEATURES: { icon: LucideIcon; title: string; body: ReactNode }[] = [
   {
+    icon: ShieldAlert,
+    title: 'It knows when a fact goes stale.',
+    body: (
+      <>
+        On every commit, and whenever you run <code className="font-mono text-[15px]">woolly check</code>, Woolly checks each
+        fact against the code it points at. Rename a function, delete a file or change a pin number, and the fact that
+        relied on it is flagged with the commit that broke it, instead of being handed to your agent.
+      </>
+    ),
+  },
+  {
+    icon: GitCommitHorizontal,
+    title: 'Every fact cites its source.',
+    body: 'A fact links to the file, function or lines it’s about, the commit it was saved at, and the session it came from. You can see why your agent believes something, and so can Woolly.',
+  },
+  {
+    icon: Users,
+    title: 'One memory for every agent on the repo.',
+    body: (
+      <>
+        Claude Code, Cursor and Codex read and update the same notes. <code className="font-mono text-[15px]">woolly init</code>{' '}
+        keeps them in <code className="font-mono text-[15px]">.woolly/woolly.md</code>, so your teammates’ agents get them
+        through git too.
+      </>
+    ),
+  },
+  {
     icon: Sunrise,
     title: 'Sessions that start warm.',
-    body: 'Claude Code opens every session with your profile, the project’s notes and a handoff from last time. Nobody has to say “here’s my stack” again.',
+    body: 'Each session opens with a short brief. It has the project’s current facts, where you left off, and a one-line warning when something went stale. Nobody has to say “here’s my stack” again.',
   },
   {
     icon: Pin,
@@ -185,35 +213,19 @@ const FEATURES: { icon: LucideIcon; title: string; body: ReactNode }[] = [
     body: 'When a session ends, Woolly saves what you chose, why, and what you ruled out. No agent pitches the rejected option again.',
   },
   {
-    icon: Bot,
-    title: 'Agents that remember.',
-    body: 'Give the agents you build a memory with an API shaped like mem0’s. For each fact a local model decides whether it’s new, an update, or no longer true, and every user’s memories stay apart.',
+    icon: History,
+    title: 'Facts keep their history.',
+    body: 'Nothing is deleted. A replaced or stale fact stays on disk with the date it stopped being true, and woolly review lets you confirm, fix or retire it.',
   },
   {
     icon: Moon,
     title: 'It dreams.',
-    body: 'While you’re away, Woolly merges duplicates, settles facts that changed, and turns your past sessions into lessons for the next one.',
-  },
-  {
-    icon: History,
-    title: 'Facts keep their history.',
-    body: 'A newer fact replaces the old one, which stays on disk with the time it stopped being true. When an AI guesses something that contradicts you, your version wins and the guess waits for your review.',
+    body: 'While you’re away, your local model merges duplicates, settles facts that changed, and turns past sessions into lessons for the next one.',
   },
   {
     icon: FileText,
-    title: 'Memory you can read',
-    body: 'Every memory is a Markdown file. Open it, grep it, fix it by hand, and see which tool saved it. The Woolly app shows the same thing with search.',
-  },
-  {
-    icon: Users,
-    title: 'One project memory for the team.',
-    body: (
-      <>
-        <code className="font-mono text-[15px]">woolly init</code> keeps the repo’s stack, conventions and gotchas in{' '}
-        <code className="font-mono text-[15px]">.woolly/woolly.md</code>. Commit it, and every teammate’s agent reads and
-        updates the same notes.
-      </>
-    ),
+    title: 'Memory you can read.',
+    body: 'Every memory is a Markdown file. Open it, grep it, fix it by hand, and see which tool saved it.',
   },
 ];
 
@@ -344,40 +356,28 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         <H2>Why Woolly</H2>
         <div className="mt-6 flex flex-col gap-5">
           <p className={P}>
-            Every AI coding tool starts from zero. You explain your stack to Cursor, then again to Claude Code, then to
-            Codex. Each keeps its own memory, or none, and none of them know what you decided yesterday or what your
-            teammate’s agent learned this morning.
+            You switch between Claude Code, Cursor and Codex on the same repo, and each one starts from zero. You explain
+            the pin map again. You remind it which config value you settled on. The tools that do remember have a worse
+            problem. They keep repeating facts the code stopped backing up weeks ago.
           </p>
           <p className={P}>
-            Woolly is <strong className="font-medium">the memory they share</strong>. It’s one folder on your laptop,
-            plain Markdown, with no cloud and no account. Any tool that speaks{' '}
+            Woolly is <strong className="font-medium">project memory your coding agents can trust</strong>. It’s plain
+            Markdown on your machine, shared by every agent through{' '}
             <Link to="/docs/mcp" className={INLINE}>
               MCP
             </Link>{' '}
-            can save to it and search it, and{' '}
-            <Link to="/docs/proxy" className={INLINE}>
-              woolly proxy
-            </Link>{' '}
-            gives the same memory to Ollama and any app that uses the OpenAI or Anthropic API.
+            and hooks, with no cloud and no account. Every fact points at the code it’s about.
           </p>
           <p className={P}>
-            When a session starts, your agent gets your profile, the project’s notes and{' '}
-            <Link to="/docs/how-it-works" className={INLINE}>
-              where you left off
-            </Link>
-            . When it ends, Woolly saves what you decided and why.
-          </p>
-          <p className={P}>
-            The agents you build get the same memory. Send a conversation to the{' '}
-            <Link to="/docs/memory-api" className={INLINE}>
-              memory API
+            When that code changes,{' '}
+            <Link to="/docs/stale-facts" className={INLINE}>
+              Woolly marks the fact stale
             </Link>{' '}
-            and a local model decides what’s new, what changed and what’s no longer true, per user. While you’re away,
-            Woolly{' '}
-            <Link to="/docs/dreaming" className={INLINE}>
-              dreams
-            </Link>
-            . It tidies what it knows and learns lessons from your sessions.
+            instead of letting your agent follow it. It runs fully on your machine, with{' '}
+            <Link to="/docs/ollama" className={INLINE}>
+              Ollama
+            </Link>{' '}
+            if you have it and plain keyword search if you don’t.
           </p>
         </div>
       </Section>
@@ -402,20 +402,6 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         </ol>
         <div className="mt-8">
           <MoreLink href="/docs/how-it-works">Read how it works</MoreLink>
-        </div>
-      </Section>
-
-      <Section id="build">
-        <H2>Build agents that remember</H2>
-        <p className={cn(P, 'mt-5')}>
-          The same calls as mem0, answered by your own machine. Install the package, add a conversation for a user, and
-          search before your agent replies.
-        </p>
-        <CodeSample />
-        <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
-          <MoreLink href="/docs/memory-api">Memory API</MoreLink>
-          <MoreLink href="/docs/javascript">JavaScript</MoreLink>
-          <MoreLink href="/docs/python">Python</MoreLink>
         </div>
       </Section>
 
@@ -498,6 +484,20 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
             </li>
           ))}
         </ul>
+      </Section>
+
+      <Section id="build">
+        <H2>Memory for the agents you build, too</H2>
+        <p className={cn(P, 'mt-5')}>
+          The same engine has an API shaped like mem0’s, answered by your own machine. Add a conversation for a user, and
+          a local model decides what’s new, what changed and what’s no longer true.
+        </p>
+        <CodeSample />
+        <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+          <MoreLink href="/docs/memory-api">Memory API</MoreLink>
+          <MoreLink href="/docs/javascript">JavaScript</MoreLink>
+          <MoreLink href="/docs/python">Python</MoreLink>
+        </div>
       </Section>
 
       <Section id="private">

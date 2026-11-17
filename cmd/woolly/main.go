@@ -51,7 +51,7 @@ func init() {
 	}
 }
 
-const usage = `Woolly: local memory for your AI tools.
+const usage = `Woolly: project memory your coding agents can trust. Local, and it knows when a fact goes stale.
 
 Usage:
   woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]

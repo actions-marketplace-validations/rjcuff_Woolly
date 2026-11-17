@@ -13,7 +13,7 @@ base="https://github.com/rjcuff/woolly/releases/download/v$version"
 
 cat <<RUBY
 class Woolly < Formula
-  desc "Local memory for your AI tools"
+  desc "Local project memory for coding agents that flags stale facts"
   homepage "https://usewoolly.com"
   version "$version"
   license "MIT"

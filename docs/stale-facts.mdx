@@ -1,0 +1,89 @@
+---
+title: Stale facts
+description: Woolly checks every project fact against the code it points at, and flags the ones the code no longer backs up.
+---
+
+A memory that's out of date is worse than no memory, because your agent follows it with confidence. Woolly ties each project fact to the code it's about, and when that code changes, it marks the fact **stale** instead of handing it to your agent.
+
+## How a fact points at code
+
+A project fact can have sources. Each one is a file, a function, type, macro or constant in it, or a range of lines.
+
+```sh
+woolly remember "The IMU's chip select is GPIO 5" --type hardware --source-ref main/pins.h:12-18
+woolly remember "imu_read_accel returns raw counts; divide by 16384 for g" --source-ref main/imu.c#imu_read_accel
+```
+
+Agents do the same through the MCP `remember` tool. Facts saved without sources get them the first time you run `woolly check`, from the files and names they mention.
+
+## Check
+
+```sh
+woolly check
+```
+
+```
+Checked 24 facts in drone against 4e1c9a2.
+  stale  imu_read_accel returns raw counts; divide by 16384 for g
+         main/imu.c: imu_read_accel was renamed to imu_read_accel_g in 4e1c9a2
+1 fact went stale. Run woolly review to confirm, fix or retire it.
+```
+
+For each fact with sources, Woolly asks four questions.
+
+| Question | If not |
+| --- | --- |
+| Is the file still there? | If git says it was renamed, the source follows it. If it was deleted, the fact is stale. |
+| Is the function, type, macro or constant still there? | If it moved to another file, the source follows it. If it was renamed and the fact names it, or it's gone, the fact is stale. |
+| Are the values the fact states still in that code? | A number or name from the fact that was in the code when the fact was saved, and is gone now, makes it stale. "GPIO 5" goes stale when the pin changes to 4. |
+| Did the code change at all? | A change that keeps the fact's values is reported as changed, not stale, so refactors don't bury you in warnings. Comments and spacing don't count. |
+
+The reason and the commit that caused it are saved with the fact. Nothing is deleted.
+
+`woolly check` exits with status 1 when a fact went stale, so you can run it in CI.
+
+| Flag | Meaning |
+| --- | --- |
+| `--json` | Print the results as JSON |
+| `--quiet` | Print only when something went stale |
+| `--no-backfill` | Don't add sources to facts that have none |
+
+Woolly finds definitions in Go, C, C++, Python, JavaScript, TypeScript and Rust. In other files it checks that the name still appears.
+
+## Check on every commit
+
+```sh
+woolly init --hooks
+```
+
+This adds a git `post-commit` hook that queues a check after each commit and returns right away. Woolly runs it in the background. If you already have a `post-commit` hook, Woolly's line is added to it.
+
+## Review
+
+```sh
+woolly review
+```
+
+Woolly shows each stale fact with its reason, one at a time.
+
+| Key | What it does |
+| --- | --- |
+| `c` | Confirm. It's still true. The fact is current again, pointing at the code as it is now. |
+| `e` | Edit. Type the corrected fact. It replaces the stale one, which is kept as history. |
+| `r` | Retire. It's no longer true. It's kept as history with today's date. |
+| `s` | Skip for now |
+| `q` | Quit |
+
+## What your agent sees
+
+Stale facts are left out of search and the brief at the start of a session. Instead, the agent gets one line.
+
+```
+2 facts went stale since last session. Run woolly review.
+```
+
+In `.woolly/woolly.md`, a stale fact keeps its line with `stale=` and the commit, so teammates see it in the diff.
+
+```md
+- The IMU's chip select is GPIO 5 <!-- id=1a2b3c4d src=main/pins.h:12-18 stale=4e1c9a2 -->
+```

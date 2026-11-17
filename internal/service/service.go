@@ -126,7 +126,7 @@ func Plist(s Spec) string {
 // Unit renders the systemd user unit.
 func Unit(s Spec) string {
 	var b strings.Builder
-	b.WriteString("[Unit]\nDescription=Woolly, local memory for your AI tools\nAfter=network.target\n\n[Service]\n")
+	b.WriteString("[Unit]\nDescription=Woolly, project memory for your coding agents\nAfter=network.target\n\n[Service]\n")
 	words := make([]string, 0, len(s.Args)+1)
 	for _, a := range append([]string{s.Exe}, s.Args...) {
 		words = append(words, systemdQuote(a))

@@ -1,37 +1,40 @@
 ---
 title: Introduction
-description: Woolly is a local memory for your AI tools. One memory, shared by every app, kept in files you own.
+description: Project memory your coding agents can trust. Local, and it knows when a fact goes stale.
 ---
 
-Every AI app you use forgets you, or keeps its own separate memory. Claude doesn't know what you told ChatGPT, Cursor doesn't know what you decided in Claude Code, and your teammates' agents start from zero.
+You switch between Claude Code, Cursor and Codex on the same repo, and each one starts from zero. You explain the pin map again, the config value you settled on, the gotcha that cost you a day. Tools that do remember have a worse problem. They keep repeating facts the code stopped backing up weeks ago.
 
-**Woolly fixes that.** It runs on your laptop and gives all of your AI tools one shared memory, and with `woolly init`, one project memory for your whole team.
+**Woolly is project memory your coding agents can trust.** It's local, every agent shares it, and every fact cites the code it came from. When that code changes, Woolly marks the fact [stale](/docs/stale-facts) instead of letting your agent follow it.
 
 <Cards>
-  <Card title="Quickstart" href="/docs/quickstart" description="Install Woolly and save your first memory in two minutes." />
-  <Card title="Connect your apps" href="/docs/connect" description="woolly connect adds Woolly to Claude Code, Cursor, VS Code, Codex, Gemini CLI and more." />
-  <Card title="Project memory for your team" href="/docs/project-memory" description="woolly init keeps a repo's memory in git, so every teammate's agent reads and updates it." />
-  <Card title="Give Ollama a memory" href="/docs/proxy" description="One command adds memory to Ollama, OpenAI and Anthropic apps." />
-  <Card title="Build with JavaScript" href="/docs/javascript" description="npm install woolly-ai, with a one-line Vercel AI SDK helper." />
-  <Card title="Build with Python" href="/docs/python" description="pip install woolly-ai and add memory to any prompt." />
+  <Card title="Quickstart" href="/docs/quickstart" description="Install Woolly and connect your agents in two minutes." />
+  <Card title="Stale facts" href="/docs/stale-facts" description="woolly check flags facts the code no longer backs up, and woolly review settles them." />
+  <Card title="Project memory" href="/docs/project-memory" description="woolly init keeps a repo's memory in git, so every agent and teammate shares it." />
+  <Card title="Connect your agents" href="/docs/connect" description="woolly connect adds Woolly to Claude Code, Cursor, Codex, Gemini CLI and more." />
 </Cards>
 
 ## Why Woolly
 
 <Cards>
-  <Card title="One binary, no setup" description="No Docker, no database server, no account. Install it and it works." />
+  <Card title="It knows when it's wrong" description="Rename a function, delete a file or change a value, and the facts that relied on it are flagged with the commit that broke them." />
+  <Card title="Every fact cites its source" description="A file, function or line range, the commit, and the session it came from." />
+  <Card title="One memory for every agent" description="Claude Code, Cursor and Codex read and update the same notes, and teammates get them through git." />
   <Card title="Files you can read" description="Every memory is a Markdown file. Edit it, search it, back it up, put it in git." />
-  <Card title="Facts stay current" description="When something changes, the new fact replaces the old one automatically." />
-  <Card title="You have the final say" description="If an AI contradicts something you said, Woolly flags it instead of overwriting you." />
-  <Card title="Safe by default" description="Passwords and keys are refused, an AI can't plant instructions, and deleted memories can be restored." />
-  <Card title="See everything" description="woolly ui opens a page to search, edit and clean up every memory." />
-  <Card title="Always running" description="woolly service install keeps Woolly in the background and starts it at login, like Ollama." />
+  <Card title="Fully local" description="No account, no cloud, no telemetry. Ollama is optional; without it Woolly uses keyword search." />
+  <Card title="One binary, no setup" description="No Docker and no database server. Install it and it works, MIT licensed." />
 </Cards>
+
+## Also in Woolly
+
+- **Personal memory.** Facts about you, like how you like to work, follow you across every AI app. See [How it works](/docs/how-it-works).
+- **Memory for the agents you build.** An API shaped like mem0's, with [Python](/docs/python) and [JavaScript](/docs/javascript) packages. See [Memory API](/docs/memory-api).
+- **Memory for Ollama.** [woolly proxy](/docs/proxy) adds memory to Ollama, OpenAI and Anthropic apps.
 
 ## Private by design
 
-Woolly never sends your memories anywhere. There is no cloud, no telemetry and no sign-in. Everything stays in `~/.woolly` on your machine.
+Woolly never sends your memories anywhere. There is no cloud, no telemetry and no sign-in. Everything stays in `~/.woolly` on your machine, and project memory stays in your repo.
 
 <Callout title="Do I need Ollama?">
-  No. Woolly works fully on its own. If you already run [Ollama](/docs/ollama), Woolly also uses it to search by meaning, learn from your chats and save decisions when a session ends.
+  No. Woolly works fully on its own, and stale detection never needs a model. If you run [Ollama](/docs/ollama), Woolly also uses it to search by meaning and to pick out decisions and gotchas when a session ends.
 </Callout>

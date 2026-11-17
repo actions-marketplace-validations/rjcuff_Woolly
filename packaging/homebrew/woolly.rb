@@ -1,5 +1,5 @@
 class Woolly < Formula
-  desc "Local memory for your AI tools"
+  desc "Local project memory for coding agents that flags stale facts"
   homepage "https://usewoolly.com"
   version "0.14.1"
   license "MIT"

@@ -10,9 +10,9 @@ import { githubUrl, siteUrl } from '@/lib/shared';
 export function homeMarkdown(releases: Release[]): string {
   const shipped = releases.map((r) => `- **v${r.version}** ${r.summary} (${r.href})`).join('\n');
   const questions = FAQ.map((q) => `### ${q.question}\n\n${q.answer}`).join('\n\n');
-  return `# Woolly, memory and learning for your agents
+  return `# Woolly, memory that knows when it's wrong
 
-Woolly is the open memory engine for agents. It keeps facts current and learns from every session, through an API, Python and JavaScript SDKs, plugins and MCP. It runs on your own machine by default, in Markdown you can read.
+One local memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones that go stale.
 
 [Get started](${siteUrl}/docs/quickstart) · [Download](${siteUrl}/download) · [GitHub](${githubUrl}) · [Docs for agents](${siteUrl}/llms.txt)
 
@@ -26,28 +26,18 @@ ${SETUP_PROMPT}
 
 ## Why Woolly
 
-Every AI coding tool starts from zero. Each keeps its own memory, or none. Woolly is the memory they share. It’s one folder on your laptop in plain Markdown, with no cloud and no account. Any MCP tool can save to it and search it, and \`woolly proxy\` gives the same memory to Ollama and any app that uses the OpenAI or Anthropic API.
-
-## Build agents that remember
-
-The memory API uses mem0's routes and field names (${siteUrl}/docs/memory-api).
-
-\`\`\`ts
-import { Woolly } from 'woolly-ai';
-const w = new Woolly();
-await w.add('I just moved to Austin', { userId: 'alice' });
-const memories = await w.search('where does she live?', { userId: 'alice' });
-\`\`\`
+You switch between Claude Code, Cursor and Codex on the same repo, and each starts from zero. The tools that do remember keep repeating facts the code stopped backing up. Woolly is plain Markdown on your machine, shared by every agent through MCP and hooks, with no cloud and no account. Every fact points at the code it's about, and when that code changes, Woolly marks the fact stale instead of letting your agent follow it (${siteUrl}/docs/stale-facts).
 
 ## What it does
 
-- **Sessions that start warm.** Every session opens with your profile, the project's notes and a handoff from last time.
+- **It knows when a fact goes stale.** On every commit and on \`woolly check\`, each fact is checked against the code it points at. A renamed function, deleted file or changed value flags the fact with the commit that broke it.
+- **Every fact cites its source.** A file, function or line range, the commit it was saved at, and the session it came from.
+- **One memory for every agent on the repo.** Claude Code, Cursor and Codex share \`.woolly/woolly.md\`, and so do your teammates through git.
+- **Sessions that start warm.** A short brief with the project's current facts, where you left off, and a one-line warning when something went stale.
 - **Decisions stick.** When a session ends, Woolly saves what you chose, why, and what you ruled out.
-- **Agents that remember.** An API shaped like mem0's, where a local model decides whether each fact is new, an update or no longer true, per user.
-- **It dreams.** While you're away, Woolly merges duplicates, settles facts that changed and turns sessions into lessons.
-- **Facts keep their history.** A newer fact replaces the old one, which is kept with when it stopped being true. Your version beats an AI's guess.
+- **Facts keep their history.** Nothing is deleted. \`woolly review\` confirms, fixes or retires stale facts.
+- **It dreams.** Your local model merges duplicates, settles facts that changed and turns sessions into lessons.
 - **Memory you can read.** Every memory is a Markdown file you can open, grep and edit.
-- **One project memory for the team.** \`woolly init\` keeps \`.woolly/woolly.md\` in the repo for every teammate's agent.
 
 ## By the numbers
 
@@ -63,6 +53,17 @@ How we measure (${siteUrl}/docs/benchmark)
 - On your laptop, Mac, Windows or Linux (${siteUrl}/download)
 - On a Raspberry Pi, synced over your own network and encrypted (${siteUrl}/docs/sync)
 - In your repo, as project memory in git (${siteUrl}/docs/project-memory)
+
+## Memory for the agents you build, too
+
+The same engine has an API shaped like mem0's (${siteUrl}/docs/memory-api).
+
+\`\`\`ts
+import { Woolly } from 'woolly-ai';
+const w = new Woolly();
+await w.add('I just moved to Austin', { userId: 'alice' });
+const memories = await w.search('where does she live?', { userId: 'alice' });
+\`\`\`
 
 ## Private by design
 

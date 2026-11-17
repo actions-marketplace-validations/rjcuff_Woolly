@@ -23,7 +23,7 @@ You can open, edit or delete these files yourself. Woolly picks up changes right
 
 ## Facts that point at the code
 
-A project fact can say what kind of fact it is and which code it's about, so Woolly can tell when the code changes underneath it:
+A project fact can say what kind of fact it is and which code it's about, so Woolly can tell when the code changes underneath it.
 
 ```md title="~/.woolly/memories/20261117-153000-1a2b3c4d.md"
 ---
@@ -43,8 +43,8 @@ The IMU's chip select is GPIO 5
 
 | Field | Meaning |
 | --- | --- |
-| `type` | `decision`, `convention`, `gotcha`, `bug` or `hardware` |
-| `sources` | The code the fact is about: a file (`main/imu.c`), a function, type, macro or constant in it (`main/imu.c#imu_init`) or a range of lines (`main/pins.h:12-18`). The part after `@` is a fingerprint of that code when the fact was saved. |
+| `type` | One of `decision`, `convention`, `gotcha`, `bug` or `hardware` |
+| `sources` | The code the fact is about. It can be a file (`main/imu.c`), a function, type, macro or constant in it (`main/imu.c#imu_init`) or a range of lines (`main/pins.h:12-18`). The part after `@` is a fingerprint of that code when the fact was saved. |
 | `commit` | The commit the fact was saved at |
 | `run_id` | The session it came from, when an app sets one |
 | `confidence` | How sure Woolly is, from 0 to 1. Left out, it's 1 for things you said and lower for things an AI inferred. |

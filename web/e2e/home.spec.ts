@@ -21,8 +21,8 @@ async function navLink(page: Page, isMobile: boolean, name: string) {
 
 test('home leads with the headline and buttons', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('Woolly | The open memory engine for agents');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('memory and learning for your agents');
+  await expect(page).toHaveTitle('Woolly | Project memory your coding agents can trust');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Memory that knows when it’s wrong.');
   await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
 
   // Never sideways, on any screen.
@@ -36,7 +36,7 @@ test('raw .md shows the page as Markdown and back', async ({ page, isMobile }) =
   await page.goto('/');
   await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Raw .md' }).click();
-  await expect(page.getByRole('main')).toContainText('# Woolly, memory and learning for your agents');
+  await expect(page.getByRole('main')).toContainText("# Woolly, memory that knows when it's wrong");
   await expect(page.getByRole('main')).toContainText('woolly connect');
   await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Page' }).click();
@@ -79,9 +79,10 @@ test('sitemap, robots and install script are served', async ({ request }) => {
 
 test('works with logos and features are shown', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Ollama', exact: true })).toHaveAttribute('href', '/docs/ollama');
+  await expect(page.getByRole('link', { name: 'Ollama', exact: true }).first()).toHaveAttribute('href', '/docs/ollama');
   await expect(page.getByRole('link', { name: 'Claude Code', exact: true })).toBeVisible();
-  await expect(page.getByRole('img', { name: /brain drawn in small squares/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /woolly mammoth drawn in small squares/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'It knows when a fact goes stale' })).toBeAttached();
   await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeAttached();
 });
 

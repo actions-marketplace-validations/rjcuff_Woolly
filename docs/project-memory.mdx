@@ -37,7 +37,7 @@ git add .woolly .gitattributes && git commit -m "Add project memory"
 
 The headings are Overview, Stack, Conventions, Decisions, Gotchas and Commands. Bugs and Hardware show up when they have facts, and a Notes heading shows up for facts that fit none of them.
 
-The comment at the end of each line is how Woolly tracks it: a short ID, the key if it has one, and the app that saved it. A fact that points at code also has `src=`, and a fact whose code changed has `stale=` with the commit that changed it, so teammates see it in the diff:
+The comment at the end of each line is how Woolly tracks it: a short ID, the key if it has one, and the app that saved it. A fact that points at code also has `src=`, and a fact whose code changed has `stale=` with the commit that changed it, so teammates see it in the diff.
 
 ```md
 - The IMU's chip select is GPIO 5 <!-- id=1a2b3c4d src=main/pins.h:12-18 stale=9b1e2f0 -->
