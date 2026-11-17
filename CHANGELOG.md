@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
+
+Memory that knows when it's wrong. Project facts now point at the code they're about, and Woolly flags the ones the code no longer backs up.
 
 - Facts can point at the code they're about. A project fact can have a `type` (decision, convention, gotcha, bug or hardware), `sources` (a file, a function or constant in it, or a range of lines, each with a fingerprint of the code) and a `confidence`. Set them with `woolly remember --type hardware --source-ref main/pins.h:12-18`, the MCP `remember` tool, the API or the SDKs. Older memory files load as they are.
 - A new `stale` status for facts whose code changed or is gone. Stale facts stay on disk with the reason and the commit, but leave search and session briefs until you review them.
@@ -12,6 +14,8 @@
 - `woolly init --hooks` adds a git post-commit hook that checks project memory after every commit, in the background, so the commit returns right away. Existing hooks are kept.
 - The session brief leaves stale facts out and tells the agent how many went stale since the last session. It runs a quick check first.
 - Facts that agents save with sources are checked against the repo, so a source that doesn't exist is dropped.
+- The Python package (`woolly-ai` 0.5.0) and the JavaScript package (`woolly-ai` 0.3.0) can save `type`, `sources` and `confidence` with a fact, and return them along with any stale reason and commit.
+- A new site and docs: one quiet column, easier to read, leading with stale detection.
 - A stale-fact benchmark, `bench/stale/run.py`. On 50 scripted changes to a small ESP32 firmware repo, Woolly flagged 28 of the 30 facts that went wrong and none of the 20 that didn't, in a median of 35 ms. Every number Woolly publishes is in `bench/RESULTS.md`.
 
 ## 0.14.1

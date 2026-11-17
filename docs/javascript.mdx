@@ -22,6 +22,12 @@ for (const m of await w.recall('where do I live?')) console.log(m.content);
 
 Give a `key` for facts that can change. A newer memory with the same key replaces the older one. `app` is the name your memories are saved under and how your app shows up in `woolly log`.
 
+A project fact can also say what kind of fact it is and which code it's about, so `woolly check` can flag it when that code changes. See [Stale facts](/docs/stale-facts).
+
+```ts
+await w.remember('The IMU chip select is GPIO 5', { project: 'drone', type: 'hardware', sources: ['main/pins.h#IMU_CS'] });
+```
+
 ## Add memory to a prompt
 
 ```ts
