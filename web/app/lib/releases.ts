@@ -84,8 +84,35 @@ export function published(releases: Omit<Release, 'date'>[], dates: Map<string, 
     .map((r) => ({ ...r, date: dates.get(r.version) ?? null }));
 }
 
+/**
+ * Whether each release's page exists on GitHub. The pages aren't rate
+ * limited like the API, so this works when the API turned the build away.
+ * Null when GitHub can't be reached at all.
+ */
+async function releasePages(releases: Omit<Release, 'date'>[]): Promise<Set<string> | null> {
+  const found = new Set<string>();
+  let answered = false;
+  await Promise.all(
+    releases.map(async (r) => {
+      try {
+        const res = await fetch(r.href, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+        answered = true;
+        if (res.ok) found.add(r.version);
+      } catch {
+        // Unreachable; decided below.
+      }
+    }),
+  );
+  return answered ? found : null;
+}
+
 /** getReleases returns the newest published releases in a changelog, dated when GitHub answers. */
 export async function getReleases(changelog: string, limit = 4): Promise<Release[]> {
+  const parsed = parseChangelog(changelog, limit + 3);
   const dates = await releaseDates();
-  return published(parseChangelog(changelog, limit + 3), dates, limit);
+  if (dates.size > 0) return published(parsed, dates, limit);
+  // The API didn't answer, often its rate limit on a shared build machine.
+  const pages = await releasePages(parsed);
+  const kept = pages ? parsed.filter((r) => pages.has(r.version)) : parsed;
+  return kept.slice(0, limit).map((r) => ({ ...r, date: null }));
 }
