@@ -12,17 +12,17 @@ export const UNDERLINE =
   'underline decoration-fd-foreground/35 decoration-1 underline-offset-[6px] transition-[text-decoration-color] duration-150 hover:decoration-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand';
 
 const NAV_LINK = 'group relative inline-block py-1 text-fd-muted-foreground outline-none transition-colors duration-200 hover:text-fd-foreground focus-visible:text-fd-foreground';
-const BRACKET = 'pointer-events-none absolute top-0 opacity-0 transition-[opacity,translate] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none';
+const BRACKET = 'pointer-events-none absolute inset-y-0 flex items-center opacity-0 transition-[opacity,translate] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none';
 
 /** A nav link: no underline, and brackets that slide in around it on hover. */
 function NavLink({ href, children, label }: { href: string; children: React.ReactNode; label?: string }) {
   const inner = (
     <>
-      <span aria-hidden="true" className={cn(BRACKET, '-left-3 translate-x-1.5')}>
+      <span aria-hidden="true" className={cn(BRACKET, '-left-[1.15ch] translate-x-1')}>
         [
       </span>
       {children}
-      <span aria-hidden="true" className={cn(BRACKET, '-right-3 -translate-x-1.5')}>
+      <span aria-hidden="true" className={cn(BRACKET, '-right-[1.15ch] -translate-x-1')}>
         ]
       </span>
     </>
