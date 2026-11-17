@@ -1,30 +1,12 @@
-import { ArrowUpRight, FileText, GitCommitHorizontal, History, Moon, Pin, ShieldAlert, Sunrise, Users, type LucideIcon } from 'lucide-react';
 import { useInView, useReducedMotion } from 'motion/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
-import { BlockButton, FrameButton, Label, MoreLink, SmartLink } from '@/components/doc/parts';
-import { PixelMammoth } from '@/components/doc/pixel-mammoth';
-import type { DocSection } from '@/components/doc/rail';
-import { InsightCard } from '@/components/motion/insight-card';
-import { NumberTicker } from '@/components/motion/number-ticker';
-import { EASE_OUT_CSS } from '@/lib/ease';
-import { FAQ } from '@/lib/faq';
+import { PixelWaves } from '@/components/doc/pixel-waves';
+import { UNDERLINE } from '@/components/doc/rail';
 import { integrations } from '@/lib/integrations';
 import type { Release } from '@/lib/releases';
 import { githubUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
-
-export const SECTIONS: DocSection[] = [
-  { id: 'top', label: 'Overview' },
-  { id: 'why', label: 'Why Woolly' },
-  { id: 'what', label: 'What it does' },
-  { id: 'numbers', label: 'By the numbers' },
-  { id: 'anywhere', label: 'Runs anywhere' },
-  { id: 'build', label: 'For your own agents' },
-  { id: 'private', label: 'Private' },
-  { id: 'shipping', label: 'Shipping weekly' },
-  { id: 'questions', label: 'Questions' },
-];
 
 /** Setup steps a coding agent can follow on its own, shown in the Raw .md view. */
 export const SETUP_PROMPT = `Set up Woolly, the project memory my coding agents share.
@@ -33,542 +15,243 @@ export const SETUP_PROMPT = `Set up Woolly, the project memory my coding agents 
    (on Windows, irm https://usewoolly.com/install.ps1 | iex)
 2. Connect my AI apps with woolly connect
 3. Keep it running at login with woolly service install
-4. In this repo, run woolly init so every agent shares its memory
+4. In this repo, run woolly init --hooks so every agent shares its memory and every commit checks it
 5. Check it works with woolly doctor, and check facts against the code with woolly check
 
 Docs for agents are at https://usewoolly.com/llms.txt`;
 
-// The apps with a logo to show, each with its name beside it.
 const APPS = integrations
   .filter((app) => app.name !== 'Python')
   .map((app) => ({ ...app, name: app.name === 'Claude' ? 'Claude Code' : app.name }));
 
 const DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
-const P = 'text-pretty text-[17px] leading-[1.7] text-fd-foreground/90';
-const INLINE = 'text-brand underline-offset-4 hover:underline';
-const NUDGE = 'transition-transform duration-200 ease-ui group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none';
+const BODY = 'text-pretty text-[15px] leading-[1.8]';
+const MUTED = 'text-fd-muted-foreground';
 
-/** False only for a section that starts below the screen, until it scrolls in, so server HTML always shows it. */
-function useReveal(ref: React.RefObject<HTMLElement | null>) {
-  const [shown, setShown] = useState(true);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || el.getBoundingClientRect().top < window.innerHeight) return;
-    setShown(false);
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShown(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: '0px 0px -12% 0px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [ref]);
-  return shown;
-}
-
-function Section({ id, children, className }: { id: string; children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLElement>(null);
-  const shown = useReveal(ref);
+function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
   return (
-    <section ref={ref} id={id} className={cn('scroll-mt-10 border-t border-fd-border pt-14 pb-16', className)}>
-      <div className="reveal" data-shown={shown}>
-        {children}
+    <section className="mt-28 flex flex-col gap-8 sm:mt-32">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className={cn('text-[12px] uppercase tracking-[0.16em]', MUTED)}>{title}</h2>
+        {aside}
       </div>
+      <div className="min-w-0">{children}</div>
     </section>
   );
 }
 
-function H2({ children }: { children: ReactNode }) {
-  return <h2 className="text-balance text-[28px] font-normal leading-tight tracking-[-0.02em] sm:text-[32px]">{children}</h2>;
-}
+const INSTALL = ['curl -fsSL https://usewoolly.com/install.sh | sh', 'woolly connect', 'woolly init --hooks'];
 
-/** Rolls from zero to the value the first time it's on screen. */
-function Rolling({ value, decimals = 0 }: { value: number; decimals?: number }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const seen = useInView(ref, { once: true, amount: 0.6 });
-  const reduce = useReducedMotion();
+function CopyInstall() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(INSTALL.join('\n'));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can be blocked; the commands are still there to select.
+    }
+  };
   return (
-    <span ref={ref}>
-      <NumberTicker value={seen || reduce ? value : 0} format={(n) => n.toFixed(decimals)} />
-    </span>
+    <button type="button" onClick={copy} className={cn(UNDERLINE, 'text-[12px]', MUTED)}>
+      {copied ? 'Copied' : 'Copy'}
+    </button>
   );
 }
 
-function WorksWith() {
+function Install() {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <Label>Works with</Label>
-      <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-fd-muted-foreground">
-        {APPS.map((app) => (
-          <li key={app.name}>
-            <Link
-              to={app.href}
-              aria-label={app.name}
-              className="flex size-8 items-center justify-center transition-[color,scale] duration-300 ease-ui hover:scale-[1.18] hover:text-fd-foreground focus-visible:text-fd-foreground motion-reduce:transition-none"
-            >
-              <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
-                <path d={app.path} />
-              </svg>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function Mammoth() {
-  return (
-    <figure className="mt-14">
-      <PixelMammoth />
-    </figure>
-  );
-}
-
-function Hero({ download, latest }: { download: { href: string; label: string }; latest?: Release }) {
-  return (
-    <header className="pb-16 pt-14">
-      {latest ? (
-        <SmartLink
-          href={latest.href}
-          className="group inline-flex max-w-full items-stretch bg-fd-muted text-[14px] shadow-[inset_0_0_0_1px_var(--color-fd-border)]"
-        >
-          <span className="flex items-center gap-2.5 px-3 py-1.5 text-fd-muted-foreground">
-            <span aria-hidden="true" className="relative flex size-1.5">
-              <span className="absolute inset-0 animate-ping rounded-full bg-green-500 opacity-60 motion-reduce:hidden" />
-              <span className="relative size-1.5 rounded-full bg-green-500" />
+    <div className="bg-fd-muted px-5 py-4">
+      <pre className="overflow-x-auto text-[13px] leading-[1.9]">
+        <code>
+          {INSTALL.map((line) => (
+            <span key={line} className="block whitespace-pre">
+              <span className={MUTED}>$ </span>
+              {line}
             </span>
-            <span className="truncate">New in v{latest.version}</span>
-          </span>
-          <span className="m-[3px] flex items-center gap-1.5 bg-fd-background px-2.5 font-medium shadow-[0_0_0_1px_var(--color-fd-border)]">
-            Read the notes
-            <ArrowUpRight aria-hidden="true" className={cn('size-3.5', NUDGE)} />
-          </span>
-        </SmartLink>
-      ) : null}
-
-      <h1 className="mt-8 text-balance text-[34px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[46px]">
-        Memory that knows when it’s wrong.
-      </h1>
-      <p className="mt-6 max-w-[560px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
-        One local memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones that
-        go stale.
-      </p>
-
-      <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-        <BlockButton href="/docs/quickstart">Get started</BlockButton>
-        <FrameButton href={download.href}>{download.label}</FrameButton>
-      </div>
-
-      <div className="mt-8">
-        <WorksWith />
-      </div>
-
-      <Mammoth />
-    </header>
-  );
-}
-
-const FEATURES: { icon: LucideIcon; title: string; body: ReactNode }[] = [
-  {
-    icon: ShieldAlert,
-    title: 'It knows when a fact goes stale.',
-    body: (
-      <>
-        On every commit, and whenever you run <code className="font-mono text-[15px]">woolly check</code>, Woolly checks each
-        fact against the code it points at. Rename a function, delete a file or change a pin number, and the fact that
-        relied on it is flagged with the commit that broke it, instead of being handed to your agent.
-      </>
-    ),
-  },
-  {
-    icon: GitCommitHorizontal,
-    title: 'Every fact cites its source.',
-    body: 'A fact links to the file, function or lines it’s about, the commit it was saved at, and the session it came from. You can see why your agent believes something, and so can Woolly.',
-  },
-  {
-    icon: Users,
-    title: 'One memory for every agent on the repo.',
-    body: (
-      <>
-        Claude Code, Cursor and Codex read and update the same notes. <code className="font-mono text-[15px]">woolly init</code>{' '}
-        keeps them in <code className="font-mono text-[15px]">.woolly/woolly.md</code>, so your teammates’ agents get them
-        through git too.
-      </>
-    ),
-  },
-  {
-    icon: Sunrise,
-    title: 'Sessions that start warm.',
-    body: 'Each session opens with a short brief. It has the project’s current facts, where you left off, and a one-line warning when something went stale. Nobody has to say “here’s my stack” again.',
-  },
-  {
-    icon: Pin,
-    title: 'Decisions stick.',
-    body: 'When a session ends, Woolly saves what you chose, why, and what you ruled out. No agent pitches the rejected option again.',
-  },
-  {
-    icon: History,
-    title: 'Facts keep their history.',
-    body: 'Nothing is deleted. A replaced or stale fact stays on disk with the date it stopped being true, and woolly review lets you confirm, fix or retire it.',
-  },
-  {
-    icon: Moon,
-    title: 'It dreams.',
-    body: 'While you’re away, your local model merges duplicates, settles facts that changed, and turns past sessions into lessons for the next one.',
-  },
-  {
-    icon: FileText,
-    title: 'Memory you can read.',
-    body: 'Every memory is a Markdown file. Open it, grep it, fix it by hand, and see which tool saved it.',
-  },
-];
-
-const SAMPLES: { id: string; label: string; install: string; code: string }[] = [
-  {
-    id: 'ts',
-    label: 'TypeScript',
-    install: 'npm install woolly-ai',
-    code: `import { Woolly } from 'woolly-ai';
-
-const w = new Woolly();
-
-await w.add('I just moved to Austin', { userId: 'alice' });
-// [{ memory: 'Lives in Austin', event: 'UPDATE', previous_memory: 'Lives in Denver' }]
-
-const memories = await w.search('where does she live?', { userId: 'alice' });`,
-  },
-  {
-    id: 'py',
-    label: 'Python',
-    install: 'pip install woolly-ai',
-    code: `from woolly import Woolly
-
-w = Woolly()
-
-w.add("I just moved to Austin", user_id="alice")
-# {"results": [{"memory": "Lives in Austin", "event": "UPDATE", ...}]}
-
-memories = w.search("where does she live?", user_id="alice")["results"]`,
-  },
-];
-
-/** A short example in TypeScript or Python, with a plain toggle between them. */
-function CodeSample() {
-  const [lang, setLang] = useState(SAMPLES[0].id);
-  const sample = SAMPLES.find((s) => s.id === lang) ?? SAMPLES[0];
-  return (
-    <div className="mt-8 shadow-[0_0_0_1px_var(--color-fd-border)]">
-      <div className="flex items-center justify-between gap-3 border-b border-fd-border px-3">
-        <div role="tablist" aria-label="Language" className="flex">
-          {SAMPLES.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              role="tab"
-              aria-selected={s.id === lang}
-              onClick={() => setLang(s.id)}
-              className={cn(
-                '-mb-px border-b-2 px-2 py-2.5 font-mono text-[12px] transition-colors duration-150',
-                s.id === lang ? 'border-brand text-fd-foreground' : 'border-transparent text-fd-muted-foreground hover:text-fd-foreground',
-              )}
-            >
-              {s.label}
-            </button>
           ))}
-        </div>
-        <code className="truncate font-mono text-[12px] text-fd-muted-foreground">{sample.install}</code>
-      </div>
-      <pre className="overflow-x-auto bg-fd-muted/50 p-4 font-mono text-[13px] leading-[1.7]">
-        <code>{sample.code}</code>
+        </code>
       </pre>
     </div>
   );
 }
 
-/** Bars that draw in once, the first time they're on screen. */
-function Bars({ rows }: { rows: { label: string; value: number }[] }) {
+const FEATURES: { title: string; body: string }[] = [
+  {
+    title: 'It knows when a fact goes stale',
+    body: 'On every commit, Woolly checks each fact against the code it points at. Rename a function, delete a file or change a pin, and the fact that relied on it is flagged with the commit that broke it.',
+  },
+  {
+    title: 'Every fact cites its source',
+    body: 'A file, a function or a few lines, the commit it was saved at, and the session it came from.',
+  },
+  {
+    title: 'One memory for every agent',
+    body: 'Claude Code, Cursor and Codex read and update the same notes. Your teammates get them through git.',
+  },
+  {
+    title: 'Sessions start warm',
+    body: 'Each session opens with the project’s current facts and where you left off. Stale facts stay out.',
+  },
+  {
+    title: 'Decisions stick',
+    body: 'What you chose, why, and what you ruled out, so no agent pitches it again.',
+  },
+  {
+    title: 'Memory you can read',
+    body: 'Plain Markdown files. Nothing is ever deleted, and woolly review settles what went stale.',
+  },
+];
+
+/** Bars made of small squares, filled in Woolly's orange and yellow, that draw in the first time they're on screen. */
+function Bars({ title, rows }: { title: string; rows: { label: string; value: number }[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const seen = useInView(ref, { once: true, amount: 0.5 });
+  const seen = useInView(ref, { once: true, amount: 0.4 });
   const reduce = useReducedMotion();
   const shown = seen || reduce;
   return (
-    <div ref={ref} className="flex flex-col gap-5">
-      {rows.map((r, i) => (
-        <div key={r.label}>
-          <div className="flex items-baseline justify-between gap-3">
-            <Label>{r.label}</Label>
-            <span className="text-[32px] leading-none tracking-[-0.02em]">
-              <Rolling value={r.value} decimals={1} />
-              <span className="text-[16px] text-fd-muted-foreground">%</span>
-            </span>
+    <div ref={ref}>
+      <h3 className="text-[15px]">{title}</h3>
+      <div className="mt-6 flex flex-col gap-5">
+        {rows.map((r, i) => (
+          <div key={r.label}>
+            <div className="flex items-baseline justify-between gap-3 text-[13px]">
+              <span className={MUTED}>{r.label}</span>
+              <span className="tabular-nums">{r.value.toFixed(1)}%</span>
+            </div>
+            <div className="mt-2 h-2.5 bg-[repeating-linear-gradient(90deg,var(--color-fd-muted)_0_4px,transparent_4px_5px)]">
+              <div
+                className="h-full [mask-image:repeating-linear-gradient(90deg,#000_0_4px,transparent_4px_5px)] bg-[linear-gradient(90deg,#f97316,#f59e0b_55%,#facc15)]"
+                style={{
+                  width: `${r.value}%`,
+                  clipPath: shown ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)',
+                  transition: reduce ? 'none' : `clip-path 800ms cubic-bezier(0.23, 1, 0.32, 1) ${i * 110}ms`,
+                }}
+              />
+            </div>
           </div>
-          <div className="mt-3 h-3 bg-[repeating-linear-gradient(90deg,var(--color-fd-muted)_0_3px,transparent_3px_4px)]">
-            <div
-              className="h-full bg-[repeating-linear-gradient(90deg,var(--color-brand)_0_3px,transparent_3px_4px)]"
-              style={{
-                width: `${r.value}%`,
-                clipPath: shown ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)',
-                transition: reduce ? 'none' : `clip-path 700ms ${EASE_OUT_CSS} ${i * 120}ms`,
-              }}
-            />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
 
-const STAT = 'rounded-none bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)] [&>div:first-child>span]:font-mono [&>div:first-child>span]:text-[11px] [&>div:first-child>span]:uppercase [&>div:first-child>span]:tracking-[0.14em]';
-
-function StatValue({ children, unit }: { children: ReactNode; unit?: string }) {
-  return (
-    <span className="mt-4 block text-[44px] font-normal leading-none tracking-[-0.03em]">
-      {children}
-      {unit ? <span className="ml-0.5 text-[18px] text-fd-muted-foreground">{unit}</span> : null}
-    </span>
-  );
-}
-
-const PLACES: { title: string; body: string; href: string }[] = [
-  { title: 'On your laptop', body: 'Mac, Windows and Linux. One small binary, or the app.', href: '/download' },
-  { title: 'On a Raspberry Pi', body: 'Sync your machines over your own network, encrypted.', href: '/docs/sync' },
-  { title: 'In your repo', body: 'Project memory in git, shared with your whole team.', href: '/docs/project-memory' },
+const STALE_BARS = [
+  { label: 'Precision', value: 100 },
+  { label: 'Recall', value: 93.3 },
+  { label: 'Renames caught', value: 100 },
+  { label: 'Changed values caught', value: 86.7 },
+  { label: 'Safe edits left alone', value: 100 },
 ];
 
-const PROMISES: { title: string; body: string }[] = [
-  { title: 'No account', body: 'Nothing to sign up for.' },
-  { title: 'No cloud', body: 'Your memory never leaves your machines.' },
-  { title: 'No telemetry', body: 'Woolly never phones home.' },
+const LOCOMO_BARS = [
+  { label: 'Overall', value: 83.2 },
+  { label: 'Dates and time', value: 95.6 },
+  { label: 'Multi-hop', value: 83.6 },
+  { label: 'Single fact', value: 79.5 },
 ];
 
 export function HomeArticle({ download, releases }: { download: { href: string; label: string }; releases: Release[] }) {
   return (
     <article id="top">
-      <Hero download={download} latest={releases[0]} />
+      <h1 className="text-balance text-[24px] font-normal leading-[1.35] tracking-[-0.01em] sm:text-[28px]">
+        Memory that knows when it’s wrong.
+      </h1>
+      <p className={cn(BODY, 'mt-6 max-w-[560px]', MUTED)}>
+        Woolly gives Claude Code, Cursor and Codex one local memory for your repo. Every fact points at the code it came
+        from. When that code changes, Woolly flags the fact instead of letting your agent follow it.
+      </p>
+      <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-[14px]">
+        <Link to="/docs/quickstart" className={UNDERLINE}>
+          Get started
+        </Link>
+        <a href={download.href} className={UNDERLINE}>
+          {download.label}
+        </a>
+        <Link to="/docs/stale-facts" className={UNDERLINE}>
+          How it works
+        </Link>
+      </div>
 
-      <Section id="why">
-        <H2>Why Woolly</H2>
-        <div className="mt-6 flex flex-col gap-5">
-          <p className={P}>
-            You switch between Claude Code, Cursor and Codex on the same repo, and each one starts from zero. You explain
-            the pin map again. You remind it which config value you settled on. The tools that do remember have a worse
-            problem. They keep repeating facts the code stopped backing up weeks ago.
-          </p>
-          <p className={P}>
-            Woolly is <strong className="font-medium">project memory your coding agents can trust</strong>. It’s plain
-            Markdown on your machine, shared by every agent through{' '}
-            <Link to="/docs/mcp" className={INLINE}>
-              MCP
-            </Link>{' '}
-            and hooks, with no cloud and no account. Every fact points at the code it’s about.
-          </p>
-          <p className={P}>
-            When that code changes,{' '}
-            <Link to="/docs/stale-facts" className={INLINE}>
-              Woolly marks the fact stale
-            </Link>{' '}
-            instead of letting your agent follow it. It runs fully on your machine, with{' '}
-            <Link to="/docs/ollama" className={INLINE}>
-              Ollama
-            </Link>{' '}
-            if you have it and plain keyword search if you don’t.
-          </p>
-        </div>
+      <figure className="mt-20 sm:mt-24">
+        <PixelWaves />
+      </figure>
+
+      <Section title="Install" aside={<CopyInstall />}>
+        <Install />
       </Section>
 
-      <Section id="what">
-        <H2>What it does</H2>
-        <ol className="mt-10 flex flex-col">
+      <Section title="What it does">
+        <ul className="flex flex-col gap-9">
           {FEATURES.map((f) => (
-            <li key={f.title} className="group/feature flex gap-5 border-t border-fd-border py-6 first:border-t-0 first:pt-0">
-              <span
-                aria-hidden="true"
-                className="flex size-10 shrink-0 items-center justify-center text-fd-muted-foreground shadow-[0_0_0_1px_var(--color-fd-border)] transition-[color,background-color,box-shadow] duration-200 ease-ui group-hover/feature:bg-brand/[0.07] group-hover/feature:text-brand group-hover/feature:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-brand)_35%,transparent)]"
-              >
-                <f.icon className="size-5 transition-transform duration-300 ease-ui group-hover/feature:-rotate-6 group-hover/feature:scale-110 motion-reduce:transition-none" strokeWidth={1.75} />
-              </span>
-              <div>
-                <h3 className="text-[17px] font-medium">{f.title}</h3>
-                <p className="mt-1.5 text-pretty text-[16px] leading-[1.7] text-fd-muted-foreground">{f.body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-8">
-          <MoreLink href="/docs/how-it-works">Read how it works</MoreLink>
-        </div>
-      </Section>
-
-      <Section id="numbers">
-        <p className="text-balance text-[26px] leading-[1.3] tracking-[-0.02em] text-fd-muted-foreground sm:text-[30px]">
-          Our <span className="text-fd-foreground">promise</span> is memory you can{' '}
-          <span className="text-fd-foreground">check</span>, not a number you have to trust.
-        </p>
-        <div className="mt-10 grid gap-3 sm:grid-cols-2">
-          <div className="grid gap-3">
-            <InsightCard
-              className={STAT}
-              label="Median recall time"
-              value={
-                <StatValue unit="ms">
-                  <Rolling value={19} />
-                </StatValue>
-              }
-            />
-            <InsightCard
-              className={STAT}
-              label="Apps it connects"
-              value={
-                <StatValue>
-                  <Rolling value={9} />
-                </StatValue>
-              }
-            />
-            <InsightCard className={STAT} label="Servers to trust" value={<StatValue>0</StatValue>} />
-          </div>
-          <div className="flex flex-col bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)]">
-            <p className="text-[16px] font-medium">LOCOMO benchmark</p>
-            <Label className="mt-1 text-[10px]">Answer in Woolly’s top 20 results</Label>
-            <div className="mt-8">
-              <Bars
-                rows={[
-                  { label: 'Overall', value: 83.2 },
-                  { label: 'Dates and time', value: 95.6 },
-                  { label: 'Multi-hop', value: 83.6 },
-                  { label: 'Single fact', value: 79.5 },
-                ]}
-              />
-            </div>
-            <p className="mt-8 text-[14px] leading-relaxed text-fd-muted-foreground">
-              382 questions over the first three conversations, searched on a laptop with nomic-embed-text. No hosted
-              model and no API key. Run the same test yourself.
-            </p>
-            <code className="mt-3 block overflow-x-auto bg-fd-muted px-3 py-2 font-mono text-[12px] whitespace-nowrap">
-              python3 bench/locomo/run.py --retrieval-only
-            </code>
-            <div className="mt-auto pt-6">
-              <MoreLink href="/docs/benchmark">How we measure</MoreLink>
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      <Section id="anywhere">
-        <H2>
-          Woolly runs where your code does,
-          <br className="max-sm:hidden" /> with no cloud at all.
-        </H2>
-        <p className={cn(P, 'mt-5')}>
-          It’s one binary with no outside dependencies. Install it on your laptop, sync it to your other machines, or
-          commit the project’s memory so your team shares it.
-        </p>
-        <ul className="mt-10 grid gap-3 sm:grid-cols-3">
-          {PLACES.map((p) => (
-            <li key={p.title}>
-              <SmartLink
-                href={p.href}
-                className="group flex h-full flex-col bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)] transition-shadow duration-200 hover:shadow-[0_0_0_1px_var(--color-brand)]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[17px] font-medium">{p.title}</p>
-                  <ArrowUpRight aria-hidden="true" className={cn('size-4 shrink-0 text-fd-muted-foreground group-hover:text-brand', NUDGE)} />
-                </div>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-fd-muted-foreground">{p.body}</p>
-              </SmartLink>
+            <li key={f.title}>
+              <h3 className="text-[15px]">{f.title}</h3>
+              <p className={cn('mt-2 text-pretty text-[14px] leading-[1.75]', MUTED)}>{f.body}</p>
             </li>
           ))}
         </ul>
       </Section>
 
-      <Section id="build">
-        <H2>Memory for the agents you build, too</H2>
-        <p className={cn(P, 'mt-5')}>
-          The same engine has an API shaped like mem0’s, answered by your own machine. Add a conversation for a user, and
-          a local model decides what’s new, what changed and what’s no longer true.
-        </p>
-        <CodeSample />
-        <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
-          <MoreLink href="/docs/memory-api">Memory API</MoreLink>
-          <MoreLink href="/docs/javascript">JavaScript</MoreLink>
-          <MoreLink href="/docs/python">Python</MoreLink>
+      <Section title="Numbers">
+        <div className="flex flex-col gap-14">
+          <Bars title="Stale facts, 50 scripted code changes" rows={STALE_BARS} />
+          <Bars title="LOCOMO, answer in the top 20 results" rows={LOCOMO_BARS} />
+          <p className={cn('text-[13px] leading-relaxed', MUTED)}>
+            35 ms for a woolly check, 19 ms median recall. On a laptop with no hosted model.{' '}
+            <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className={UNDERLINE}>
+              How we measure
+            </a>
+          </p>
         </div>
       </Section>
 
-      <Section id="private">
-        <H2>Private by design.</H2>
-        <p className={cn(P, 'mt-5 text-fd-muted-foreground')}>
-          Woolly refuses passwords and API keys, and an AI can’t plant instructions in your memory. Lines that come from a
-          repo are checked for secrets and injected instructions before any agent sees them.
-        </p>
-        <ul className="mt-10 grid gap-3 sm:grid-cols-3">
-          {PROMISES.map((p) => (
-            <li key={p.title} className="bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)]">
-              <Label className="text-fd-foreground">{p.title}</Label>
-              <p className="mt-3 text-[14px] text-fd-muted-foreground">{p.body}</p>
+      <Section title="Works with">
+        <ul className="flex flex-wrap gap-x-6 gap-y-3 text-[14px]">
+          {APPS.map((app) => (
+            <li key={app.name}>
+              <Link to={app.href} className={UNDERLINE}>
+                {app.name}
+              </Link>
             </li>
           ))}
         </ul>
-        <div className="mt-8 flex flex-wrap gap-x-8 gap-y-3">
-          <MoreLink href="/docs/security">Security</MoreLink>
-          <MoreLink href={githubUrl}>Read the code</MoreLink>
-        </div>
       </Section>
 
-      <Section id="shipping">
-        <H2>Shipping weekly</H2>
-        <p className={cn(P, 'mt-4 text-fd-muted-foreground')}>Built in public, one release at a time. Here’s what landed lately.</p>
-        <ol className="mt-8 shadow-[0_0_0_1px_var(--color-fd-border)]">
+      <Section title="Also">
+        <p className={cn(BODY, MUTED)}>
+          The same engine has an{' '}
+          <Link to="/docs/memory-api" className={cn(UNDERLINE, 'text-fd-foreground')}>
+            API shaped like mem0’s
+          </Link>{' '}
+          for the agents you build, and{' '}
+          <Link to="/docs/proxy" className={cn(UNDERLINE, 'text-fd-foreground')}>
+            woolly proxy
+          </Link>{' '}
+          gives Ollama a memory. No account, no cloud, no telemetry.
+        </p>
+      </Section>
+
+      <Section title="Shipping weekly">
+        <ol className="flex flex-col">
           {releases.map((r) => (
-            <li key={r.version} className="border-b border-fd-border last:border-b-0">
-              <a href={r.href} className="group flex items-start gap-4 px-4 py-4 transition-colors duration-150 hover:bg-fd-muted/60">
-                <span aria-hidden="true" className="mt-0.5 flex size-6 shrink-0 items-center justify-center text-fd-muted-foreground shadow-[0_0_0_1px_var(--color-fd-border)] transition-colors duration-200 group-hover:bg-brand group-hover:text-brand-foreground group-hover:shadow-none">
-                  <ArrowUpRight className={cn('size-3.5', NUDGE)} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-baseline gap-x-3">
-                    <span className="font-mono text-[14px] font-medium text-brand">v{r.version}</span>
-                    {r.date ? (
-                      <time dateTime={r.date} className="text-[13px] text-fd-muted-foreground tabular-nums">
-                        {DATE.format(new Date(r.date))}
-                      </time>
-                    ) : null}
-                  </span>
-                  <span className="mt-1 line-clamp-2 block text-pretty text-[15px] leading-relaxed">{r.summary}</span>
-                </span>
+            <li key={r.version}>
+              <a href={r.href} className="group grid grid-cols-[72px_1fr] gap-x-4 py-2.5 text-[14px] sm:grid-cols-[72px_64px_1fr]">
+                <span>v{r.version}</span>
+                {r.date ? (
+                  <time dateTime={r.date} className={cn('max-sm:hidden', MUTED)}>
+                    {DATE.format(new Date(r.date))}
+                  </time>
+                ) : (
+                  <span className="max-sm:hidden" />
+                )}
+                <span className={cn('line-clamp-2 leading-relaxed group-hover:text-fd-foreground', MUTED)}>{r.summary}</span>
               </a>
             </li>
           ))}
         </ol>
-        <div className="mt-6">
-          <MoreLink href={`${githubUrl}/blob/main/CHANGELOG.md`}>Read the changelog</MoreLink>
-        </div>
       </Section>
-
-      <Section id="questions">
-        <H2>Questions</H2>
-        <dl className="mt-8 flex flex-col gap-8">
-          {FAQ.map((q) => (
-            <div key={q.question}>
-              <dt className="text-[17px] font-medium">{q.question}</dt>
-              <dd className="mt-2 text-pretty text-[16px] leading-[1.7] text-fd-muted-foreground">{q.answer}</dd>
-            </div>
-          ))}
-        </dl>
-        <p className="mt-10 text-[15px] text-fd-muted-foreground">
-          Still have a question?{' '}
-          <a href={`${githubUrl}/issues`} className={INLINE}>
-            Ask on GitHub
-          </a>
-          .
-        </p>
-      </Section>
-
     </article>
   );
 }

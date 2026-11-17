@@ -1,21 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** Opens the menu drawer on a phone; elsewhere the nav is already on screen. */
-async function openNav(page: Page, isMobile: boolean) {
-  if (!isMobile) return;
-  // Taps before the page has loaded do nothing, so retry until the drawer opens.
-  const button = page.getByRole('button', { name: 'Open menu' });
-  await expect(async () => {
-    // Only tap while it's closed; once open, the drawer covers the button.
-    if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click({ timeout: 1000 });
-    await expect(button).toHaveAttribute('aria-expanded', 'true', { timeout: 1000 });
-  }).toPass({ timeout: 15_000 });
-  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
-}
+/** The nav is always on screen now; there's no drawer to open. */
+async function openNav(_page: Page, _isMobile: boolean) {}
 
-/** A link in the main nav, opening the drawer first on a phone. */
-async function navLink(page: Page, isMobile: boolean, name: string) {
-  await openNav(page, isMobile);
+/** A link in the main nav. */
+async function navLink(page: Page, _isMobile: boolean, name: string) {
   return page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
 }
 
@@ -35,11 +24,11 @@ test('home leads with the headline and buttons', async ({ page }) => {
 test('raw .md shows the page as Markdown and back', async ({ page, isMobile }) => {
   await page.goto('/');
   await openNav(page, isMobile);
-  await page.getByRole('button', { name: 'Raw .md' }).click();
+  await page.getByRole('contentinfo').getByRole('button', { name: 'Raw .md' }).click();
   await expect(page.getByRole('main')).toContainText("# Woolly, memory that knows when it's wrong");
   await expect(page.getByRole('main')).toContainText('woolly connect');
   await openNav(page, isMobile);
-  await page.getByRole('button', { name: 'Page' }).click();
+  await page.getByRole('contentinfo').getByRole('button', { name: 'Page' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 });
 
@@ -81,7 +70,7 @@ test('works with logos and features are shown', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('link', { name: 'Ollama', exact: true }).first()).toHaveAttribute('href', '/docs/ollama');
   await expect(page.getByRole('link', { name: 'Claude Code', exact: true })).toBeVisible();
-  await expect(page.getByRole('img', { name: /woolly mammoth drawn in small squares/ })).toBeVisible();
+  await expect(page.getByRole('img', { name: /rectangle of small squares/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'It knows when a fact goes stale' })).toBeAttached();
   await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeAttached();
 });
