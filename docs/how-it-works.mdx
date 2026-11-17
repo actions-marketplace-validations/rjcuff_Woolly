@@ -21,6 +21,41 @@ Moved to Denver in October
 
 You can open, edit or delete these files yourself. Woolly picks up changes right away.
 
+## Facts that point at the code
+
+A project fact can say what kind of fact it is and which code it's about, so Woolly can tell when the code changes underneath it:
+
+```md title="~/.woolly/memories/20261117-153000-1a2b3c4d.md"
+---
+id: 20261117-153000-1a2b3c4d
+source: agent
+status: active
+created_at: 2026-11-17T15:30:00Z
+project: drone
+commit: 3f2c1ab
+type: hardware
+sources: main/pins.h:12-18@77aa01b3, main/imu.c#imu_init@9b1e2f04
+confidence: 0.8
+---
+
+The IMU's chip select is GPIO 5
+```
+
+| Field | Meaning |
+| --- | --- |
+| `type` | `decision`, `convention`, `gotcha`, `bug` or `hardware` |
+| `sources` | The code the fact is about: a file (`main/imu.c`), a function, type, macro or constant in it (`main/imu.c#imu_init`) or a range of lines (`main/pins.h:12-18`). The part after `@` is a fingerprint of that code when the fact was saved. |
+| `commit` | The commit the fact was saved at |
+| `run_id` | The session it came from, when an app sets one |
+| `confidence` | How sure Woolly is, from 0 to 1. Left out, it's 1 for things you said and lower for things an AI inferred. |
+| `created_at`, `invalid_at` | When the fact became true and when it stopped being true (valid from and valid to) |
+
+When the code a fact points at is removed or changes in a way that contradicts it, Woolly marks the fact `stale` with a reason and the commit that did it, keeps it out of search and session briefs, and asks you to review it. Nothing is deleted.
+
+When each memory was last used is kept in `~/.woolly/usage.json`, not in the memory files, so searching never rewrites them.
+
+Files from older versions load as they are. They just have no type or sources until you add them.
+
 ## Keeping facts current
 
 Most memory tools keep everything forever, so your AI keeps bringing up things that stopped being true. Woolly handles change on purpose.
@@ -30,6 +65,7 @@ Most memory tools keep everything forever, so your AI keeps bringing up things t
 | You save the same thing twice | Keeps one copy and refreshes its date |
 | A new fact has the same `key` | Marks the old one superseded and hides it from search |
 | An AI contradicts something you said | Saves it as a conflict and keeps your version |
+| The code a fact points at changes | Marks it stale and asks you to review it |
 
 ## Who said it
 

@@ -49,6 +49,7 @@ const (
 	StatusSuperseded Status = "superseded" // replaced by a newer memory with the same key
 	StatusConflict   Status = "conflict"   // disagrees with a more trusted memory; needs review
 	StatusExpired    Status = "expired"    // no longer true, with nothing to replace it; kept as history
+	StatusStale      Status = "stale"      // the code it points at changed or is gone; needs review
 )
 
 // Memory is a single remembered fact.
@@ -82,6 +83,20 @@ type Memory struct {
 	InvalidAt *time.Time `json:"invalid_at,omitempty"`
 	// Metadata is free-form data an app attaches to a memory.
 	Metadata map[string]any `json:"metadata,omitempty"`
+	// Type is what kind of project fact this is: decision, convention,
+	// gotcha, bug or hardware. Empty for anything else.
+	Type string `json:"type,omitempty"`
+	// Sources are the files, symbols or line ranges the fact is about.
+	// Woolly checks them against the code to tell when the fact goes stale.
+	Sources []Ref `json:"sources,omitempty"`
+	// Conf is how sure Woolly is, from 0 to 1. Zero means not set; use
+	// Confidence() for the value with defaults.
+	Conf float64 `json:"confidence,omitempty"`
+	// StaleReason and StaleCommit say why a stale fact went stale and the
+	// commit that did it. StaleAt is when it was flagged.
+	StaleReason string     `json:"stale_reason,omitempty"`
+	StaleCommit string     `json:"stale_commit,omitempty"`
+	StaleAt     *time.Time `json:"stale_at,omitempty"`
 
 	file string // path on disk; empty until saved
 }
@@ -93,6 +108,11 @@ func (m *Memory) clone() Memory {
 		t := *m.InvalidAt
 		c.InvalidAt = &t
 	}
+	c.Sources = append([]Ref(nil), m.Sources...)
+	if m.StaleAt != nil {
+		t := *m.StaleAt
+		c.StaleAt = &t
+	}
 	if m.Metadata != nil {
 		c.Metadata = make(map[string]any, len(m.Metadata))
 		for k, v := range m.Metadata {
@@ -103,7 +123,8 @@ func (m *Memory) clone() Memory {
 }
 
 // Live reports whether the memory is still current: not replaced by a newer
-// one and not marked as no longer true.
+// one and not marked as no longer true. Stale and conflicting memories are
+// live: they wait for review.
 func (m *Memory) Live() bool {
 	return m.Status != StatusSuperseded && m.Status != StatusExpired
 }

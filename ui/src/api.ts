@@ -1,5 +1,5 @@
 export type Source = 'user' | 'import' | 'agent';
-export type Status = 'active' | 'superseded' | 'conflict';
+export type Status = 'active' | 'superseded' | 'conflict' | 'expired' | 'stale';
 
 export type Memory = {
   id: string;
@@ -14,6 +14,11 @@ export type Memory = {
   conflicts_with?: string;
   via?: string; // the app that saved it
   project?: string; // set for facts that only matter in one project
+  type?: 'decision' | 'convention' | 'gotcha' | 'bug' | 'hardware';
+  sources?: string[]; // the code the fact is about
+  confidence?: number;
+  stale_reason?: string;
+  stale_commit?: string;
   inTrash?: boolean; // set by the page for memories shown in the trash
 };
 

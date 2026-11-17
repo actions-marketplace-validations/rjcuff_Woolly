@@ -51,6 +51,8 @@ type Store struct {
 	mu   sync.Mutex
 	mems map[string]*Memory
 	fp   string // fingerprint of the directory at last load
+
+	usageMu sync.Mutex // guards usage.json
 }
 
 // Open opens (creating if needed) a store rooted at dir.
@@ -210,6 +212,13 @@ type RememberInput struct {
 	User, Agent, Session string
 	// Metadata is free-form data an app attaches to the memory.
 	Metadata map[string]any
+	// Type is decision, convention, gotcha, bug or hardware. It also adds
+	// the matching tag, which is how woolly.md files the fact.
+	Type string
+	// Sources are the files, symbols or line ranges the fact is about.
+	Sources []Ref
+	// Confidence is from 0 to 1. Zero means the default for the source.
+	Confidence float64
 }
 
 // RememberResult reports what Remember did.
@@ -244,8 +253,14 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 		return nil, &InjectionError{}
 	}
 	key := NormalizeKey(in.Key)
+	typ, _ := NormalizeType(in.Type)
+	if typ != "" {
+		in.Tags = append(in.Tags, typ)
+	}
 	tags := NormalizeTags(in.Tags)
 	project := NormalizeProject(in.Project)
+	refs := cleanRefs(in.Sources)
+	conf := ClampConfidence(in.Confidence)
 	slot := &Memory{Project: project, User: CleanScopeID(in.User), Agent: CleanScopeID(in.Agent), Session: CleanScopeID(in.Session)}
 
 	s.mu.Lock()
@@ -264,6 +279,15 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 		ex.Tags = mergeTags(ex.Tags, tags)
 		if src.Rank() > ex.Source.Rank() {
 			ex.Source = src // the user confirmed something an agent guessed
+		}
+		if ex.Type == "" {
+			ex.Type = typ
+		}
+		if len(ex.Sources) == 0 {
+			ex.Sources = refs
+		}
+		if conf > ex.Conf {
+			ex.Conf = conf
 		}
 		if err := s.write(ex); err != nil {
 			return nil, err
@@ -287,6 +311,7 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 		Source: src, Status: StatusActive, CreatedAt: now, UpdatedAt: now,
 		Via: CleanApp(in.Via), Project: project, Commit: in.Commit,
 		User: slot.User, Agent: slot.Agent, Session: slot.Session, Metadata: in.Metadata,
+		Type: typ, Sources: refs, Conf: conf,
 	}
 	res := &RememberResult{}
 
@@ -382,6 +407,9 @@ type UpdateInput struct {
 	Key            *string
 	Tags           *[]string
 	Project        *string
+	Type           *string
+	Sources        *[]Ref
+	Confidence     *float64
 	AllowSensitive bool
 }
 
@@ -415,6 +443,15 @@ func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
 	}
 	if in.Project != nil {
 		m.Project = NormalizeProject(*in.Project)
+	}
+	if in.Type != nil {
+		m.Type, _ = NormalizeType(*in.Type)
+	}
+	if in.Sources != nil {
+		m.Sources = cleanRefs(*in.Sources)
+	}
+	if in.Confidence != nil {
+		m.Conf = ClampConfidence(*in.Confidence)
 	}
 	m.UpdatedAt = time.Now().UTC()
 	if m.Status == StatusActive && m.Key != "" {

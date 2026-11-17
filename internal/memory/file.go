@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -47,6 +48,16 @@ func encode(m *Memory) []byte {
 	w("run_id", m.Session)
 	if m.InvalidAt != nil {
 		w("invalid_at", m.InvalidAt.UTC().Format(time.RFC3339Nano))
+	}
+	w("type", m.Type)
+	w("sources", formatRefs(m.Sources))
+	if m.Conf > 0 {
+		w("confidence", strconv.FormatFloat(m.Conf, 'f', -1, 64))
+	}
+	w("stale_reason", m.StaleReason)
+	w("stale_commit", m.StaleCommit)
+	if m.StaleAt != nil {
+		w("stale_at", m.StaleAt.UTC().Format(time.RFC3339Nano))
 	}
 	if len(m.Metadata) > 0 {
 		if j, err := json.Marshal(m.Metadata); err == nil {
@@ -117,6 +128,22 @@ func decode(data []byte) (*Memory, error) {
 			}
 		case "metadata":
 			_ = json.Unmarshal([]byte(v), &m.Metadata)
+		case "type":
+			m.Type, _ = NormalizeType(v)
+		case "sources":
+			m.Sources = cleanRefs(ParseRefs(v))
+		case "confidence":
+			if c, err := strconv.ParseFloat(v, 64); err == nil {
+				m.Conf = ClampConfidence(c)
+			}
+		case "stale_reason":
+			m.StaleReason = v
+		case "stale_commit":
+			m.StaleCommit = v
+		case "stale_at":
+			if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+				m.StaleAt = &t
+			}
 		}
 	}
 	if m.ID == "" {
@@ -126,7 +153,7 @@ func decode(data []byte) (*Memory, error) {
 		m.Source = SourceUser
 	}
 	switch m.Status {
-	case StatusActive, StatusSuperseded, StatusConflict, StatusExpired:
+	case StatusActive, StatusSuperseded, StatusConflict, StatusExpired, StatusStale:
 	default:
 		m.Status = StatusActive
 	}

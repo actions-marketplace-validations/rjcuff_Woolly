@@ -39,6 +39,11 @@ class Memory:
     via: Optional[str] = None
     project: Optional[str] = None
     score: Optional[float] = None
+    type: Optional[str] = None
+    sources: List[str] = field(default_factory=list)
+    confidence: Optional[float] = None
+    stale_reason: Optional[str] = None
+    stale_commit: Optional[str] = None
 
     @classmethod
     def from_json(cls, d: Dict[str, Any], score: Optional[float] = None) -> "Memory":
@@ -56,6 +61,11 @@ class Memory:
             via=d.get("via") or None,
             project=d.get("project") or None,
             score=score,
+            type=d.get("type") or None,
+            sources=list(d.get("sources") or []),
+            confidence=d.get("confidence"),
+            stale_reason=d.get("stale_reason") or None,
+            stale_commit=d.get("stale_commit") or None,
         )
 
     def __str__(self) -> str:
@@ -165,6 +175,9 @@ class Woolly:
         tags: Optional[List[str]] = None,
         source: str = "user",
         project: Optional[str] = None,
+        type: Optional[str] = None,
+        sources: Optional[List[str]] = None,
+        confidence: Optional[float] = None,
     ) -> RememberResult:
         """Save a memory.
 
@@ -172,7 +185,10 @@ class Woolly:
         newer memory with the same key replaces the older one. Use
         ``source="agent"`` for things your app inferred rather than things the
         user said. Set ``project`` for facts that only matter in one project,
-        like its database. Woolly refuses secrets, and refuses instruction-like text
+        like its database. For project facts, ``type`` is one of decision,
+        convention, gotcha, bug or hardware, and ``sources`` lists the code the
+        fact is about (``"main/imu.c#imu_init"``, ``"main/pins.h:12-18"``) so
+        Woolly can flag it stale when that code changes. Woolly refuses secrets, and refuses instruction-like text
         that doesn't come from the user, by raising :class:`WoollyError`.
         """
         body: Dict[str, Any] = {"content": content, "source": source}
@@ -182,6 +198,12 @@ class Woolly:
             body["tags"] = list(tags)
         if project:
             body["project"] = project
+        if type:
+            body["type"] = type
+        if sources:
+            body["sources"] = list(sources)
+        if confidence is not None:
+            body["confidence"] = confidence
         r = self._request("POST", "/api/remember", body)
         conflict = r.get("conflicts_with")
         return RememberResult(

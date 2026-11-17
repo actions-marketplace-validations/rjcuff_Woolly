@@ -11,17 +11,23 @@ import (
 // The repo's project memory is .woolly/woolly.md: one fact per line under a
 // few headings, sorted, so diffs stay small and merges rarely conflict.
 
-// Section is a heading in woolly.md and the tag its memories carry.
-type Section struct{ Name, Tag string }
+// Section is a heading in woolly.md and the tag its memories carry. An
+// optional section only shows when it has facts.
+type Section struct {
+	Name, Tag string
+	Optional  bool
+}
 
 // Sections are the headings every woolly.md has, in order.
 var Sections = []Section{
-	{"Overview", "overview"},
-	{"Stack", "stack"},
-	{"Conventions", "convention"},
-	{"Decisions", "decision"},
-	{"Gotchas", "gotcha"},
-	{"Commands", "command"},
+	{"Overview", "overview", false},
+	{"Stack", "stack", false},
+	{"Conventions", "convention", false},
+	{"Decisions", "decision", false},
+	{"Gotchas", "gotcha", false},
+	{"Bugs", "bug", true},
+	{"Hardware", "hardware", true},
+	{"Commands", "command", false},
 }
 
 // SectionNames lists every heading, Notes last.
@@ -62,6 +68,8 @@ type line struct {
 	text    string // the fact
 	id      string // last part of the memory's ID
 	key, by string
+	src     string // where in the code: comma-separated refs without fingerprints
+	stale   string // the commit that made it stale, or "yes"; "" when current
 	raw     string // the line as written, for lines Woolly doesn't manage
 }
 
@@ -154,6 +162,10 @@ func parseFact(s string) line {
 				ln.key = memory.NormalizeKey(v)
 			case "by":
 				ln.by = memory.CleanApp(v)
+			case "src":
+				ln.src = refsText(memory.ParseRefs(v))
+			case "stale":
+				ln.stale = staleText(v)
 			}
 		}
 		s = strings.TrimSpace(s[:i])
@@ -192,6 +204,12 @@ func (ln line) String() string {
 		}
 		attrs = append(attrs, "by="+by)
 	}
+	if ln.src != "" {
+		attrs = append(attrs, "src="+ln.src)
+	}
+	if ln.stale != "" {
+		attrs = append(attrs, "stale="+ln.stale)
+	}
 	return "- " + ln.text + " <!-- " + strings.Join(attrs, " ") + " -->"
 }
 
@@ -213,7 +231,7 @@ func (d doc) render() string {
 	}
 	for _, name := range SectionNames() {
 		raw, facts := d.in(name)
-		if name == Notes && len(raw)+len(facts) == 0 {
+		if optional(name) && len(raw)+len(facts) == 0 {
 			continue
 		}
 		b.WriteString("## " + name + "\n\n")
@@ -272,6 +290,44 @@ func SectionOf(m memory.Memory) string {
 		}
 	}
 	return Guess(m.Content)
+}
+
+func optional(name string) bool {
+	if name == Notes {
+		return true
+	}
+	for _, s := range Sections {
+		if s.Name == name {
+			return s.Optional
+		}
+	}
+	return false
+}
+
+// refsText writes refs for woolly.md: where they point, without
+// fingerprints, which would change on every confirm and clutter diffs.
+func refsText(refs []memory.Ref) string {
+	var parts []string
+	for _, r := range refs {
+		parts = append(parts, r.Where())
+	}
+	return strings.Join(parts, ",")
+}
+
+var shaRe = regexp.MustCompile(`^[0-9a-f]{4,40}$`)
+
+func staleText(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	switch {
+	case shaRe.MatchString(v):
+		if len(v) > 7 {
+			v = v[:7]
+		}
+		return v
+	case v == "" || v == "no" || v == "false":
+		return ""
+	}
+	return "yes"
 }
 
 // TagFor is the tag for a heading, or "" for Notes.

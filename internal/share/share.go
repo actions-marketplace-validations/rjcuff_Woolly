@@ -290,12 +290,20 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 		saved, err := store.Remember(memory.RememberInput{
 			ID: id, Content: ln.text, Key: ln.key, Tags: tags,
 			Source: memory.SourceAgent, Via: ln.by, Project: r.Project,
+			Sources: memory.ParseRefs(ln.src),
 		})
 		if err != nil {
 			res.Skipped++
 			ln.raw = ln.String()
 			kept = append(kept, ln)
 			continue
+		}
+		if ln.stale != "" && saved.Memory.Status == memory.StatusActive {
+			commit := ln.stale
+			if commit == "yes" {
+				commit = ""
+			}
+			_, _ = store.MarkStale(saved.Memory.ID, memory.StaleInput{Reason: "flagged stale in woolly.md", Commit: commit})
 		}
 		inFile[suffix(saved.Memory.ID)] = true
 		res.Imported++
@@ -340,11 +348,20 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 }
 
 func lineFor(m memory.Memory) line {
-	return line{section: SectionOf(m), text: oneLine(m.Content), id: suffix(m.ID), key: m.Key, by: m.Via}
+	ln := line{section: SectionOf(m), text: oneLine(m.Content), id: suffix(m.ID), key: m.Key, by: m.Via, src: refsText(m.Sources)}
+	if m.Status == memory.StatusStale {
+		ln.stale = staleText(m.StaleCommit)
+		if ln.stale == "" {
+			ln.stale = "yes"
+		}
+	}
+	return ln
 }
 
+// changed reports whether someone edited the line. Stale flags aren't
+// compared: each computer checks the code itself.
 func changed(m memory.Memory, ln line) bool {
-	return oneLine(m.Content) != ln.text || m.Key != ln.key || SectionOf(m) != ln.section
+	return oneLine(m.Content) != ln.text || m.Key != ln.key || SectionOf(m) != ln.section || refsText(m.Sources) != ln.src
 }
 
 // update makes a memory match a line someone edited.
@@ -362,6 +379,15 @@ func update(store *memory.Store, m memory.Memory, ln line) error {
 	if SectionOf(m) != ln.section {
 		tags := withSection(m.Tags, ln.section)
 		in.Tags = &tags
+		typ := ""
+		if t, ok := memory.NormalizeType(TagFor(ln.section)); ok {
+			typ = t
+		}
+		in.Type = &typ
+	}
+	if refsText(m.Sources) != ln.src {
+		refs := memory.ParseRefs(ln.src)
+		in.Sources = &refs
 	}
 	_, err := store.Update(m.ID, in)
 	return err

@@ -318,6 +318,22 @@ func printJSON(v any) error {
 	return enc.Encode(v)
 }
 
+// ground keeps the sources that exist in the current project's repo and
+// fingerprints them. Outside the repo it keeps them as given.
+func (a *app) ground(project string, refs []memory.Ref) []memory.Ref {
+	if len(refs) == 0 {
+		return nil
+	}
+	cwd, _ := os.Getwd()
+	if r := share.Find(cwd); r != nil && r.Project == memory.NormalizeProject(project) && groundRefs != nil {
+		return groundRefs(r.Dir, refs)
+	}
+	return refs
+}
+
+// groundRefs is set by the stale checker. Until then refs are kept as given.
+var groundRefs func(dir string, refs []memory.Ref) []memory.Ref
+
 func cmdRemember(args []string) error {
 	fs := newFlags("remember")
 	key := fs.String("key", "", "stable slot for facts that change, e.g. user.location")
@@ -326,6 +342,8 @@ func cmdRemember(args []string) error {
 	asJSON := fs.Bool("json", false, "print JSON")
 	allowSecret := fs.Bool("allow-secret", false, "save even if it looks like a password or API key")
 	project := fs.String("project", "", "only for this project, like a repo name")
+	typ := fs.String("type", "", "for project facts: decision, convention, gotcha, bug or hardware")
+	sources := fs.String("source-ref", "", "for project facts: the code it's about, like main/imu.c#imu_init or main/pins.h:12-18 (comma-separated)")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -333,6 +351,23 @@ func cmdRemember(args []string) error {
 	text := strings.TrimSpace(strings.Join(pos, " "))
 	if text == "" {
 		return errors.New(`nothing to remember; try: woolly remember "I prefer tabs over spaces"`)
+	}
+	if *typ != "" {
+		if _, ok := memory.NormalizeType(*typ); !ok {
+			return fmt.Errorf("unknown --type %q (use %s)", *typ, strings.Join(memory.Types, ", "))
+		}
+	}
+	refs := memory.ParseRefs(*sources)
+	if *sources != "" && len(refs) == 0 {
+		return fmt.Errorf("could not read --source-ref %q; use a path relative to the repo, like main/imu.c#imu_init", *sources)
+	}
+	if (*typ != "" || len(refs) > 0) && *project == "" {
+		if cwd, err := os.Getwd(); err == nil {
+			*project = repoName(cwd)
+		}
+		if *project == "" {
+			return errors.New("--type and --source-ref are for project facts: run this inside a git repo or pass --project")
+		}
 	}
 	src, ok := memory.ParseSource(*source)
 	if !ok {
@@ -344,6 +379,7 @@ func cmdRemember(args []string) error {
 	}
 	res, err := a.store.Remember(memory.RememberInput{
 		Content: text, Key: *key, Tags: []string{*tags}, Source: src, AllowSensitive: *allowSecret, Via: cli, Project: *project, Commit: commitFor(*project),
+		Type: *typ, Sources: a.ground(*project, refs),
 	})
 	var sensitive *memory.SensitiveError
 	if errors.As(err, &sensitive) {

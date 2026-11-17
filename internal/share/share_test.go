@@ -302,3 +302,52 @@ func TestGuess(t *testing.T) {
 		t.Error("LooksProject")
 	}
 }
+
+func TestSourcesAndStaleTravelThroughWoollyMD(t *testing.T) {
+	r := repo(t)
+	me := store(t)
+	res, _ := me.Remember(memory.RememberInput{Content: "IMU chip select is GPIO 5", Project: "acme", Type: "hardware",
+		Sources: []memory.Ref{{Path: "main/pins.h", Start: 12, End: 18, Hash: "77aa01b3"}, {Path: "main/imu.c", Symbol: "imu_init"}}})
+	me.MarkStale(res.Memory.ID, memory.StaleInput{Reason: "imu_init was removed", Commit: "9b1e2f0aa"})
+	if _, err := r.Init(me, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	text := read(t, r)
+	for _, want := range []string{"## Hardware", "src=main/pins.h:12-18,main/imu.c#imu_init", "stale=9b1e2f0"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("missing %q in\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "77aa01b3") {
+		t.Fatal("fingerprints stay out of woolly.md")
+	}
+	if strings.Contains(text, "## Bugs") {
+		t.Fatal("empty optional sections are left out")
+	}
+
+	// A teammate picks up the fact with its sources and stale flag.
+	them := store(t)
+	if _, err := r.Sync(them); err != nil {
+		t.Fatal(err)
+	}
+	st, _ := them.Stale("acme")
+	if len(st) != 1 || len(st[0].Sources) != 2 || st[0].Sources[1].Symbol != "imu_init" || st[0].StaleCommit != "9b1e2f0" || memory.TypeOf(st[0]) != "hardware" {
+		t.Fatalf("teammate got %+v", st)
+	}
+}
+
+func TestOldWoollyMDWithoutNewSectionsIsUnchanged(t *testing.T) {
+	r := repo(t)
+	me := store(t)
+	me.Remember(memory.RememberInput{Content: "acme uses Postgres 17", Project: "acme", Key: "db"})
+	if _, err := r.Init(me, Options{}); err != nil {
+		t.Fatal(err)
+	}
+	before := read(t, r)
+	if _, err := r.Sync(me); err != nil {
+		t.Fatal(err)
+	}
+	if after := read(t, r); after != before || strings.Contains(after, "src=") || strings.Contains(after, "## Hardware") {
+		t.Fatalf("sync changed a plain file:\n%s", after)
+	}
+}

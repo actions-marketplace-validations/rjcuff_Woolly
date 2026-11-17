@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Facts can point at the code they're about. A project fact can have a `type` (decision, convention, gotcha, bug or hardware), `sources` (a file, a function or constant in it, or a range of lines, each with a fingerprint of the code) and a `confidence`. Set them with `woolly remember --type hardware --source-ref main/pins.h:12-18`, the MCP `remember` tool, the API or the SDKs. Older memory files load as they are.
+- A new `stale` status for facts whose code changed or is gone. Stale facts stay on disk with the reason and the commit, but leave search and session briefs until you review them.
+- `.woolly/woolly.md` lines show `src=` for the code a fact points at and `stale=` with the commit that made it stale, so teammates see both in the diff. New Bugs and Hardware headings show up when they have facts; existing files don't change.
+- When each memory was last used is kept in `~/.woolly/usage.json`, not in the memory files.
+
 ## 0.14.1
 
 - Search by meaning is more accurate. Woolly now gives `nomic-embed-text` the search and document prefixes it was trained with (and the query prefix `mxbai-embed-large` expects). On LOCOMO, the share of questions where Woolly's top 20 results held the answer rose from 75.9% to 83.2% on the first three conversations. Saved embeddings are refreshed once, the first time you search.

@@ -48,6 +48,9 @@ type Server struct {
 	Activity *activity.Log
 	// Repo, if set, is a git repo that shares its project memories.
 	Repo *share.Repo
+	// Ground, when set, keeps only the sources that exist in the repo at
+	// dir and gives each a fingerprint of the code it points at.
+	Ground func(dir string, refs []memory.Ref) []memory.Ref
 	// Root is the git repo the app works in, if any. Project notes record
 	// its commit so Woolly can tell when they go out of date.
 	Root string
@@ -203,13 +206,16 @@ var tools = []map[string]any{
 			"In a repo with .woolly/woolly.md, project memory is shared with the whole team through git, so only save what every teammate's agent should know. " +
 			"Give a stable key for facts that can change; a newer memory with the same key replaces the older one.",
 		"inputSchema": obj(map[string]any{
-			"content": map[string]any{"type": "string", "description": "The fact, as one short self-contained sentence."},
-			"key":     map[string]any{"type": "string", "description": `Optional stable slot such as "user.location" or "project.acme.database".`},
-			"tags":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional tags."},
-			"source":  map[string]any{"type": "string", "enum": []string{"user", "agent"}, "description": `"user" if the user said it directly, "agent" if you inferred it. Default "agent".`},
-			"scope":   map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for facts about the codebase, "personal" for facts about the user. Default "auto": Woolly decides, and picks personal when unsure.`},
-			"section": map[string]any{"type": "string", "enum": []string{"Overview", "Stack", "Conventions", "Decisions", "Gotchas", "Commands"}, "description": "For project memory, the heading it goes under. Woolly guesses if you leave it out."},
-			"project": map[string]any{"type": "string", "description": "The project's name, if it isn't the current one."},
+			"content":    map[string]any{"type": "string", "description": "The fact, as one short self-contained sentence."},
+			"key":        map[string]any{"type": "string", "description": `Optional stable slot such as "user.location" or "project.acme.database".`},
+			"tags":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Optional tags."},
+			"source":     map[string]any{"type": "string", "enum": []string{"user", "agent"}, "description": `"user" if the user said it directly, "agent" if you inferred it. Default "agent".`},
+			"scope":      map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for facts about the codebase, "personal" for facts about the user. Default "auto": Woolly decides, and picks personal when unsure.`},
+			"section":    map[string]any{"type": "string", "enum": []string{"Overview", "Stack", "Conventions", "Decisions", "Gotchas", "Bugs", "Hardware", "Commands"}, "description": "For project memory, the heading it goes under. Woolly guesses if you leave it out."},
+			"type":       map[string]any{"type": "string", "enum": memory.Types, "description": "For project memory, what kind of fact it is. Sets the section too."},
+			"sources":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": `For project memory, the code the fact is about, relative to the repo root: "main/pins.h", "main/imu.c#imu_read_accel" (a function, type, macro or constant) or "main/pins.h:12-18" (lines). Woolly checks these against the code and flags the fact stale when they change.`},
+			"confidence": map[string]any{"type": "number", "minimum": 0, "maximum": 1, "description": "How sure you are, from 0 to 1. Leave it out if unsure."},
+			"project":    map[string]any{"type": "string", "description": "The project's name, if it isn't the current one."},
 		}, "content"),
 	},
 	{
@@ -278,16 +284,22 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	switch name {
 	case "remember":
 		var a struct {
-			Content string `json:"content"`
-			Key     string `json:"key"`
-			Tags    any    `json:"tags"`
-			Source  string `json:"source"`
-			Project string `json:"project"`
-			Scope   string `json:"scope"`
-			Section string `json:"section"`
+			Content string   `json:"content"`
+			Key     string   `json:"key"`
+			Tags    any      `json:"tags"`
+			Source  string   `json:"source"`
+			Project string   `json:"project"`
+			Scope   string   `json:"scope"`
+			Section string   `json:"section"`
+			Type    string   `json:"type"`
+			Sources []string `json:"sources"`
+			Conf    float64  `json:"confidence"`
 		}
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
+		}
+		if a.Scope == "" && (a.Type != "" || len(a.Sources) > 0) && (a.Project != "" || s.Project != "") && !share.LooksPersonal(a.Content) {
+			a.Scope = "project" // only project facts have a type or point at code
 		}
 		project, err := s.scopeFor(a.Scope, a.Project, a.Key, a.Content)
 		if err != nil {
@@ -305,7 +317,12 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			src = parsed
 		}
-		res, err := s.Store.Remember(memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project)})
+		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf}
+		if project != "" {
+			in.Type = a.Type
+			in.Sources = s.sources(project, a.Sources)
+		}
+		res, err := s.Store.Remember(in)
 		if err != nil {
 			return "", err
 		}
@@ -513,6 +530,21 @@ func (s *Server) commit(project string) string {
 		return ""
 	}
 	return gitinfo.Head(s.Root)
+}
+
+// sources reads the refs an agent gave for a project fact. The hook in
+// Sources, when set, checks them against the code.
+func (s *Server) sources(project string, refs []string) []memory.Ref {
+	var out []memory.Ref
+	for _, r := range refs {
+		if ref, ok := memory.ParseRef(r); ok {
+			out = append(out, ref)
+		}
+	}
+	if s.Ground != nil && s.Repo != nil && s.Repo.Project == project {
+		out = s.Ground(s.Repo.Dir, out)
+	}
+	return out
 }
 
 // shareRepo writes project notes to the repo after a change, and reports

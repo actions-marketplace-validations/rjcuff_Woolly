@@ -80,16 +80,20 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 
 	mux.HandleFunc("POST /api/remember", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Content string   `json:"content"`
-			Key     string   `json:"key"`
-			Tags    []string `json:"tags"`
-			Source  string   `json:"source"`
-			Project string   `json:"project"`
+			Content string       `json:"content"`
+			Key     string       `json:"key"`
+			Tags    []string     `json:"tags"`
+			Source  string       `json:"source"`
+			Project string       `json:"project"`
+			Type    string       `json:"type"`
+			Sources []memory.Ref `json:"sources"`
+			Conf    float64      `json:"confidence"`
 		}
 		if !readJSON(w, r, &req) {
 			return
 		}
-		in := memory.RememberInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Via: appOf(r), Project: req.Project}
+		in := memory.RememberInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Via: appOf(r), Project: req.Project,
+			Type: req.Type, Sources: req.Sources, Confidence: req.Conf}
 		if req.Source != "" {
 			src, ok := memory.ParseSource(req.Source)
 			if !ok {
@@ -164,15 +168,19 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 
 	mux.HandleFunc("PATCH /api/memories/{id}", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Content *string   `json:"content"`
-			Key     *string   `json:"key"`
-			Tags    *[]string `json:"tags"`
-			Project *string   `json:"project"`
+			Content *string       `json:"content"`
+			Key     *string       `json:"key"`
+			Tags    *[]string     `json:"tags"`
+			Project *string       `json:"project"`
+			Type    *string       `json:"type"`
+			Sources *[]memory.Ref `json:"sources"`
+			Conf    *float64      `json:"confidence"`
 		}
 		if !readJSON(w, r, &req) {
 			return
 		}
-		m, err := store.Update(r.PathValue("id"), memory.UpdateInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Project: req.Project})
+		m, err := store.Update(r.PathValue("id"), memory.UpdateInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Project: req.Project,
+			Type: req.Type, Sources: req.Sources, Confidence: req.Conf})
 		if err != nil {
 			writeStoreError(w, err)
 			return

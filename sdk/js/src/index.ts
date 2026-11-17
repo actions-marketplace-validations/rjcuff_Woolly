@@ -1,6 +1,9 @@
 // Client for Woolly, the local memory for your AI tools. It talks to
 // `woolly serve` on your own computer; nothing goes anywhere else.
 
+/** What kind of project fact a memory is. */
+export type FactType = 'decision' | 'convention' | 'gotcha' | 'bug' | 'hardware';
+
 /** A remembered fact. */
 export interface Memory {
   id: string;
@@ -8,13 +11,23 @@ export interface Memory {
   key?: string;
   tags?: string[];
   source: 'user' | 'import' | 'agent';
-  status: 'active' | 'superseded' | 'conflict' | 'expired';
+  status: 'active' | 'superseded' | 'conflict' | 'expired' | 'stale';
   created_at: string;
   updated_at: string;
   project?: string;
   via?: string;
   superseded_by?: string;
   conflicts_with?: string;
+  /** For project facts: decision, convention, gotcha, bug or hardware. */
+  type?: FactType;
+  /** The code the fact is about: "path", "path#symbol" or "path:start-end". */
+  sources?: string[];
+  /** How sure Woolly is, from 0 to 1. */
+  confidence?: number;
+  /** Why a stale fact went stale, and the commit that did it. */
+  stale_reason?: string;
+  stale_commit?: string;
+  stale_at?: string;
   /** Relevance from recall, when the memory came from a search. */
   score?: number;
 }
@@ -61,7 +74,7 @@ export interface ScopedMemory {
   run_id?: string;
   project?: string;
   metadata?: Record<string, unknown>;
-  status: 'active' | 'superseded' | 'conflict' | 'expired';
+  status: 'active' | 'superseded' | 'conflict' | 'expired' | 'stale';
   created_at: string;
   updated_at: string;
   /** When it stopped being true, for replaced and expired memories. */
@@ -242,7 +255,15 @@ export class Woolly {
    */
   remember(
     content: string,
-    options: { key?: string; tags?: string[]; source?: 'user' | 'agent' | 'import'; project?: string } = {},
+    options: {
+      key?: string;
+      tags?: string[];
+      source?: 'user' | 'agent' | 'import';
+      project?: string;
+      type?: FactType;
+      sources?: string[];
+      confidence?: number;
+    } = {},
   ): Promise<RememberResult> {
     return this.request('POST', '/api/remember', { content, source: 'user', ...options });
   }
