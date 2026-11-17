@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { parseChangelog } from '../app/lib/releases';
+import { parseChangelog, published } from '../app/lib/releases';
 
 test('the changelog becomes a short plain summary per release', () => {
   const md = [
@@ -38,4 +38,13 @@ test('a file name with a dot does not end the sentence', () => {
   expect(parseChangelog(md, 1)[0].summary).toBe(
     'A Windows app. Download Woolly-windows.exe, run it, and Woolly starts.',
   );
+});
+
+test('a version GitHub has not released yet is left out', () => {
+  const md = ['## 2.0.0', '', '- Not out yet.', '', '## 1.0.0', '', '- Out.'].join('\n');
+  const parsed = parseChangelog(md, 5);
+  const dates = new Map([['1.0.0', '2026-11-01T00:00:00Z']]);
+  expect(published(parsed, dates, 4).map((r) => r.version)).toEqual(['1.0.0']);
+  // When GitHub can't be reached, nothing is hidden.
+  expect(published(parsed, new Map(), 4).map((r) => r.version)).toEqual(['2.0.0', '1.0.0']);
 });

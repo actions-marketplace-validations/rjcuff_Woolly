@@ -71,8 +71,21 @@ async function releaseDates(): Promise<Map<string, string>> {
   }
 }
 
-/** getReleases returns the newest releases in a changelog, dated when GitHub answers. */
+/**
+ * published dates each release and, when GitHub answered, keeps only the
+ * versions it has actually released, so a changelog pushed ahead of its
+ * release never links to a page that isn't there yet.
+ */
+export function published(releases: Omit<Release, 'date'>[], dates: Map<string, string>, limit: number): Release[] {
+  const known = dates.size > 0;
+  return releases
+    .filter((r) => !known || dates.has(r.version))
+    .slice(0, limit)
+    .map((r) => ({ ...r, date: dates.get(r.version) ?? null }));
+}
+
+/** getReleases returns the newest published releases in a changelog, dated when GitHub answers. */
 export async function getReleases(changelog: string, limit = 4): Promise<Release[]> {
   const dates = await releaseDates();
-  return parseChangelog(changelog, limit).map((r) => ({ ...r, date: dates.get(r.version) ?? null }));
+  return published(parseChangelog(changelog, limit + 3), dates, limit);
 }
