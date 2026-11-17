@@ -51,6 +51,25 @@ response = client.chat.completions.create(
 
 It works the same with Anthropic, Ollama or any other model.
 
+## Memory for the agents you build
+
+The same API as mem0, on your own machine. `add` turns a conversation into memories for one user, and a local model decides whether each fact is new, updates an older one, or is no longer true. `search` finds them before your agent answers.
+
+```python
+woolly.add(
+    [
+        {"role": "user", "content": "I just moved to Austin"},
+        {"role": "assistant", "content": "Nice!"},
+    ],
+    user_id="alice",
+)
+# {"results": [{"memory": "Lives in Austin", "event": "UPDATE", "previous_memory": "Lives in Denver", ...}]}
+
+memories = woolly.search("where does she live?", user_id="alice")["results"]
+```
+
+Scope with `user_id`, `agent_id`, `run_id` or `project`. Also `get_all`, `history` (every version of a memory), `delete_all` and `dream`, which merges duplicates and settles facts that changed. Pass `infer=False` to `add` to save messages as they are, without a model. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
+
 ## More
 
 ```python

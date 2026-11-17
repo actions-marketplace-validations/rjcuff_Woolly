@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
 
 - A memory layer API for the agents you build, with mem0's routes and field names: `POST /v1/memories` turns a conversation into memories, and `POST /v1/search` finds them. For each fact a local model decides whether it's new, updates an older memory, says one is no longer true, or is already known, and reports `ADD`, `UPDATE`, `DELETE` or `NONE`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
 - Memories can belong to a `user_id`, `agent_id` or `run_id`, so one user's memories are never shown to or changed by another.
@@ -9,6 +9,7 @@
 - The API also accepts the token as `Authorization: Token ...`, the way mem0's clients send it.
 - Dreaming: `woolly dream` tidies memory with your local model. It folds repeats together, merges facts that say the same thing, and settles facts that contradict each other, keeping the old ones as history. With `--project` it reads that project's handoffs and decisions and writes up to five lessons for the next session, each pointing at the notes it came from. While Woolly runs, it dreams on its own at most once a day when memory has changed. `WOOLLY_DREAM=off` turns that off. Also `POST /v1/dream`. See [Dreaming](https://usewoolly.com/docs/dreaming).
 - `woolly resolve` now settles conflicts that have no key.
+- The JavaScript package (`woolly-ai` 0.2.0) and the Python package (`woolly-ai` 0.4.0) have the memory layer too: `add`, `search`, `getAll` / `get_all`, `history`, `deleteAll` / `delete_all` and `dream`, scoped by user, agent or run.
 
 ## 0.13.1
 

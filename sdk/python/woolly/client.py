@@ -286,6 +286,110 @@ class Woolly:
         """Make one memory the current fact for its key, replacing the others."""
         return Memory.from_json(self._request("POST", "/api/resolve", {"keep_id": keep_id})["kept"])
 
+    # The memory layer API, with mem0's method and field names. Each returns
+    # mem0's shape: a dict with a "results" list.
+
+    @staticmethod
+    def _scope(user_id=None, agent_id=None, run_id=None, project=None) -> Dict[str, str]:
+        return {k: v for k, v in {"user_id": user_id, "agent_id": agent_id, "run_id": run_id, "project": project}.items() if v}
+
+    def add(
+        self,
+        messages: Union[str, List[Dict[str, Any]]],
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        project: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        infer: bool = True,
+    ) -> Dict[str, Any]:
+        """Add a conversation to memory, the way mem0's ``add`` does.
+
+        A local model picks out the facts and decides for each whether it's
+        new, updates an older memory, says one is no longer true, or is
+        already known. Each result has an ``event``: ADD, UPDATE, DELETE,
+        NONE, or CONFLICT for a change to something the user said, which
+        waits for their review. Pass ``infer=False`` to save each user
+        message as it is, without a model.
+        """
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+        body: Dict[str, Any] = {"messages": messages, "infer": infer, **self._scope(user_id, agent_id, run_id, project)}
+        if metadata:
+            body["metadata"] = metadata
+        old, self.timeout = self.timeout, max(self.timeout, 120.0)
+        try:
+            return self._request("POST", "/v1/memories", body)
+        finally:
+            self.timeout = old
+
+    def search(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        project: Optional[str] = None,
+        top_k: int = 5,
+        threshold: float = 0.0,
+        show_expired: bool = False,
+    ) -> Dict[str, Any]:
+        """Search one user's, agent's or run's memories, best first. Each result has a ``score``."""
+        body = {
+            "query": query,
+            "filters": self._scope(user_id, agent_id, run_id, project),
+            "top_k": top_k,
+            "threshold": threshold,
+            "show_expired": show_expired,
+        }
+        return self._request("POST", "/v1/search", body)
+
+    def get_all(
+        self,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        project: Optional[str] = None,
+        show_expired: bool = False,
+    ) -> Dict[str, Any]:
+        """Every current memory in a scope, newest first."""
+        q = self._scope(user_id, agent_id, run_id, project)
+        if show_expired:
+            q["show_expired"] = "true"
+        return self._request("GET", "/v1/memories" + ("?" + urllib.parse.urlencode(q) if q else ""))
+
+    def history(self, memory_id: str) -> Dict[str, Any]:
+        """Every version of a memory, oldest first."""
+        return self._request("GET", "/v1/memories/" + urllib.parse.quote(memory_id) + "/history")
+
+    def delete_all(
+        self, user_id: Optional[str] = None, agent_id: Optional[str] = None, run_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Move every memory of a user, agent or run to the trash."""
+        q = self._scope(user_id, agent_id, run_id)
+        if not q:
+            raise WoollyError("delete_all needs a user_id, agent_id or run_id")
+        return self._request("DELETE", "/v1/memories?" + urllib.parse.urlencode(q))
+
+    def dream(
+        self,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        project: Optional[str] = None,
+        dry_run: bool = False,
+        learn: bool = True,
+    ) -> Dict[str, Any]:
+        """Tidy memory with the local model: merge duplicates, settle facts
+        that changed, and with ``project``, write lessons from its past
+        sessions. Returns the steps and counts of what changed."""
+        body = {"dry_run": dry_run, "learn": learn, **self._scope(user_id, agent_id, run_id, project)}
+        old, self.timeout = self.timeout, max(self.timeout, 600.0)
+        try:
+            return self._request("POST", "/v1/dream", body)
+        finally:
+            self.timeout = old
+
     def profile(self) -> Profile:
         """Get a summary of everything currently known about the user."""
         p = self._request("GET", "/api/profile")

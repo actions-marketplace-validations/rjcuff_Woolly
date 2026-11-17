@@ -132,3 +132,40 @@ test('AI SDK middleware passes calls through when Woolly is off', async () => {
   await generateText({ model, prompt: 'hello' });
   assert.equal(mock.doGenerateCalls[0].prompt.some((m) => m.role === 'system'), false);
 });
+
+test('memory layer: add, search, history and delete by user', async () => {
+  const added = await w.add([{ role: 'user', content: 'Deploys the API to Fly.io' }, { role: 'assistant', content: 'ok' }], {
+    userId: 'alice',
+    infer: false,
+    metadata: { team: 'web' },
+  });
+  assert.equal(added.length, 1);
+  assert.equal(added[0].event, 'ADD');
+  await w.add('Deploys the API to Render', { userId: 'bob', infer: false });
+
+  const found = await w.search('where does the API deploy', { userId: 'bob' });
+  assert.equal(found.length, 1);
+  assert.match(found[0].memory, /Render/);
+  assert.equal(typeof found[0].score, 'number');
+
+  const mine = await w.getAll({ userId: 'alice' });
+  assert.equal(mine.length, 1);
+  assert.deepEqual(mine[0].metadata, { team: 'web' });
+
+  const hist = await w.history(added[0].id);
+  assert.equal(hist[0].event, 'ADD');
+
+  assert.equal(await w.deleteAll({ userId: 'alice' }), 1);
+  assert.equal((await w.getAll({ userId: 'alice' })).length, 0);
+  assert.equal((await w.getAll({ userId: 'bob' })).length, 1);
+  await assert.rejects(w.deleteAll({}), WoollyError);
+});
+
+test('add with a model needs Ollama, and dream still folds repeats', async () => {
+  await assert.rejects(w.add('I live in Denver', { userId: 'carol' }), (e) => e instanceof WoollyError && e.status === 503);
+  await w.add('Uses pnpm', { userId: 'dave', infer: false });
+  await w.add('uses pnpm.', { userId: 'dave', infer: false });
+  const rep = await w.dream({ userId: 'dave' });
+  assert.equal(rep.merged, 1);
+  assert.equal((await w.getAll({ userId: 'dave' })).length, 1);
+});

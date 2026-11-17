@@ -144,3 +144,37 @@ class WoollyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    # The memory layer API.
+
+    def test_add_search_history_delete_by_user(self):
+        added = self.w.add(
+            [{"role": "user", "content": "Ships the app on Fridays"}, {"role": "assistant", "content": "ok"}],
+            user_id="alice", infer=False, metadata={"team": "web"},
+        )["results"]
+        self.assertEqual([e["event"] for e in added], ["ADD"])
+        self.w.add("Ships the app on Mondays", user_id="bob", infer=False)
+
+        found = self.w.search("when does the app ship", user_id="bob")["results"]
+        self.assertEqual(len(found), 1)
+        self.assertIn("Mondays", found[0]["memory"])
+        self.assertIsNotNone(found[0]["score"])
+
+        mine = self.w.get_all(user_id="alice")["results"]
+        self.assertEqual(mine[0]["metadata"], {"team": "web"})
+        self.assertEqual(self.w.history(added[0]["id"])["results"][0]["event"], "ADD")
+
+        self.assertEqual(self.w.delete_all(user_id="alice")["deleted"], 1)
+        self.assertEqual(self.w.get_all(user_id="alice")["results"], [])
+        self.assertEqual(len(self.w.get_all(user_id="bob")["results"]), 1)
+        with self.assertRaises(WoollyError):
+            self.w.delete_all()
+
+    def test_infer_needs_ollama_and_dream_folds_repeats(self):
+        with self.assertRaises(WoollyError) as e:
+            self.w.add("I live in Denver", user_id="carol")
+        self.assertEqual(e.exception.status, 503)
+        self.w.add("Uses pnpm", user_id="dave", infer=False)
+        self.w.add("uses pnpm.", user_id="dave", infer=False)
+        self.assertEqual(self.w.dream(user_id="dave")["merged"], 1)
+        self.assertEqual(len(self.w.get_all(user_id="dave")["results"]), 1)

@@ -44,6 +44,25 @@ const { text } = await generateText({ model, prompt: 'Any snack ideas?' });
 
 Options: `limit` (memories per call, default 6), `project`, and any `new Woolly()` option. If Woolly isn't running, calls go through unchanged.
 
+## Memory for the agents you build
+
+The same API as mem0, on your own machine. `add` turns a conversation into memories for one user, and a local model decides whether each fact is new, updates an older one, or is no longer true. `search` finds them before your agent answers.
+
+```ts
+await w.add(
+  [
+    { role: 'user', content: 'I just moved to Austin' },
+    { role: 'assistant', content: 'Nice!' },
+  ],
+  { userId: 'alice' },
+);
+// [{ memory: 'Lives in Austin', event: 'UPDATE', previous_memory: 'Lives in Denver', ... }]
+
+const memories = await w.search('where does she live?', { userId: 'alice' });
+```
+
+Scope with `userId`, `agentId`, `runId` or `project`. Also `getAll`, `history` (every version of a memory), `deleteAll` and `dream`, which merges duplicates and settles facts that changed. Pass `infer: false` to `add` to save messages as they are, without a model. See [Memory API for agents](/docs/memory-api).
+
 ## Learn from a conversation
 
 With Ollama running, a local model picks out the facts worth keeping. See [Smart memory](/docs/learn).

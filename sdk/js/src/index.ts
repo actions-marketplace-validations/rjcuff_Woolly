@@ -8,7 +8,7 @@ export interface Memory {
   key?: string;
   tags?: string[];
   source: 'user' | 'import' | 'agent';
-  status: 'active' | 'superseded' | 'conflict';
+  status: 'active' | 'superseded' | 'conflict' | 'expired';
   created_at: string;
   updated_at: string;
   project?: string;
@@ -41,6 +41,73 @@ export interface Profile {
   preferences: Memory[];
   notes: Memory[];
   markdown: string;
+}
+
+/** Who a memory belongs to: the same scope fields mem0 uses. */
+export interface Scope {
+  userId?: string;
+  agentId?: string;
+  runId?: string;
+  /** Keep the memory to one codebase. */
+  project?: string;
+}
+
+/** A memory from the memory layer API, in mem0's shape. */
+export interface ScopedMemory {
+  id: string;
+  memory: string;
+  user_id?: string;
+  agent_id?: string;
+  run_id?: string;
+  project?: string;
+  metadata?: Record<string, unknown>;
+  status: 'active' | 'superseded' | 'conflict' | 'expired';
+  created_at: string;
+  updated_at: string;
+  /** When it stopped being true, for replaced and expired memories. */
+  invalid_at?: string;
+  /** Relevance, when it came from search. */
+  score?: number;
+}
+
+/** What add did with one fact. */
+export interface MemoryEvent {
+  id: string;
+  memory: string;
+  event: 'ADD' | 'UPDATE' | 'DELETE' | 'NONE' | 'CONFLICT';
+  previous_memory?: string;
+  reason?: string;
+}
+
+/** One version in a memory's history. */
+export interface HistoryEntry {
+  id: string;
+  memory_id: string;
+  old_memory: string | null;
+  new_memory: string | null;
+  event: 'ADD' | 'UPDATE' | 'DELETE';
+  created_at: string;
+}
+
+/** What a dream did. */
+export interface DreamReport {
+  steps: { action: 'merge' | 'settle' | 'conflict' | 'learn'; memory: string; ids: string[]; result?: string; reason?: string }[];
+  merged: number;
+  settled: number;
+  conflicts: number;
+  learned: number;
+  compared: number;
+  note?: string;
+}
+
+function scopeBody(s: Scope = {}) {
+  return { user_id: s.userId, agent_id: s.agentId, run_id: s.runId, project: s.project };
+}
+
+function scopeQuery(s: Scope = {}, extra: Record<string, string | undefined> = {}) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries({ ...scopeBody(s), ...extra })) if (v) q.set(k, v);
+  return q.size ? `?${q}` : '';
 }
 
 export interface WoollyOptions {
@@ -258,6 +325,71 @@ export class Woolly {
     return (await this.request<{ kept: Memory }>('POST', '/api/resolve', { keep_id: keepId })).kept;
   }
 
+  /**
+   * Add a conversation to memory, the way mem0's add does. A local model
+   * picks out the facts and decides for each whether it's new, updates an
+   * older memory, says one is no longer true, or is already known. Pass
+   * infer: false to save each user message as it is, without a model.
+   */
+  async add(
+    messages: string | ChatMessage[],
+    options: Scope & { metadata?: Record<string, unknown>; infer?: boolean } = {},
+  ): Promise<MemoryEvent[]> {
+    const msgs = typeof messages === 'string' ? [{ role: 'user', content: messages }] : messages;
+    const r = await this.request<{ results: MemoryEvent[] }>(
+      'POST',
+      '/v1/memories',
+      { messages: msgs, ...scopeBody(options), metadata: options.metadata, infer: options.infer ?? true },
+      Math.max(this.timeout, 120_000),
+    );
+    return r.results;
+  }
+
+  /** Search one user's, agent's or run's memories, best first. */
+  async search(
+    query: string,
+    options: Scope & { topK?: number; threshold?: number; showExpired?: boolean } = {},
+  ): Promise<ScopedMemory[]> {
+    const r = await this.request<{ results: ScopedMemory[] }>('POST', '/v1/search', {
+      query,
+      filters: scopeBody(options),
+      top_k: options.topK ?? 5,
+      threshold: options.threshold ?? 0,
+      show_expired: options.showExpired ?? false,
+    });
+    return r.results;
+  }
+
+  /** Every current memory in a scope, newest first. showExpired includes old versions. */
+  async getAll(options: Scope & { topK?: number; showExpired?: boolean } = {}): Promise<ScopedMemory[]> {
+    const extra = { top_k: options.topK ? String(options.topK) : undefined, show_expired: options.showExpired ? 'true' : undefined };
+    return (await this.request<{ results: ScopedMemory[] }>('GET', `/v1/memories${scopeQuery(options, extra)}`)).results;
+  }
+
+  /** Every version of a memory, oldest first. */
+  async history(id: string): Promise<HistoryEntry[]> {
+    return (await this.request<{ results: HistoryEntry[] }>('GET', `/v1/memories/${encodeURIComponent(id)}/history`)).results;
+  }
+
+  /** Move every memory of a user, agent or run to the trash. */
+  async deleteAll(scope: Scope): Promise<number> {
+    if (!scope.userId && !scope.agentId && !scope.runId) throw new WoollyError('deleteAll needs a userId, agentId or runId');
+    return (await this.request<{ deleted: number }>('DELETE', `/v1/memories${scopeQuery(scope)}`)).deleted;
+  }
+
+  /**
+   * Tidy memory with the local model: merge duplicates, settle facts that
+   * changed, and with a project, write lessons from its past sessions.
+   */
+  dream(options: Scope & { dryRun?: boolean; learn?: boolean } = {}): Promise<DreamReport> {
+    return this.request(
+      'POST',
+      '/v1/dream',
+      { ...scopeBody(options), dry_run: options.dryRun ?? false, learn: options.learn ?? true },
+      Math.max(this.timeout, 600_000),
+    );
+  }
+
   /** A summary of everything Woolly knows about the user. */
   async profile(): Promise<Profile> {
     const p = await this.request<Omit<Profile, 'markdown'>>('GET', '/api/profile');
@@ -284,5 +416,9 @@ export const remember = (content: string, options?: Parameters<Woolly['remember'
 export const recall = (query: string, options?: Parameters<Woolly['recall']>[1]) => client().recall(query, options);
 /** A prompt note of relevant memories, with the default client. */
 export const context = (query: string, options?: Parameters<Woolly['context']>[1]) => client().context(query, options);
+/** Add a conversation to memory with the default client. */
+export const add = (messages: string | ChatMessage[], options?: Parameters<Woolly['add']>[1]) => client().add(messages, options);
+/** Search a scope's memories with the default client. */
+export const search = (query: string, options?: Parameters<Woolly['search']>[1]) => client().search(query, options);
 /** Learn from a conversation with the default client. */
 export const learn = (input: string | ChatMessage[], options?: Parameters<Woolly['learn']>[1]) => client().learn(input, options);
