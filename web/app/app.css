@@ -403,7 +403,15 @@ button:has(> svg.lucide-check) svg {
 }
 #nd-page th,
 #nd-page td {
-  padding: 0.7em 1em 0.7em 0;
+  padding: 0.85em 1.25em;
+  vertical-align: top;
+}
+#nd-page th {
+  font-weight: 500;
+}
+#nd-page table,
+#nd-page div:has(> table) {
+  border-radius: 0 !important;
 }
 #nd-page th,
 #nd-page td {
