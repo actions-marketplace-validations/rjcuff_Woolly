@@ -57,8 +57,12 @@ demo: build
 
 # Builds and uploads the woolly-ai Python package. Bump the version in
 # sdk/python/pyproject.toml and sdk/python/woolly/__init__.py first.
+# PYTHON is a Python with build and twine, like a release venv:
+#   python3 -m venv ~/.venvs/woolly-release && ~/.venvs/woolly-release/bin/pip install build twine
+#   make pypi PYTHON=~/.venvs/woolly-release/bin/python
+PYTHON ?= python3
 pypi: py-test
-	cd sdk/python && rm -rf dist && python3 -m build && python3 -m twine upload dist/*
+	cd sdk/python && rm -rf dist && $(PYTHON) -m build && $(PYTHON) -m twine upload dist/*
 
 # Builds the desktop app for this computer. Needs Rust (rustup.rs).
 app:
