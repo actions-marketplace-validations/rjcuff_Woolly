@@ -1,6 +1,6 @@
 import type { Route } from './+types/download';
 import { useEffect, useState } from 'react';
-import { UNDERLINE } from '@/components/doc/rail';
+import { LINK, QUIET_LINK } from '@/components/doc/rail';
 import { cn } from '@/lib/utils';
 import { DocShell } from '@/components/doc/shell';
 import { detectOS, macApp, windowsApp, type OS } from '@/lib/download';
@@ -52,7 +52,7 @@ export default function Download({ loaderData }: Route.ComponentProps) {
     <DocShell stars={loaderData?.stars}>
       <section className="pb-10">
         <h1 className="text-[24px] font-normal leading-[1.35] tracking-[-0.01em] sm:text-[28px]">Download Woolly</h1>
-        <p className="mt-6 max-w-[520px] text-pretty text-[15px] leading-[1.8] text-fd-muted-foreground">
+        <p className="mt-6 max-w-[520px] text-pretty font-sans text-[16px] leading-[1.75] text-fd-muted-foreground">
           Free and open source, for Mac, Windows and Linux. Pick your computer.
         </p>
 
@@ -68,10 +68,12 @@ export default function Download({ loaderData }: Route.ComponentProps) {
               onClick={() => setOS(o.id)}
               className={cn(
                 'outline-none transition-colors duration-200 focus-visible:text-fd-foreground',
-                os === o.id ? 'text-fd-foreground underline decoration-1 underline-offset-[6px]' : 'text-fd-muted-foreground hover:text-fd-foreground',
+                os === o.id ? 'text-fd-foreground' : 'text-fd-muted-foreground hover:text-fd-foreground',
               )}
             >
+              <span aria-hidden="true" className={os === o.id ? '' : 'invisible'}>[</span>
               {o.label}
+              <span aria-hidden="true" className={os === o.id ? '' : 'invisible'}>]</span>
             </button>
           ))}
         </div>
@@ -79,8 +81,8 @@ export default function Download({ loaderData }: Route.ComponentProps) {
         <div id="os-panel" role="tabpanel" aria-labelledby={`os-${os}`} className="mt-10 flex flex-col gap-12">
           {os !== 'linux' && (
             <div className="flex flex-col gap-3">
-              <a href={os === 'mac' ? macApp : windowsApp} className={cn(UNDERLINE, 'self-start text-[15px]')}>
-                {os === 'mac' ? 'Download for Mac' : 'Download for Windows'}
+              <a href={os === 'mac' ? macApp : windowsApp} className={cn(LINK, 'self-start text-[15px]')}>
+                {os === 'mac' ? 'Download for Mac' : 'Download for Windows'} <span aria-hidden="true">↓</span>
               </a>
               <p className="text-[13px] text-fd-muted-foreground">
                 {os === 'mac' ? 'Apple Silicon and Intel, macOS 11 or later.' : 'Windows 10 or later.'}
@@ -97,7 +99,7 @@ export default function Download({ loaderData }: Route.ComponentProps) {
                     ? 'Or install the command line tool in PowerShell.'
                     : 'Paste this in a terminal.'}
               </p>
-              <button type="button" onClick={copy} className={cn(UNDERLINE, 'text-[12px] text-fd-muted-foreground')}>
+              <button type="button" onClick={copy} className={cn(QUIET_LINK, 'text-[13px]')}>
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
@@ -111,10 +113,10 @@ export default function Download({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <p className="mt-16 text-[15px] leading-[1.8] text-fd-muted-foreground">
+        <p className="mt-16 font-sans text-[16px] leading-[1.75] text-fd-muted-foreground">
           Then connect your AI apps with <code className="whitespace-nowrap text-fd-foreground">woolly connect</code>, and run{' '}
           <code className="whitespace-nowrap text-fd-foreground">woolly init --hooks</code> in your repo. See the{' '}
-          <a href="/docs/quickstart" className={cn(UNDERLINE, 'text-fd-foreground')}>
+          <a href="/docs/quickstart" className={LINK}>
             quickstart
           </a>
           .

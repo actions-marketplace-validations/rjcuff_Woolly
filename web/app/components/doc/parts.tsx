@@ -27,7 +27,7 @@ export function SmartLink({ href, className, children, ...rest }: { href: string
 /** A quiet link with an arrow, for "read more" at the end of a section. */
 export function MoreLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <SmartLink href={href} className="group inline-flex items-center gap-1 text-[15px] font-medium text-fd-foreground underline-offset-4 hover:underline">
+    <SmartLink href={href} className="group inline-flex items-center gap-1 text-[15px] font-medium text-fd-foreground transition-colors hover:text-fd-muted-foreground">
       {children}
       <ArrowUpRight aria-hidden="true" className="size-3.5 text-fd-muted-foreground transition-[transform,color] duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand" />
     </SmartLink>

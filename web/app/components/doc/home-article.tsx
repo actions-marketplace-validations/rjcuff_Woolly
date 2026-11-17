@@ -2,7 +2,7 @@ import { useInView, useReducedMotion } from 'motion/react';
 import { useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { PixelWaves } from '@/components/doc/pixel-waves';
-import { UNDERLINE } from '@/components/doc/rail';
+import { LINK, QUIET_LINK } from '@/components/doc/rail';
 import { integrations } from '@/lib/integrations';
 import type { Release } from '@/lib/releases';
 import { githubUrl } from '@/lib/shared';
@@ -26,7 +26,7 @@ const APPS = integrations
 
 const DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
-const BODY = 'text-pretty text-[15px] leading-[1.8]';
+const BODY = 'text-pretty font-sans text-[16px] leading-[1.75]';
 const MUTED = 'text-fd-muted-foreground';
 
 function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
@@ -55,7 +55,7 @@ function CopyInstall() {
     }
   };
   return (
-    <button type="button" onClick={copy} className={cn(UNDERLINE, 'text-[12px]', MUTED)}>
+    <button type="button" onClick={copy} className={cn(QUIET_LINK, 'text-[13px]')}>
       {copied ? 'Copied' : 'Copy'}
     </button>
   );
@@ -117,7 +117,7 @@ function Bars({ title, rows }: { title: string; rows: { label: string; value: nu
       <div className="mt-6 flex flex-col gap-5">
         {rows.map((r, i) => (
           <div key={r.label}>
-            <div className="flex items-baseline justify-between gap-3 text-[13px]">
+            <div className="flex items-baseline justify-between gap-3 text-[14px]">
               <span className={MUTED}>{r.label}</span>
               <span className="tabular-nums">{r.value.toFixed(1)}%</span>
             </div>
@@ -164,14 +164,14 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         from. When that code changes, Woolly flags the fact instead of letting your agent follow it.
       </p>
       <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 text-[14px]">
-        <Link to="/docs/quickstart" className={UNDERLINE}>
-          Get started
+        <Link to="/docs/quickstart" className={LINK}>
+          Get started <span aria-hidden="true">→</span>
         </Link>
-        <a href={download.href} className={UNDERLINE}>
-          {download.label}
+        <a href={download.href} className={LINK}>
+          {download.label} <span aria-hidden="true">↓</span>
         </a>
-        <Link to="/docs/stale-facts" className={UNDERLINE}>
-          How it works
+        <Link to="/docs/stale-facts" className={LINK}>
+          How it works <span aria-hidden="true">→</span>
         </Link>
       </div>
 
@@ -188,7 +188,7 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
           {FEATURES.map((f) => (
             <li key={f.title}>
               <h3 className="text-[15px]">{f.title}</h3>
-              <p className={cn('mt-2 text-pretty text-[14px] leading-[1.75]', MUTED)}>{f.body}</p>
+              <p className={cn('mt-2 text-pretty font-sans text-[15px] leading-[1.7]', MUTED)}>{f.body}</p>
             </li>
           ))}
         </ul>
@@ -198,10 +198,10 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         <div className="flex flex-col gap-14">
           <Bars title="Stale facts, 50 scripted code changes" rows={STALE_BARS} />
           <Bars title="LOCOMO, answer in the top 20 results" rows={LOCOMO_BARS} />
-          <p className={cn('text-[13px] leading-relaxed', MUTED)}>
+          <p className={cn('font-sans text-[15px] leading-relaxed', MUTED)}>
             35 ms for a woolly check, 19 ms median recall. On a laptop with no hosted model.{' '}
-            <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className={UNDERLINE}>
-              How we measure
+            <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className={LINK}>
+              How we measure <span aria-hidden="true">→</span>
             </a>
           </p>
         </div>
@@ -211,7 +211,7 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         <ul className="flex flex-wrap gap-x-6 gap-y-3 text-[14px]">
           {APPS.map((app) => (
             <li key={app.name}>
-              <Link to={app.href} className={UNDERLINE}>
+              <Link to={app.href} className={LINK}>
                 {app.name}
               </Link>
             </li>
@@ -222,11 +222,11 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
       <Section title="Also">
         <p className={cn(BODY, MUTED)}>
           The same engine has an{' '}
-          <Link to="/docs/memory-api" className={cn(UNDERLINE, 'text-fd-foreground')}>
+          <Link to="/docs/memory-api" className={LINK}>
             API shaped like mem0’s
           </Link>{' '}
           for the agents you build, and{' '}
-          <Link to="/docs/proxy" className={cn(UNDERLINE, 'text-fd-foreground')}>
+          <Link to="/docs/proxy" className={LINK}>
             woolly proxy
           </Link>{' '}
           gives Ollama a memory. No account, no cloud, no telemetry.
@@ -246,7 +246,7 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
                 ) : (
                   <span className="max-sm:hidden" />
                 )}
-                <span className={cn('line-clamp-2 leading-relaxed group-hover:text-fd-foreground', MUTED)}>{r.summary}</span>
+                <span className={cn('line-clamp-2 font-sans text-[15px] leading-relaxed group-hover:text-fd-foreground', MUTED)}>{r.summary}</span>
               </a>
             </li>
           ))}

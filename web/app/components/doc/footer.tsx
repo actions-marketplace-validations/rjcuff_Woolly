@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { UNDERLINE, type Mode } from '@/components/doc/rail';
+import { QUIET_LINK, type Mode } from '@/components/doc/rail';
 import { blueskyUrl, githubUrl, linkedinUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
@@ -15,18 +15,18 @@ const LINKS: { label: string; href: string }[] = [
 /** The bottom of every page except the docs: small links, and the switches. */
 export function DocFooter({ mode, onMode }: { mode?: Mode; onMode?: (mode: Mode) => void }) {
   return (
-    <footer className="mt-28 pb-12 text-[13px] text-fd-muted-foreground">
+    <footer className="mt-28 pb-12 text-[14px] text-fd-muted-foreground">
       <nav aria-label="Footer">
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <li className="text-fd-foreground">© {new Date().getFullYear()} Woolly™</li>
           {LINKS.map((l) => (
             <li key={l.label}>
               {l.href.startsWith('/') ? (
-                <Link to={l.href} className={cn(UNDERLINE, 'hover:text-fd-foreground')}>
+                <Link to={l.href} className={QUIET_LINK}>
                   {l.label}
                 </Link>
               ) : (
-                <a href={l.href} className={cn(UNDERLINE, 'hover:text-fd-foreground')}>
+                <a href={l.href} className={QUIET_LINK}>
                   {l.label}
                 </a>
               )}
@@ -43,7 +43,7 @@ export function DocFooter({ mode, onMode }: { mode?: Mode; onMode?: (mode: Mode)
                 type="button"
                 aria-pressed={mode === m}
                 onClick={() => onMode(m)}
-                className={cn('outline-none focus-visible:ring-2 focus-visible:ring-brand', mode === m ? 'text-fd-foreground' : cn(UNDERLINE, 'hover:text-fd-foreground'))}
+                className={cn('outline-none focus-visible:ring-2 focus-visible:ring-brand', mode === m ? 'text-fd-foreground' : QUIET_LINK)}
               >
                 {m === 'human' ? 'Page' : 'Raw .md'}
               </button>

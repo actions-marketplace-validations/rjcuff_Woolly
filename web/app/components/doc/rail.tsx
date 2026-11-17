@@ -8,8 +8,12 @@ export type Mode = 'human' | 'agent';
 /** A section of the page, with the memory file it reads as. */
 export type DocSection = { id: string; label: string };
 
-export const UNDERLINE =
-  'underline decoration-fd-foreground/35 decoration-1 underline-offset-[6px] transition-[text-decoration-color] duration-150 hover:decoration-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand';
+/** A plain link: no underline, it dims a little on hover. */
+export const LINK =
+  'text-fd-foreground transition-colors duration-150 hover:text-fd-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand';
+/** A quiet link in gray that brightens on hover. */
+export const QUIET_LINK =
+  'text-fd-muted-foreground transition-colors duration-150 hover:text-fd-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand';
 
 const NAV_LINK = 'group relative inline-block py-1 text-fd-muted-foreground outline-none transition-colors duration-200 hover:text-fd-foreground focus-visible:text-fd-foreground';
 const BRACKET = 'pointer-events-none absolute inset-y-0 flex items-center opacity-0 transition-[opacity,translate] duration-200 group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100 motion-reduce:transition-none';
