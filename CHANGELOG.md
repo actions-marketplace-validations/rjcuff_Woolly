@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.14.1
 
 - Search by meaning is more accurate. Woolly now gives `nomic-embed-text` the search and document prefixes it was trained with (and the query prefix `mxbai-embed-large` expects). On LOCOMO, the share of questions where Woolly's top 20 results held the answer rose from 75.9% to 83.2% on the first three conversations. Saved embeddings are refreshed once, the first time you search.
 - `bench/locomo/run.py --retrieval-only` measures Woolly's search alone, with no answer model: how often the answer is in the top 5, 10 and 20 results, and how often every message it needs is.
-- The Windows app is version 0.14.0.
+- The Mac and Windows apps show the right version. The 0.14.0 apps ran Woolly 0.14.0 but called themselves 0.13.1.
+- The favicon is the mammoth again.
 
 ## 0.14.0
 
