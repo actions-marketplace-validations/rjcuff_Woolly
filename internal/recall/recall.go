@@ -164,6 +164,7 @@ func (e *Engine) vectors(ctx context.Context, mems []memory.Memory, docs []strin
 		return nil, nil, e.lastErr
 	}
 	model := e.emb.Model()
+	docPrefix, queryPrefix := taskPrefixes(model)
 	if e.cache.Model != model {
 		e.cache = &cacheFile{Model: model, Entries: map[string]cacheEntry{}}
 	}
@@ -172,15 +173,16 @@ func (e *Engine) vectors(ctx context.Context, mems []memory.Memory, docs []strin
 	var missIdx []int
 	var texts []string
 	for i, m := range mems {
-		h := hashText(docs[i])
+		text := docPrefix + docs[i]
+		h := hashText(text)
 		if ent, ok := e.cache.Entries[m.ID]; ok && ent.Hash == h && len(ent.Vec) > 0 {
 			vecs[i] = ent.Vec
 			continue
 		}
 		missIdx = append(missIdx, i)
-		texts = append(texts, docs[i])
+		texts = append(texts, text)
 	}
-	texts = append(texts, query)
+	texts = append(texts, queryPrefix+query)
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
@@ -200,13 +202,27 @@ func (e *Engine) vectors(ctx context.Context, mems []memory.Memory, docs []strin
 	}
 	for j, i := range missIdx {
 		vecs[i] = got[j]
-		e.cache.Entries[mems[i].ID] = cacheEntry{Hash: hashText(docs[i]), Vec: got[j]}
+		e.cache.Entries[mems[i].ID] = cacheEntry{Hash: hashText(docPrefix + docs[i]), Vec: got[j]}
 	}
 	if len(missIdx) > 0 {
 		_ = e.cache.save(e.cachePath)
 	}
 	e.lastErr = nil
 	return vecs, got[len(got)-1], nil
+}
+
+// taskPrefixes returns the text an embedding model expects before a stored
+// document and before a search query. Models trained this way rank noticeably
+// worse without it.
+func taskPrefixes(model string) (doc, query string) {
+	m := strings.ToLower(model)
+	switch {
+	case strings.Contains(m, "nomic-embed"):
+		return "search_document: ", "search_query: "
+	case strings.Contains(m, "mxbai-embed"), strings.Contains(m, "bge-"):
+		return "", "Represent this sentence for searching relevant passages: "
+	}
+	return "", ""
 }
 
 type cacheEntry struct {

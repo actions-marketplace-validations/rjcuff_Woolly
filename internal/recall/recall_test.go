@@ -104,3 +104,20 @@ func TestFallsBackWhenEmbedderFails(t *testing.T) {
 		t.Fatal("expected embed error to be recorded")
 	}
 }
+
+func TestTaskPrefixes(t *testing.T) {
+	tests := []struct {
+		model, doc, query string
+	}{
+		{"nomic-embed-text", "search_document: ", "search_query: "},
+		{"nomic-embed-text:latest", "search_document: ", "search_query: "},
+		{"mxbai-embed-large", "", "Represent this sentence for searching relevant passages: "},
+		{"all-minilm", "", ""},
+	}
+	for _, tt := range tests {
+		doc, query := taskPrefixes(tt.model)
+		if doc != tt.doc || query != tt.query {
+			t.Errorf("taskPrefixes(%q) = %q, %q; want %q, %q", tt.model, doc, query, tt.doc, tt.query)
+		}
+	}
+}

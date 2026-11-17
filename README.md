@@ -2,9 +2,9 @@
 
 # Woolly
 
-**Your agents share one brain.**
+**Memory and learning for your agents.**
 
-Every AI coding tool starts from zero. Woolly gives Claude Code, Cursor, Codex and Ollama one memory, so you explain your project once. It lives on your laptop, in files you can read.
+Woolly is the open memory engine for agents. It keeps facts current and learns from every session, through an API, Python and JavaScript SDKs, plugins and MCP. Claude Code, Cursor, Codex and Ollama share the same memory. It runs on your own machine by default, in Markdown you can read.
 
 [![Release](https://img.shields.io/github/v/release/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
@@ -43,7 +43,7 @@ Prefer an app? [Download Woolly for Mac or Windows](https://usewoolly.com/downlo
 
 **Facts stay current.** A newer fact replaces the old one. When an AI guesses something that contradicts you, your version wins and the guess is flagged for review.
 
-**Build agents that remember.** A memory layer API with mem0's routes: send a conversation, and a local model adds, updates or retires facts per user, keeping every old version as history. [Memory API](https://usewoolly.com/docs/memory-api)
+**Build agents that remember.** A memory layer API with mem0's routes. Send a conversation and a local model adds, updates or retires facts per user, keeping every old version as history. [Memory API](https://usewoolly.com/docs/memory-api)
 
 **It dreams.** While you're away, Woolly merges duplicates, settles facts that changed, and turns your past sessions into lessons for the next one. Nothing is deleted. [Dreaming](https://usewoolly.com/docs/dreaming)
 
@@ -63,7 +63,7 @@ Prefer an app? [Download Woolly for Mac or Windows](https://usewoolly.com/downlo
 woolly init
 ```
 
-Run it in a repo and commit `.woolly/`. Every teammate's agent now reads and updates the same notes: the stack, conventions, decisions, gotchas and commands. Think of it as a CLAUDE.md that keeps itself up to date.
+Run it in a repo and commit `.woolly/`. Every teammate's agent now reads and updates the same notes on the stack, conventions, decisions, gotchas and commands. Think of it as a CLAUDE.md that keeps itself up to date.
 
 - One fact per line in `.woolly/woolly.md`, so diffs are readable and you can edit it by hand.
 - Facts about you never go in the repo.
@@ -73,7 +73,7 @@ Run it in a repo and commit `.woolly/`. Every teammate's agent now reads and upd
 
 ## Fast on a laptop
 
-On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark, Woolly found the right memory for 87% of questions in a median of 23 ms, running entirely on a laptop with Ollama. [Run it yourself](https://usewoolly.com/docs/benchmark)
+On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark, Woolly had the answer in its top 20 results for 83.2% of 382 questions, 95.6% for questions about dates and time, in a median of 19 ms. It runs entirely on a laptop with Ollama. [Run it yourself](https://usewoolly.com/docs/benchmark)
 
 ## Questions
 

@@ -29,13 +29,13 @@ export const SECTIONS: DocSection[] = [
 /** Setup steps a coding agent can follow on its own, shown in the Raw .md view. */
 export const SETUP_PROMPT = `Set up Woolly, the local memory shared by my AI tools.
 
-1. Install it: curl -fsSL https://usewoolly.com/install.sh | sh
-   (On Windows: irm https://usewoolly.com/install.ps1 | iex)
-2. Connect my AI apps: woolly connect
-3. Keep it running at login: woolly service install
-4. Check it works: woolly doctor
+1. Install it with curl -fsSL https://usewoolly.com/install.sh | sh
+   (on Windows, irm https://usewoolly.com/install.ps1 | iex)
+2. Connect my AI apps with woolly connect
+3. Keep it running at login with woolly service install
+4. Check it works with woolly doctor
 
-Docs for agents: https://usewoolly.com/llms.txt`;
+Docs for agents are at https://usewoolly.com/llms.txt`;
 
 // The apps with a logo to show, each with its name beside it.
 const APPS = integrations
@@ -152,11 +152,11 @@ function Hero({ download, latest }: { download: { href: string; label: string };
       ) : null}
 
       <h1 className="mt-8 text-[34px] font-normal leading-[1.08] tracking-[-0.03em] sm:text-[46px]">
-        your agents share one brain
+        memory and learning for your agents
       </h1>
       <p className="mt-6 max-w-[560px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
-        The open, local memory engine for agents. Your coding tools share one memory, and the agents you build get an
-        API that keeps facts current and learns from every session, all on your laptop in Markdown you can read.
+        Woolly is the open memory engine for agents. It keeps facts current and learns from every session, through an API,
+        Python and JavaScript SDKs, plugins and MCP. It runs on your own machine by default, in Markdown you can read.
       </p>
 
       <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -377,7 +377,7 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
             <Link to="/docs/dreaming" className={INLINE}>
               dreams
             </Link>
-            : it tidies what it knows and learns lessons from your sessions.
+            . It tidies what it knows and learns lessons from your sessions.
           </p>
         </div>
       </Section>
@@ -431,7 +431,7 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
               label="Median recall time"
               value={
                 <StatValue unit="ms">
-                  <Rolling value={23} />
+                  <Rolling value={19} />
                 </StatValue>
               }
             />
@@ -448,20 +448,23 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
           </div>
           <div className="flex flex-col bg-fd-background p-5 shadow-[0_0_0_1px_var(--color-fd-border)]">
             <p className="text-[16px] font-medium">LOCOMO benchmark</p>
-            <Label className="mt-1 text-[10px]">Long conversation memory</Label>
+            <Label className="mt-1 text-[10px]">Answer in Woolly’s top 20 results</Label>
             <div className="mt-8">
               <Bars
                 rows={[
-                  { label: 'Found the answer', value: 86.7 },
-                  { label: 'Answered right', value: 56.7 },
+                  { label: 'Overall', value: 83.2 },
+                  { label: 'Dates and time', value: 95.6 },
+                  { label: 'Multi-hop', value: 83.6 },
+                  { label: 'Single fact', value: 79.5 },
                 ]}
               />
             </div>
             <p className="mt-8 text-[14px] leading-relaxed text-fd-muted-foreground">
-              Answered by qwen2.5:7b on a laptop, not a hosted model. Run the same test yourself:
+              382 questions over the first three conversations, searched on a laptop with nomic-embed-text. No hosted
+              model and no API key. Run the same test yourself.
             </p>
             <code className="mt-3 block overflow-x-auto bg-fd-muted px-3 py-2 font-mono text-[12px] whitespace-nowrap">
-              python3 bench/locomo/run.py
+              python3 bench/locomo/run.py --retrieval-only
             </code>
             <div className="mt-auto pt-6">
               <MoreLink href="/docs/benchmark">How we measure</MoreLink>

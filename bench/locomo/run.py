@@ -9,6 +9,11 @@ has a local model judge the answer against the correct one.
 
 Needs a built woolly (make build) and Ollama with the answer model pulled.
 Pull nomic-embed-text too for Woolly's search by meaning.
+
+    python3 bench/locomo/run.py --retrieval-only
+
+measures only Woolly's search, with no answer model: how often the memories
+it returns hold the message, or all the messages, that answer each question.
 """
 
 import argparse
@@ -104,11 +109,13 @@ def main():
     ap.add_argument("--model", default="qwen2.5:7b", help="Ollama model that answers")
     ap.add_argument("--judge", default="", help="Ollama model that grades (default: the answer model)")
     ap.add_argument("--top-k", type=int, default=20, help="memories recalled per question")
+    ap.add_argument("--retrieval-only", action="store_true",
+                    help="measure only Woolly's search, with no answer or judge model")
     ap.add_argument("--out", default=str(ROOT / "bench" / "locomo" / "results"), help="where to write results")
     args = ap.parse_args()
     judge = args.judge or args.model
 
-    for m in {args.model, judge}:
+    for m in set() if args.retrieval_only else {args.model, judge}:
         if not has_model(m):
             sys.exit(f"Ollama isn't running or {m} isn't pulled. Run: ollama pull {m}")
     semantic = has_model("nomic-embed-text")
@@ -156,7 +163,16 @@ def main():
                 memories = "\n".join("- " + m.content for m in found) or "(none)"
                 # Did search find a message that holds the answer? This part is all Woolly.
                 evidence = {by_id[e].strip() for e in q.get("evidence", []) if e in by_id}
-                hit = bool(evidence & {m.content.strip() for m in found}) if evidence else None
+                got = [m.content.strip() for m in found]
+                hit = bool(evidence & set(got)) if evidence else None
+                complete = evidence <= set(got) if evidence else None
+                rank = next((n + 1 for n, c in enumerate(got) if c in evidence), None)
+                if args.retrieval_only:
+                    results.append({"conversation": conv_i, "category": CATEGORIES[q["category"]],
+                                    "question": q["question"], "found_evidence": hit, "all_evidence": complete,
+                                    "first_rank": rank, "recall_ms": round(recall_ms, 1)})
+                    print(f"\r  {i + 1}/{len(qa)}", end="", flush=True)
+                    continue
                 answer = chat(args.model, ANSWER_PROMPT.format(a=a, b=b, memories=memories), q["question"])
                 verdict = chat(judge, JUDGE_PROMPT,
                                f"Question: {q['question']}\nGold answer: {q['answer']}\nAnswer to grade: {answer}",
@@ -178,6 +194,9 @@ def main():
 
     if not results:
         sys.exit("No questions were run.")
+    if args.retrieval_only:
+        report_retrieval(results, args.top_k)
+        return
     summary = {"overall": sum(r["correct"] for r in results) / len(results), "questions": len(results)}
     for cat in CATEGORIES.values():
         rs = [r for r in results if r["category"] == cat]
@@ -206,6 +225,22 @@ def main():
     if "retrieval" in summary:
         print(f"  Woolly found a message with the answer for {summary['retrieval']:.1%} of questions (top {args.top_k})")
     print(f"  median recall {summary['recall_ms_median']:.0f} ms. Full results: {out / (stamp + '.json')}")
+
+
+def report_retrieval(results, k):
+    """Prints how often Woolly's search found the answer, by category and depth."""
+    graded = [r for r in results if r["found_evidence"] is not None]
+    print(f"\nLOCOMO retrieval with Woolly, top {k} ({len(graded)} questions with evidence)")
+    print(f"  {'':<12} {'any@5':>7} {'any@10':>7} {f'any@{k}':>7} {f'all@{k}':>7}")
+    for cat in [*CATEGORIES.values(), "overall"]:
+        rs = [r for r in graded if cat in ("overall", r["category"])]
+        if not rs:
+            continue
+        at = lambda n: sum(1 for r in rs if r["first_rank"] and r["first_rank"] <= n) / len(rs)
+        full = sum(r["all_evidence"] for r in rs) / len(rs)
+        print(f"  {cat:<12} {at(5):7.1%} {at(10):7.1%} {at(k):7.1%} {full:7.1%}  ({len(rs)})")
+    times = sorted(r["recall_ms"] for r in results)
+    print(f"  median recall {times[len(times) // 2]:.0f} ms")
 
 
 if __name__ == "__main__":

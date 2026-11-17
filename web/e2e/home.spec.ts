@@ -21,8 +21,8 @@ async function navLink(page: Page, isMobile: boolean, name: string) {
 
 test('home leads with the headline and buttons', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('Woolly | The open, local memory engine for agents');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('your agents share one brain');
+  await expect(page).toHaveTitle('Woolly | The open memory engine for agents');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('memory and learning for your agents');
   await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
 
   // Never sideways, on any screen.
@@ -36,7 +36,7 @@ test('raw .md shows the page as Markdown and back', async ({ page, isMobile }) =
   await page.goto('/');
   await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Raw .md' }).click();
-  await expect(page.getByRole('main')).toContainText('# Woolly: your agents share one brain');
+  await expect(page.getByRole('main')).toContainText('# Woolly, memory and learning for your agents');
   await expect(page.getByRole('main')).toContainText('woolly connect');
   await openNav(page, isMobile);
   await page.getByRole('button', { name: 'Page' }).click();

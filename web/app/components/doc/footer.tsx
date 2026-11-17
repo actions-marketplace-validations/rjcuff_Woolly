@@ -43,7 +43,7 @@ export function DocFooter() {
         <div>
           <Wordmark className="text-[20px]" />
           <p className="mt-3 max-w-[220px] text-[14px] leading-relaxed text-fd-muted-foreground">
-            Your agents share one brain. Local, private and MIT licensed.
+            Memory and learning for your agents. Runs locally, MIT licensed.
           </p>
         </div>
         {FOOTER.map((col) => (

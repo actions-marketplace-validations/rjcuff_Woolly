@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Search by meaning is more accurate. Woolly now gives `nomic-embed-text` the search and document prefixes it was trained with (and the query prefix `mxbai-embed-large` expects). On LOCOMO, the share of questions where Woolly's top 20 results held the answer rose from 75.9% to 83.2% on the first three conversations. Saved embeddings are refreshed once, the first time you search.
+- `bench/locomo/run.py --retrieval-only` measures Woolly's search alone, with no answer model: how often the answer is in the top 5, 10 and 20 results, and how often every message it needs is.
+- The Windows app is version 0.14.0.
+
 ## 0.14.0
 
 - A memory layer API for the agents you build, with mem0's routes and field names: `POST /v1/memories` turns a conversation into memories, and `POST /v1/search` finds them. For each fact a local model decides whether it's new, updates an older memory, says one is no longer true, or is already known, and reports `ADD`, `UPDATE`, `DELETE` or `NONE`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).

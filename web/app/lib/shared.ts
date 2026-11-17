@@ -1,9 +1,9 @@
 import { createGetUrl } from 'fumadocs-core/source';
 
 export const appName = 'Woolly';
-export const tagline = 'The open, local memory engine for agents';
+export const tagline = 'The open memory engine for agents';
 export const siteDescription =
-  'Woolly is the open, local memory engine for agents. Claude Code, Cursor and Codex share one memory, and the agents you build get an API shaped like mem0’s that keeps facts current and learns from every session. Open source, private and free.';
+  'Woolly is the open memory engine for agents, with memory and continual learning through an API, SDKs, plugins and MCP. It keeps facts current, learns from every session and runs on your own machine. Open source, private and free.';
 // The public URL of the site. Update this once the domain is live.
 export const siteUrl = 'https://usewoolly.com';
 export const docsRoute = '/docs';

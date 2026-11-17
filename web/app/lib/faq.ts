@@ -41,7 +41,7 @@ export const FAQ: Faq[] = [
   {
     question: 'Can I use Woolly as the memory for agents I build?',
     answer:
-      'Yes. The memory API uses mem0’s routes and field names, with JavaScript and Python packages: add a conversation for a user, and search before your agent replies. It runs on your own machine and only answers that machine, so it fits agents you and your team run, not a hosted service for thousands of users.',
+      'Yes. The memory API uses mem0’s routes and field names, with JavaScript and Python packages. Add a conversation for a user, then search before your agent replies. It runs on your own machine and only answers that machine, so it fits agents you and your team run, not a hosted service for thousands of users.',
     keywords: ['api', 'sdk', 'mem0', 'app', 'product', 'build', 'agent'],
   },
   {

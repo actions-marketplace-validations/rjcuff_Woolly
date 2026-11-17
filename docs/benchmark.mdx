@@ -14,16 +14,35 @@ python3 bench/locomo/run.py --conversations 1 --questions 30
 
 It saves every message of each conversation into a fresh Woolly, then for each question asks Woolly for the 20 closest memories, has a local model answer from them, and has a local model grade the answer.
 
-## First results
+## Search results
 
-On the first 30 questions of conversation 1, with `qwen2.5:7b`:
+Woolly's own job is search. Given a question, are the messages that answer it in what it returns? `--retrieval-only` measures just that, with no answer model.
+
+```sh
+python3 bench/locomo/run.py --retrieval-only
+```
+
+On the first three conversations, 382 questions, searched on a laptop with `nomic-embed-text`:
+
+| | Top 5 | Top 10 | Top 20 | Every message needed, top 20 |
+|---|---|---|---|---|
+| Multi-hop | 67.1% | 76.7% | 83.6% | 35.6% |
+| Dates and time | 83.3% | 92.2% | 95.6% | 93.3% |
+| Open-domain | 26.3% | 47.4% | 63.2% | 47.4% |
+| Single fact | 61.0% | 70.5% | 79.5% | 79.0% |
+| **Overall** | **65.7%** | **75.7%** | **83.2%** | **72.5%** |
+
+Median recall time was 19 ms. Before Woolly gave the embedding model its search and document prefixes, the overall top 20 score was 75.9%.
+
+## Answer accuracy
+
+On the first 30 questions of conversation 1, with `qwen2.5:7b` answering and grading:
 
 | | Score |
 |---|---|
 | Overall | 56.7% |
 | Woolly found the message with the answer | 86.7% |
-| Median recall time | 23 ms |
 
-Retrieval is Woolly's part. Accuracy also depends on the answer model, and a 7B model on a laptop misses more dates and multi-step questions than the hosted models most published numbers use, so these aren't directly comparable to mem0's.
+Accuracy also depends on the answer model. A 7B model on a laptop misses more dates and multi-step questions than the hosted models most published numbers use, so these aren't directly comparable to mem0's.
 
 The dataset is CC BY-NC 4.0, so the script downloads it instead of including it. See [bench/locomo](https://github.com/rjcuff/woolly/tree/main/bench/locomo) for every option.

@@ -12,7 +12,7 @@ python3 bench/locomo/run.py --conversations 1 --questions 30   # a quick try, ab
 python3 bench/locomo/run.py                                      # all 10 conversations
 ```
 
-Options: `--model` (answer model, default `qwen2.5:7b`), `--judge` (grading model, default the answer model), `--top-k` (memories per question, default 20), `--conversations`, `--questions`.
+Options: `--retrieval-only` (measure only Woolly's search, no answer model), `--model` (answer model, default `qwen2.5:7b`), `--judge` (grading model, default the answer model), `--top-k` (memories per question, default 20), `--conversations`, `--questions`.
 
 Results go to `bench/locomo/results/`, which isn't committed.
 
@@ -28,18 +28,36 @@ Adversarial questions (category 5) are left out, as in mem0's paper. The judge i
 
 ## Results
 
-A first sample: the first 30 questions of conversation 1, with `qwen2.5:7b` answering and grading and `nomic-embed-text` for search, on a MacBook.
+### Search
+
+Woolly's own job is search. Given a question, are the messages that answer it in what it returns? `--retrieval-only` measures just that, with no answer model.
+
+```sh
+python3 bench/locomo/run.py --retrieval-only
+```
+
+On the first three conversations, 382 questions, searched on a laptop with `nomic-embed-text`:
+
+| | Top 5 | Top 10 | Top 20 | Every message needed, top 20 |
+|---|---|---|---|---|
+| Multi-hop | 67.1% | 76.7% | 83.6% | 35.6% |
+| Dates and time | 83.3% | 92.2% | 95.6% | 93.3% |
+| Open-domain | 26.3% | 47.4% | 63.2% | 47.4% |
+| Single fact | 61.0% | 70.5% | 79.5% | 79.0% |
+| **Overall** | **65.7%** | **75.7%** | **83.2%** | **72.5%** |
+
+Median recall time was 19 ms. Before Woolly gave the embedding model its search and document prefixes, the overall top 20 score was 75.9%.
+
+### Answer accuracy
+
+On the first 30 questions of conversation 1, with `qwen2.5:7b` answering and grading:
 
 | | Score |
 |---|---|
-| Multi-hop | 70.0% (10 questions) |
-| Temporal | 56.2% (16 questions) |
-| Open-domain | 25.0% (4 questions) |
-| **Overall** | **56.7%** (30 questions) |
+| Overall | 56.7% |
 | Woolly found the message with the answer | 86.7% |
-| Median recall time | 23 ms |
 
-A run over all 10 conversations is next. With a 7B model it takes a few hours.
+Accuracy also depends on the answer model. A 7B model on a laptop misses more dates and multi-step questions than the hosted models most published numbers use, so these aren't directly comparable to mem0's.
 
 ## Reading the numbers
 
