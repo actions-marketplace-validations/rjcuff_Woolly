@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rjcuff/woolly/internal/dream"
 	"github.com/rjcuff/woolly/internal/learn"
 	"github.com/rjcuff/woolly/internal/memory"
 	"github.com/rjcuff/woolly/internal/recall"
@@ -209,6 +210,42 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"results": history(versions)})
+	})
+
+	mux.HandleFunc("POST /v1/dream", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			scopeFields
+			DryRun bool  `json:"dry_run"`
+			Learn  *bool `json:"learn"`
+		}
+		if !readJSON(w, r, &req) {
+			return
+		}
+		d := opts.Dreamer
+		if d == nil {
+			d = &dream.Dreamer{Store: store, Engine: engine}
+		}
+		rep, err := d.Dream(r.Context(), dream.Options{Scope: req.scope(), DryRun: req.DryRun, Learn: req.Learn == nil || *req.Learn})
+		if errors.Is(err, dream.ErrBusy) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !req.DryRun {
+			var ids []string
+			for _, st := range rep.Steps {
+				if st.Result != "" {
+					ids = append(ids, st.Result)
+				}
+			}
+			if len(ids) > 0 {
+				record(r, "dream", ids, "", len(ids))
+			}
+		}
+		writeJSON(w, http.StatusOK, rep)
 	})
 
 	mux.HandleFunc("POST /v1/search", func(w http.ResponseWriter, r *http.Request) {

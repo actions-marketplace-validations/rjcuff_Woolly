@@ -22,6 +22,7 @@ type AddOptions struct {
 	Scope    memory.Scope
 	Via      string
 	Metadata map[string]any
+	Tags     []string
 	// Infer has the model pick out facts and decide what changes. Without
 	// it, each user message is saved as it is.
 	Infer bool
@@ -123,6 +124,16 @@ func (l *Learner) Add(ctx context.Context, msgs []Message, o AddOptions) ([]Even
 	return events, nil
 }
 
+// AddFact runs one fact through the same decisions as Add: it's added,
+// updates or retires a close memory in the scope, or is skipped as known.
+func (l *Learner) AddFact(ctx context.Context, fact string, o AddOptions) (Event, error) {
+	if l.Model == nil {
+		return Event{}, ErrNoModel
+	}
+	o.Scope = o.Scope.Normalized()
+	return l.addFact(ctx, strings.TrimSpace(fact), o.Scope.Project, o)
+}
+
 // addRaw saves each user message as it is, for apps that pick facts themselves.
 func (l *Learner) addRaw(msgs []Message, o AddOptions) ([]Event, error) {
 	events := []Event{}
@@ -145,7 +156,7 @@ func (l *Learner) addRaw(msgs []Message, o AddOptions) ([]Event, error) {
 
 func (l *Learner) input(content, project string, o AddOptions) memory.RememberInput {
 	return memory.RememberInput{
-		Content: content, Project: project, Source: memory.SourceAgent, Via: o.Via, Metadata: o.Metadata,
+		Content: content, Project: project, Source: memory.SourceAgent, Via: o.Via, Metadata: o.Metadata, Tags: o.Tags,
 		User: o.Scope.User, Agent: o.Scope.Agent, Session: o.Scope.Session,
 	}
 }

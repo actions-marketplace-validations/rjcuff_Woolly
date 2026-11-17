@@ -577,6 +577,24 @@ func (s *Store) Resolve(id string) (Memory, []Memory, error) {
 
 func (s *Store) resolveLocked(keep *Memory, now time.Time) ([]Memory, error) {
 	var replaced []Memory
+	// A conflict flagged without a key pairs two memories directly.
+	for _, ex := range s.mems {
+		if ex.ID == keep.ID || !ex.Live() || (ex.ID != keep.ConflictsWith && ex.ConflictsWith != keep.ID) {
+			continue
+		}
+		if ex.Key != "" && ex.Key == keep.Key {
+			continue // the key pass below handles it
+		}
+		ex.Status = StatusSuperseded
+		ex.SupersededBy = keep.ID
+		ex.ConflictsWith = ""
+		ex.UpdatedAt = now
+		ex.InvalidAt = &now
+		if err := s.write(ex); err != nil {
+			return nil, err
+		}
+		replaced = append(replaced, ex.clone())
+	}
 	if keep.Key != "" {
 		for _, ex := range s.mems {
 			if ex.ID == keep.ID || ex.Key != keep.Key || !sameSlot(ex, keep) || ex.Status == StatusSuperseded || ex.Status == StatusExpired {
@@ -729,4 +747,84 @@ func (s *Store) History(id string) ([]Memory, error) {
 		}
 	}
 	return out, nil
+}
+
+// Supersede marks the memory old as replaced by the memory by, which must
+// already exist. Both stay on disk; old is kept as history from now on.
+func (s *Store) Supersede(old, by string) (Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, err
+	}
+	o, err := s.find(old)
+	if err != nil {
+		return Memory{}, err
+	}
+	b, err := s.find(by)
+	if err != nil {
+		return Memory{}, err
+	}
+	if o.ID == b.ID {
+		return Memory{}, errors.New("a memory can't replace itself")
+	}
+	now := time.Now().UTC()
+	o.Status = StatusSuperseded
+	o.SupersededBy = b.ID
+	o.ConflictsWith = ""
+	o.UpdatedAt = now
+	o.InvalidAt = &now
+	if err := s.write(o); err != nil {
+		return Memory{}, err
+	}
+	return o.clone(), nil
+}
+
+// Merge saves in as one memory that replaces every memory in ids, which are
+// kept as history. The new memory takes the scope of the first one unless in
+// sets its own.
+func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
+	if len(ids) < 2 {
+		return nil, errors.New("merging needs at least two memories")
+	}
+	res, err := s.Replace(ids[0], in)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range ids[1:] {
+		if id == res.Memory.ID {
+			continue
+		}
+		m, err := s.Supersede(id, res.Memory.ID)
+		if err != nil {
+			return nil, err
+		}
+		res.Superseded = append(res.Superseded, m)
+	}
+	return res, nil
+}
+
+// MarkConflict flags the memory id as disagreeing with the memory with, so
+// the user picks which is true. Resolve settles it.
+func (s *Store) MarkConflict(id, with string) (Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, err
+	}
+	m, err := s.find(id)
+	if err != nil {
+		return Memory{}, err
+	}
+	w, err := s.find(with)
+	if err != nil {
+		return Memory{}, err
+	}
+	m.Status = StatusConflict
+	m.ConflictsWith = w.ID
+	m.UpdatedAt = time.Now().UTC()
+	if err := s.write(m); err != nil {
+		return Memory{}, err
+	}
+	return m.clone(), nil
 }

@@ -7,6 +7,8 @@
 - Nothing is overwritten. A replaced memory keeps its text with an `invalid_at` time, a fact that's no longer true is marked `expired`, and `GET /v1/memories/{id}/history` shows every version.
 - Your version still wins: a model's change to something you said yourself is saved as a conflict for you to review, not applied.
 - The API also accepts the token as `Authorization: Token ...`, the way mem0's clients send it.
+- Dreaming: `woolly dream` tidies memory with your local model. It folds repeats together, merges facts that say the same thing, and settles facts that contradict each other, keeping the old ones as history. With `--project` it reads that project's handoffs and decisions and writes up to five lessons for the next session, each pointing at the notes it came from. While Woolly runs, it dreams on its own at most once a day when memory has changed. `WOOLLY_DREAM=off` turns that off. Also `POST /v1/dream`. See [Dreaming](https://usewoolly.com/docs/dreaming).
+- `woolly resolve` now settles conflicts that have no key.
 
 ## 0.13.1
 

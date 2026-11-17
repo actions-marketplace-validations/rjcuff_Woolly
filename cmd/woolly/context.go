@@ -194,6 +194,7 @@ var verbs = map[string]string{
 	"handoff":     "saved where you left off",
 	"sync":        "synced",
 	"learn":       "learned",
+	"dream":       "tidied memory:",
 }
 
 func cmdLog(args []string) error {
@@ -260,6 +261,8 @@ func describeEntry(a *app, e activity.Entry) string {
 		return s
 	case "import", "sync", "learn":
 		return fmt.Sprintf("%s %d memories", verb, e.Count)
+	case "dream":
+		return fmt.Sprintf("%s %d changes", verb, e.Count)
 	case "empty_trash":
 		return fmt.Sprintf("%s (%d)", verb, e.Count)
 	case "context":

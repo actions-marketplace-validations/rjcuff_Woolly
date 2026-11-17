@@ -134,6 +134,15 @@ Shows the newest first. `--app cursor` shows one app, `-n 200` shows more, and `
 
 Every memory also records the app that saved it. `woolly show <id>` and the review page show it as "via Cursor".
 
+## dream
+
+```sh
+woolly dream --dry-run
+woolly dream --project acme
+```
+
+Folds repeats together, merges duplicates, settles facts that contradict each other, and with `--project` writes lessons from that project's past sessions. `--no-learn` skips lessons, `--user` keeps it to one `user_id`, and `--json` prints JSON. See [Dreaming](/docs/dreaming).
+
 ## context
 
 ```sh

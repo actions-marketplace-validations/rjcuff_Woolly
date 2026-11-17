@@ -25,6 +25,7 @@ const VERBS: Record<string, string> = {
   empty_trash: 'Emptied the trash',
   import: 'Imported',
   learn: 'Learned',
+  dream: 'Tidied memory:',
   sync: 'Synced',
 };
 
@@ -185,7 +186,7 @@ export function Library({
                   : `Read ${e.count ?? 0} memories`
                 : subject && ['remember', 'update', 'forget', 'restore', 'resolve'].includes(e.action)
                   ? `${VERBS[e.action]} “${subject}”`
-                  : ['import', 'learn', 'sync'].includes(e.action)
+                  : ['import', 'learn', 'sync', 'dream'].includes(e.action)
                     ? `${VERBS[e.action]} ${e.count ?? 0}`
                     : (VERBS[e.action] ?? e.action);
             return (

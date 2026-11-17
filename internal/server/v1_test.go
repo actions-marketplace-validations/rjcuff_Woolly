@@ -98,3 +98,18 @@ func TestV1InferWithoutAModel(t *testing.T) {
 		t.Fatalf("want 503 with a hint: %d %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestV1DreamFoldsRepeats(t *testing.T) {
+	h, token := setup(t)
+	for _, text := range []string{"Uses pnpm", "uses pnpm."} {
+		v1(t, h, token, "POST", "/v1/memories", `{"messages":[{"role":"user","content":"`+text+`"}],"user_id":"alice","infer":false}`)
+	}
+	dry := v1(t, h, token, "POST", "/v1/dream", `{"user_id":"alice","dry_run":true}`)
+	if dry["merged"].(float64) != 1 || len(results(v1(t, h, token, "GET", "/v1/memories?user_id=alice", ""))) != 2 {
+		t.Fatalf("dry run: %v", dry)
+	}
+	rep := v1(t, h, token, "POST", "/v1/dream", `{"user_id":"alice"}`)
+	if rep["merged"].(float64) != 1 || len(results(v1(t, h, token, "GET", "/v1/memories?user_id=alice", ""))) != 1 {
+		t.Fatalf("dream: %v", rep)
+	}
+}

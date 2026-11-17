@@ -94,5 +94,6 @@ curl localhost:11435/v1/memories/ID/history -H "Authorization: Bearer $TOKEN"
 | `DELETE` | `/v1/memories` | Move every memory in a scope to the trash. Needs a `user_id`, `agent_id` or `run_id` |
 | `GET` | `/v1/memories/{id}/history` | Every version, oldest first |
 | `POST` | `/v1/search` | Search: `query`, `filters`, `top_k`, `threshold`, `show_expired` |
+| `POST` | `/v1/dream` | Tidy a scope and learn lessons: `dry_run`, `learn`. See [Dreaming](/docs/dreaming) |
 
 Every memory is still a Markdown file in `~/.woolly/memories`, with its scope in the header, so you can read and fix what your agents learned.

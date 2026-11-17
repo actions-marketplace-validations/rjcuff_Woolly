@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/rjcuff/woolly/internal/activity"
+	"github.com/rjcuff/woolly/internal/dream"
 	"github.com/rjcuff/woolly/internal/learn"
 	"github.com/rjcuff/woolly/internal/memory"
 	"github.com/rjcuff/woolly/internal/ollama"
@@ -46,6 +47,7 @@ func appOf(r *http.Request) string {
 type Options struct {
 	Activity *activity.Log
 	Learner  *learn.Learner
+	Dreamer  *dream.Dreamer
 	Ollama   *ollama.Client
 	// Home is Woolly's folder. Setting it turns on the Apps and Settings API.
 	Home string

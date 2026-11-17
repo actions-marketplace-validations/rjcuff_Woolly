@@ -25,6 +25,7 @@ import (
 
 	"github.com/rjcuff/woolly/internal/activity"
 	"github.com/rjcuff/woolly/internal/connect"
+	"github.com/rjcuff/woolly/internal/dream"
 	"github.com/rjcuff/woolly/internal/importer"
 	"github.com/rjcuff/woolly/internal/mcp"
 	"github.com/rjcuff/woolly/internal/memory"
@@ -55,6 +56,7 @@ const usage = `Woolly: local memory for your AI tools.
 Usage:
   woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]
   woolly learn [text]          pick out facts from text or a conversation with a local model
+  woolly dream [--project p] [--dry-run]  tidy memory and learn lessons from past sessions
   woolly recall <query> [-n 5] [--project p] [--all] [--json]
   woolly list [--project p] [--all] [--json]
   woolly show <id>
@@ -133,6 +135,8 @@ func run(args []string) error {
 		return cmdTrash(rest)
 	case "conflicts":
 		return cmdConflicts(rest)
+	case "dream":
+		return cmdDream(rest)
 	case "learn":
 		return cmdLearn(rest)
 	case "sync":
@@ -177,7 +181,7 @@ func run(args []string) error {
 }
 
 var commands = []string{"remember", "recall", "list", "show", "forget", "import", "profile", "restore", "trash",
-	"conflicts", "learn", "sync", "log", "context", "handoff", "init", "project", "decide", "resolve", "ui",
+	"conflicts", "learn", "dream", "sync", "log", "context", "handoff", "init", "project", "decide", "resolve", "ui",
 	"serve", "mcp", "proxy", "doctor", "update", "connect", "disconnect", "service", "version", "help"}
 
 // closest is the command a typo was probably meant to be, or "".
@@ -233,6 +237,9 @@ type app struct {
 
 	syncMu   sync.Mutex
 	syncStop func()
+
+	dreamOnce sync.Once
+	dream     *dream.Dreamer
 }
 
 var importName = map[string]string{"chatgpt": "ChatGPT import", "claude": "Claude import"}
@@ -706,6 +713,7 @@ func cmdServe(args []string) error {
 	go func() {
 		errc <- server.ServeListener(ln, server.Handler(a.store, a.engine, version, token, a.serverOptions()))
 	}()
+	go a.dreamInBackground()
 	if err := a.ensureSync(); err != nil {
 		fmt.Fprintln(os.Stderr, "woolly: sync is off:", err)
 	}

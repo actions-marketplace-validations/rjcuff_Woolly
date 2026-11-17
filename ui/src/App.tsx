@@ -396,6 +396,7 @@ const verbs: Record<string, string> = {
   empty_trash: 'Emptied the trash',
   import: 'Imported',
   learn: 'Learned',
+  dream: 'Tidied memory:',
   sync: 'Synced',
 };
 
@@ -416,6 +417,8 @@ function describeEntry(e: Activity, find: (id: string) => Memory | undefined) {
     case 'learn':
     case 'sync':
       return `${verb} ${e.count ?? 0} memories`;
+    case 'dream':
+      return `${verb} ${e.count ?? 0} changes`;
     case 'empty_trash':
       return `${verb} (${e.count ?? 0})`;
     case 'context':

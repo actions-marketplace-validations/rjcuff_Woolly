@@ -1,0 +1,43 @@
+---
+title: Dreaming
+description: Woolly tidies its memory while you're away, and learns lessons from your past sessions.
+---
+
+Memory gets messy. Two apps save the same fact in different words, a fact changes and the old one hangs around, and the lessons from last week's sessions sit in handoff notes nobody rereads. Dreaming fixes that with your local model, while you're not using it.
+
+```sh
+woolly dream --dry-run   # see what would change
+woolly dream             # tidy everything
+woolly dream --project acme   # tidy acme, and write lessons from its sessions
+```
+
+## What a dream does
+
+1. **Folds repeats together.** Memories with the same words in the same scope become one. This works without a model.
+2. **Merges duplicates.** Two facts that say the same thing in different words, like "Deploys from main" and "Ships to production from the main branch", become one fact that keeps every detail.
+3. **Settles contradictions.** When two facts can't both be true, like "Lives in Denver" and "Lives in Austin", the newer one stays current and the older one is kept as history.
+4. **Learns lessons.** For a project, the model reads its handoffs and decisions from the last two months and writes up to five lessons for the next session, like "Run make check before every commit". Every lesson has to point at the notes it came from, and is saved with the `learning` tag and those notes' IDs in `learned_from`. A lesson that's already known isn't written twice.
+
+Nothing is deleted. A merged or replaced memory stays on disk with `status: superseded` and an `invalid_at` time, and the [memory API](/docs/memory-api#memories-over-time) shows its whole history.
+
+## Your version wins
+
+An inferred fact never replaces something you said yourself. If one disagrees with yours, it's flagged as a conflict for you to review with `woolly conflicts`, and when two duplicates include one you said, yours is the one kept, in your words.
+
+## While you're away
+
+When `woolly serve` or the background service is running, Woolly dreams on its own at most once a day: only when memories changed since the last dream, and only when the chat model is installed. It writes lessons for the projects you worked in since then. Dreams show up in `woolly log`.
+
+To turn it off, set `WOOLLY_DREAM=off`. A dream remembers which pairs of facts it found unrelated, in `~/.woolly/dream.json`, so it doesn't ask the model about them again.
+
+## From the API
+
+```sh
+curl -X POST localhost:11435/v1/dream \
+  -H "Authorization: Bearer $(cat ~/.woolly/token)" \
+  -d '{"user_id": "alice", "dry_run": true}'
+```
+
+Scope it like any [memory API](/docs/memory-api) call with `user_id`, `agent_id`, `run_id` or `project`. `"learn": false` skips lessons. The answer lists each step with the memories it looked at, plus counts of what was merged, settled, flagged and learned.
+
+Dreaming needs a chat model in [Ollama](/docs/ollama), `qwen2.5:3b` by default, set with `WOOLLY_LLM_MODEL`. A bigger model makes better calls.
