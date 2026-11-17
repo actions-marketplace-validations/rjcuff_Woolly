@@ -243,3 +243,162 @@ button:has(> svg.lucide-check) svg {
     transition: none;
   }
 }
+
+/* The docs, in the same quiet style as the front pages: the soft gray, Geist
+   Mono, no borders or dividers, square code blocks and plain headings. */
+:root:not(.dark) #nd-notebook-layout,
+:root:not(.dark):has(#nd-notebook-layout),
+:root:not(.dark):has(#nd-notebook-layout) body {
+  --color-fd-background: #e6e7ea;
+  --color-fd-muted: #dcdee2;
+  --color-fd-card: #dcdee2;
+  --color-fd-secondary: #dcdee2;
+  --color-fd-accent: #dcdee2;
+  --color-fd-popover: #eceef0;
+  --color-fd-border: #c9ccd1;
+  --color-fd-muted-foreground: #63666d;
+  background-color: #e6e7ea;
+}
+#nd-notebook-layout,
+#nd-notebook-layout ~ div,
+[role='dialog']:has([cmdk-input], input[type='search']) {
+  --color-fd-primary: var(--color-fd-foreground);
+  --color-fd-primary-foreground: var(--color-fd-background);
+  font-family: var(--font-mono);
+}
+#nd-notebook-layout .border-b,
+#nd-notebook-layout .border-t,
+#nd-notebook-layout .border,
+#nd-notebook-layout header,
+#nd-notebook-layout aside,
+#nd-notebook-layout kbd {
+  border-color: transparent;
+}
+#nd-notebook-layout #nd-subnav > div {
+  background: var(--color-fd-background);
+}
+/* Search: a plain gray field. */
+#nd-notebook-layout #nd-subnav button[class*='bg-fd-secondary'] {
+  border-radius: 0;
+  background: var(--color-fd-muted);
+}
+#nd-notebook-layout kbd {
+  border-radius: 0;
+  background: transparent;
+}
+/* The sidebar: the current page in the foreground, no pill behind it. */
+#nd-sidebar a {
+  border-radius: 0;
+  font-size: 13px;
+}
+#nd-sidebar a[data-active='true'] {
+  background: transparent;
+  color: var(--color-fd-foreground);
+}
+#nd-sidebar a[data-active='true']::before {
+  content: '[';
+  margin-right: 0.35ch;
+}
+#nd-sidebar a[data-active='true']::after {
+  content: ']';
+  margin-left: 0.35ch;
+}
+#nd-sidebar p,
+#nd-sidebar [data-section] {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-fd-muted-foreground);
+}
+/* The table of contents: no rail, just text. */
+#nd-toc *,
+#nd-notebook-layout [id^='nd-toc'] * {
+  border-color: transparent !important;
+}
+#nd-notebook-layout a[data-active='true'] {
+  color: var(--color-fd-foreground);
+}
+/* The page. */
+#nd-page {
+  font-size: 15px;
+}
+#nd-page h1 {
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+#nd-page h1 + p {
+  font-size: 15px;
+  line-height: 1.8;
+}
+#nd-page .prose {
+  font-size: 15px;
+  line-height: 1.8;
+}
+#nd-page .prose :where(h2) {
+  margin-top: 3.5em;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-fd-muted-foreground);
+}
+#nd-page .prose :where(h3) {
+  margin-top: 2em;
+  font-size: 15px;
+  font-weight: 400;
+}
+#nd-page .prose :where(strong) {
+  font-weight: 500;
+}
+#nd-page .prose :where(a):not(:where([class~='not-prose'] *)) {
+  color: var(--color-fd-foreground);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 6px;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+}
+#nd-page .prose :where(a):hover {
+  text-decoration-color: currentColor;
+}
+#nd-page .prose :where(code):not(:where(pre code)) {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-fd-muted);
+}
+#nd-page figure.shiki,
+#nd-page .shiki {
+  border: 0;
+  border-radius: 0;
+  background: var(--color-fd-muted);
+}
+#nd-page table {
+  font-size: 13px;
+}
+#nd-page th,
+#nd-page td {
+  border-color: var(--color-fd-border);
+}
+#nd-page [class*='rounded'] {
+  border-radius: 0;
+}
+#nd-page button[class*='rounded-md'] {
+  border-color: transparent;
+  background: var(--color-fd-muted);
+}
+#nd-toc [class*='overflow-y-auto'] svg,
+#nd-toc [class*='overflow-y-auto'] [class*='absolute'] {
+  display: none;
+}
+#nd-toc a {
+  padding-inline-start: 0 !important;
+  margin-inline-start: 0 !important;
+}
+#nd-sidebar a[data-active='true'] {
+  width: fit-content;
+}
+#nd-page .prose :where(h2, h3) a {
+  text-decoration: none !important;
+  color: inherit !important;
+}
