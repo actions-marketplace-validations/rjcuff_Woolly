@@ -8,12 +8,12 @@
     "url": "https://github.com/rjcuff/woolly",
     "source": "github"
   },
-  "version": "0.14.0",
+  "version": "0.14.1",
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/rjcuff/woolly/releases/download/v0.14.0/woolly.mcpb",
-      "fileSha256": "e1636337dd1c7395dedd0c545af95dc62022587fcecdc16d9f6187c5afc92e76",
+      "identifier": "https://github.com/rjcuff/woolly/releases/download/v0.14.1/woolly.mcpb",
+      "fileSha256": "138b291c9603d8aa53e7f513d40bddf1748e66277c1d5447d1e42799959cf9f3",
       "transport": {
         "type": "stdio"
       }
