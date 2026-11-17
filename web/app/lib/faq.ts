@@ -39,10 +39,16 @@ export const FAQ: Faq[] = [
     keywords: ['team', 'git', 'repo', 'project', 'share'],
   },
   {
-    question: 'Is this a memory API for my app?',
+    question: 'Can I use Woolly as the memory for agents I build?',
     answer:
-      'No, and that is on purpose. Woolly makes your own AI workflow better. There are JavaScript and Python packages for scripts and side projects, but if you are adding memory to a product with thousands of users, a hosted memory API is the better fit.',
-    keywords: ['api', 'sdk', 'mem0', 'app', 'product', 'build'],
+      'Yes. The memory API uses mem0’s routes and field names, with JavaScript and Python packages: add a conversation for a user, and search before your agent replies. It runs on your own machine and only answers that machine, so it fits agents you and your team run, not a hosted service for thousands of users.',
+    keywords: ['api', 'sdk', 'mem0', 'app', 'product', 'build', 'agent'],
+  },
+  {
+    question: 'How is Woolly different from mem0 or supermemory?',
+    answer:
+      'Woolly is one open-source program that runs on your own machine, with your memories in Markdown files you can read. Its API is shaped like mem0’s, so switching is mostly a new address. It keeps every old version of a fact, never lets a model overrule what you said, and dreams to turn your sessions into lessons.',
+    keywords: ['mem0', 'supermemory', 'zep', 'letta', 'different', 'compare', 'alternative'],
   },
   {
     question: 'Is Woolly free?',

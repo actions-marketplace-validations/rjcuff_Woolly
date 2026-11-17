@@ -21,7 +21,7 @@ async function navLink(page: Page, isMobile: boolean, name: string) {
 
 test('home leads with the headline and buttons', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('Woolly | One memory for your AI coding tools');
+  await expect(page).toHaveTitle('Woolly | The open, local memory engine for agents');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('your agents share one brain');
   await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
 

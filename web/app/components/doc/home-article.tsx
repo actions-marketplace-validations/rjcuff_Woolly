@@ -1,4 +1,4 @@
-import { ArrowUpRight, FileText, Pin, RefreshCw, Sunrise, Users, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, Bot, FileText, History, Moon, Pin, Sunrise, Users, type LucideIcon } from 'lucide-react';
 import { useInView, useReducedMotion } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -18,6 +18,7 @@ export const SECTIONS: DocSection[] = [
   { id: 'top', label: 'Overview' },
   { id: 'why', label: 'Why Woolly' },
   { id: 'what', label: 'What it does' },
+  { id: 'build', label: 'Build with it' },
   { id: 'numbers', label: 'By the numbers' },
   { id: 'anywhere', label: 'Runs anywhere' },
   { id: 'private', label: 'Private' },
@@ -154,8 +155,8 @@ function Hero({ download, latest }: { download: { href: string; label: string };
         your agents share one brain
       </h1>
       <p className="mt-6 max-w-[560px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground sm:text-[19px]">
-        Claude Code, Cursor, Codex and Ollama read and write one memory. It lives on your laptop, in Markdown files you
-        can read.
+        The open, local memory engine for agents. Your coding tools share one memory, and the agents you build get an
+        API that keeps facts current and learns from every session, all on your laptop in Markdown you can read.
       </p>
 
       <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -184,9 +185,19 @@ const FEATURES: { icon: LucideIcon; title: string; body: ReactNode }[] = [
     body: 'When a session ends, Woolly saves what you chose, why, and what you ruled out. No agent pitches the rejected option again.',
   },
   {
-    icon: RefreshCw,
-    title: 'Facts stay current.',
-    body: 'A newer fact replaces the old one. When an AI guesses something that contradicts you, your version wins and the guess waits for your review.',
+    icon: Bot,
+    title: 'Agents that remember.',
+    body: 'Give the agents you build a memory with an API shaped like mem0’s. For each fact a local model decides whether it’s new, an update, or no longer true, and every user’s memories stay apart.',
+  },
+  {
+    icon: Moon,
+    title: 'It dreams.',
+    body: 'While you’re away, Woolly merges duplicates, settles facts that changed, and turns your past sessions into lessons for the next one.',
+  },
+  {
+    icon: History,
+    title: 'Facts keep their history.',
+    body: 'A newer fact replaces the old one, which stays on disk with the time it stopped being true. When an AI guesses something that contradicts you, your version wins and the guess waits for your review.',
   },
   {
     icon: FileText,
@@ -205,6 +216,68 @@ const FEATURES: { icon: LucideIcon; title: string; body: ReactNode }[] = [
     ),
   },
 ];
+
+const SAMPLES: { id: string; label: string; install: string; code: string }[] = [
+  {
+    id: 'ts',
+    label: 'TypeScript',
+    install: 'npm install woolly-ai',
+    code: `import { Woolly } from 'woolly-ai';
+
+const w = new Woolly();
+
+await w.add('I just moved to Austin', { userId: 'alice' });
+// [{ memory: 'Lives in Austin', event: 'UPDATE', previous_memory: 'Lives in Denver' }]
+
+const memories = await w.search('where does she live?', { userId: 'alice' });`,
+  },
+  {
+    id: 'py',
+    label: 'Python',
+    install: 'pip install woolly-ai',
+    code: `from woolly import Woolly
+
+w = Woolly()
+
+w.add("I just moved to Austin", user_id="alice")
+# {"results": [{"memory": "Lives in Austin", "event": "UPDATE", ...}]}
+
+memories = w.search("where does she live?", user_id="alice")["results"]`,
+  },
+];
+
+/** A short example in TypeScript or Python, with a plain toggle between them. */
+function CodeSample() {
+  const [lang, setLang] = useState(SAMPLES[0].id);
+  const sample = SAMPLES.find((s) => s.id === lang) ?? SAMPLES[0];
+  return (
+    <div className="mt-8 shadow-[0_0_0_1px_var(--color-fd-border)]">
+      <div className="flex items-center justify-between gap-3 border-b border-fd-border px-3">
+        <div role="tablist" aria-label="Language" className="flex">
+          {SAMPLES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === lang}
+              onClick={() => setLang(s.id)}
+              className={cn(
+                '-mb-px border-b-2 px-2 py-2.5 font-mono text-[12px] transition-colors duration-150',
+                s.id === lang ? 'border-brand text-fd-foreground' : 'border-transparent text-fd-muted-foreground hover:text-fd-foreground',
+              )}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <code className="truncate font-mono text-[12px] text-fd-muted-foreground">{sample.install}</code>
+      </div>
+      <pre className="overflow-x-auto bg-fd-muted/50 p-4 font-mono text-[13px] leading-[1.7]">
+        <code>{sample.code}</code>
+      </pre>
+    </div>
+  );
+}
 
 /** Bars that draw in once, the first time they're on screen. */
 function Bars({ rows }: { rows: { label: string; value: number }[] }) {
@@ -294,6 +367,18 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
             </Link>
             . When it ends, Woolly saves what you decided and why.
           </p>
+          <p className={P}>
+            The agents you build get the same memory. Send a conversation to the{' '}
+            <Link to="/docs/memory-api" className={INLINE}>
+              memory API
+            </Link>{' '}
+            and a local model decides what’s new, what changed and what’s no longer true, per user. While you’re away,
+            Woolly{' '}
+            <Link to="/docs/dreaming" className={INLINE}>
+              dreams
+            </Link>
+            : it tidies what it knows and learns lessons from your sessions.
+          </p>
         </div>
       </Section>
 
@@ -317,6 +402,20 @@ export function HomeArticle({ download, releases }: { download: { href: string; 
         </ol>
         <div className="mt-8">
           <MoreLink href="/docs/how-it-works">Read how it works</MoreLink>
+        </div>
+      </Section>
+
+      <Section id="build">
+        <H2>Build agents that remember</H2>
+        <p className={cn(P, 'mt-5')}>
+          The same calls as mem0, answered by your own machine. Install the package, add a conversation for a user, and
+          search before your agent replies.
+        </p>
+        <CodeSample />
+        <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+          <MoreLink href="/docs/memory-api">Memory API</MoreLink>
+          <MoreLink href="/docs/javascript">JavaScript</MoreLink>
+          <MoreLink href="/docs/python">Python</MoreLink>
         </div>
       </Section>
 
