@@ -315,17 +315,17 @@ export function Panels() {
           key={p.step}
           aria-label={p.step}
           className={cn(
-            'flex min-w-0 flex-col justify-start gap-8 px-5 py-14 sm:px-10 sm:py-14 lg:min-h-[calc(100svh-3.5rem)] lg:px-12 lg:pb-24 lg:pt-[clamp(32px,6vh,72px)]',
+            'flex min-w-0 flex-col justify-start gap-9 px-5 py-14 sm:px-10 sm:py-16 lg:min-h-[calc(100svh-3.5rem)] lg:justify-center lg:px-12 lg:py-[clamp(48px,8vh,96px)]',
             p.onBlue ? 'bg-[var(--blue)] text-[var(--paper)]' : 'text-[var(--blue)]',
             !p.onBlue && i > 0 && 'border-t border-[var(--blue)]/20',
           )}
         >
           <span className={cn('self-start whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[12px] leading-[1.6]', p.onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>{p.step}</span>
           <div>
-            <h2 className="max-w-[520px] text-balance text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[44px]">{p.title}</h2>
-            <p className="mt-5 max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">{p.body}</p>
+            <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">{p.title}</h2>
+            <p className="mt-6 max-w-[540px] text-[17px] leading-[1.6] opacity-90 sm:text-[18px]">{p.body}</p>
           </div>
-          <div className="max-w-[560px]">{p.show(p.onBlue)}</div>
+          <div className="max-w-[600px]">{p.show(p.onBlue)}</div>
         </section>
       ))}
     </div>
