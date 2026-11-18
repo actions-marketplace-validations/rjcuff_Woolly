@@ -39,7 +39,10 @@ else
   echo "No Developer ID certificate found, so the app won't be signed."
 fi
 
-(cd app && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npx tauri build $target)
+# The app shows the release's version, not whatever tauri.conf.json last said.
+config=""
+case "$version" in *-dev) ;; *) config="--config {\"version\":\"$version\"}" ;; esac
+(cd app && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npx tauri build $target $config)
 
 case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*)
