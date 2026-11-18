@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { DitherMammoth } from '@/components/frost/dither-mammoth';
@@ -56,7 +56,7 @@ export function CopyMorph({ done }: { done: boolean }) {
   const t = reduce ? { duration: 0 } : { duration: 0.28, ease: [0.23, 1, 0.32, 1] as const };
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="size-[18px]">
-      <motion.g initial={false} animate={done ? { scale: 0.3, opacity: 0 } : { scale: 1, opacity: 1 }} transition={t} style={{ transformOrigin: '12px 12px' }}>
+      <motion.g initial={false} animate={done ? { scale: 0.3, opacity: 0 } : { scale: 1, opacity: 1 }} transition={t} style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
         <rect x="8" y="8" width="13" height="13" rx="2" />
         <path d="M4 16V5a1 1 0 0 1 1-1h11" />
       </motion.g>
@@ -87,14 +87,13 @@ function Install({ onBlue }: { onBlue?: boolean }) {
   };
   return (
     <div className={cn('w-full max-w-[560px]', onBlue ? 'text-[var(--paper)]' : 'text-[var(--blue)]')}>
-      <div className={cn('relative flex items-stretch rounded-[14px] border', onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>
+      <div className={cn('relative flex items-stretch overflow-hidden rounded-[14px] border', onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>
         <code className={cn(MONO, 'flex min-w-0 flex-1 items-center overflow-x-auto whitespace-nowrap px-5 py-3.5 text-[13.5px] sm:text-[14px]')}>
           <span className="mr-3 opacity-50">$</span>
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.span key={os} initial={reduce ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
-              {INSTALL[os]}
-            </motion.span>
-          </AnimatePresence>
+          {/* Switching systems fades the new command in where the old one was. */}
+          <motion.span key={os} initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>
+            {INSTALL[os]}
+          </motion.span>
         </code>
         <button
           type="button"
@@ -146,7 +145,7 @@ const APPS = [
 
 export function HeroContent() {
   return (
-    <div className="flex h-full flex-col justify-between gap-12 px-5 py-10 text-[var(--blue)] sm:px-10 sm:py-14 lg:px-12 lg:py-[clamp(32px,6vh,72px)]">
+    <div className="flex flex-col gap-8 px-5 py-10 text-[var(--blue)] sm:px-10 sm:py-14 lg:px-12 lg:py-[clamp(32px,6vh,72px)]">
       <div>
         <Link to="/docs/stale-facts" className="group inline-flex items-center gap-3 text-[14px] outline-none">
           <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New in 0.15</span>
@@ -171,7 +170,7 @@ export function HeroContent() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-[var(--blue)]/25 pt-5">
+      <div className="mt-4 flex flex-col gap-3 border-t border-[var(--blue)]/25 pt-5">
         <span className="text-[13px] opacity-70">Works with</span>
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px]">
           {APPS.map((app) => (
