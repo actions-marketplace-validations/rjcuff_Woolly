@@ -147,9 +147,9 @@ export function HeroContent() {
   return (
     <div className="flex flex-col gap-8 px-5 py-10 text-[var(--blue)] sm:px-10 sm:py-14 lg:px-12 lg:py-[clamp(32px,6vh,72px)]">
       <div>
-        <Link to="/docs/stale-facts" className="group inline-flex items-center gap-3 text-[14px] outline-none">
-          <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New in 0.15</span>
-          <span className="underline-offset-4 group-hover:underline">woolly check flags facts the code no longer backs up</span>
+        <Link to="/docs/why" className="group inline-flex items-center gap-3 text-[14px] outline-none">
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New in 0.16</span>
+          <span className="underline-offset-4 group-hover:underline">woolly why shows the decisions behind any line of code</span>
         </Link>
         <h1 className="mt-8 max-w-[620px] text-balance text-[44px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px] lg:text-[clamp(48px,6.4vh,76px)]">
           Memory that knows when it’s wrong.
