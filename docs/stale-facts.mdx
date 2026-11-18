@@ -76,10 +76,12 @@ Woolly shows each stale fact with its reason, one at a time.
 
 ## What your agent sees
 
-Stale facts are left out of search and the brief at the start of a session. Instead, the agent gets one line.
+Stale facts are left out of search and the brief at the start of a session. Instead, the agent is told which facts were kept out and why, so it knows what not to rely on.
 
 ```
-2 facts went stale since last session. Run woolly review.
+Woolly kept 1 stale fact out of this session. The code no longer backs it up:
+- "The IMU's chip select is GPIO 5" (main/pins.h#IMU_CS: 5 is no longer there in 4e1c9a2)
+Don't rely on it until someone runs woolly review.
 ```
 
 In `.woolly/woolly.md`, a stale fact keeps its line with `stale=` and the commit, so teammates see it in the diff.
@@ -87,3 +89,23 @@ In `.woolly/woolly.md`, a stale fact keeps its line with `stale=` and the commit
 ```md
 - The IMU's chip select is GPIO 5 <!-- id=1a2b3c4d src=main/pins.h:12-18 stale=4e1c9a2 -->
 ```
+
+## Caught it
+
+Every fact Woolly flags is one your agent would otherwise have followed. `woolly check` says so when it happens, with a running count for the repo.
+
+```
+1 fact went stale. Run woolly review to confirm, fix or retire it.
+Caught it. That's 14 stale facts Woolly has kept away from your agents in drone.
+```
+
+`woolly caught` lists them, newest first. `woolly caught --badge` prints a badge with the count for your README.
+
+```md
+[![14 stale facts caught by Woolly](https://img.shields.io/badge/woolly-14%20stale%20facts%20caught-1a3fd1)](https://usewoolly.com)
+```
+
+## On pull requests
+
+The Woolly GitHub Action runs the same check on every pull request and comments when a change makes a fact stale. See [Pull request checks](/docs/pull-requests).
+

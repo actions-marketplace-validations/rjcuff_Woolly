@@ -23,6 +23,7 @@ import (
 	"github.com/rjcuff/woolly/internal/profile"
 	"github.com/rjcuff/woolly/internal/recall"
 	"github.com/rjcuff/woolly/internal/share"
+	"github.com/rjcuff/woolly/internal/why"
 )
 
 var supportedVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
@@ -36,7 +37,8 @@ Use a stable "key" (e.g. "user.location", "project.acme.database") for facts tha
 Set source to "user" only when the user said it directly; use "agent" for things you inferred.
 There are two kinds of memory. Personal memory is about the user: their name, where they live, their preferences and how they like to work. It stays on their computer. Project memory is about the codebase: its stack, conventions, decisions, gotchas and commands. In a repo with .woolly/woolly.md it's shared with the team through git.
 Set "scope" to "personal" or "project" when you know which it is. Never put anything about the user in project memory.
-When the user makes a decision or turns down an approach, call "decide" with the choice, why, and what was rejected. Never suggest a rejected option again unless the user brings it up.
+Before changing code you didn't write in this session, call "why" with the file or line to see the decisions and gotchas behind it.
+When the user makes a decision or turns down an approach, call "decide" with the choice, why, and what was rejected, plus "sources" when it is about specific code. Never suggest a rejected option again unless the user brings it up.
 When you finish a piece of work or the user is wrapping up, call "handoff" with what you were working on, what got done, what was decided and what's next, so the next session in any app can pick up.`
 
 // Server is an MCP server backed by a Woolly store.
@@ -239,7 +241,16 @@ var tools = []map[string]any{
 			"rejected": map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "Options that were turned down, each with why, like \"Redis: overkill for one server\"."},
 			"key":      map[string]any{"type": "string", "description": "Optional stable name, like \"ratelimit.store\", so a later decision on the same thing replaces this one."},
 			"project":  map[string]any{"type": "string", "description": "The project it's about. Defaults to the current project."},
+			"sources":  map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "The code the decision is about, relative to the repo, like \"src/auth.ts#requireUser\" or \"src/auth.ts:10-24\". The why tool finds it from there."},
 		}, "decision"),
+	},
+	{
+		"name":        "why",
+		"title":       "Why is this code like this",
+		"description": "Before changing code, ask why it is the way it is: the decisions, conventions and gotchas saved about a file, a line or a function, with what was rejected and whether the code still backs each one up.",
+		"inputSchema": obj(map[string]any{
+			"target": map[string]any{"type": "string", "description": "The code, relative to the repo: \"src/auth.ts\", \"src/auth.ts:42\" or \"src/auth.ts#requireUser\"."},
+		}, "target"),
 	},
 	{
 		"name":        "handoff",
@@ -423,6 +434,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			Rejected any    `json:"rejected"`
 			Key      string `json:"key"`
 			Project  string `json:"project"`
+			Sources  any    `json:"sources"`
 		}
 		_ = json.Unmarshal(raw, &a)
 		if strings.TrimSpace(a.Decision) == "" {
@@ -435,6 +447,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		res, err := s.Store.Remember(memory.RememberInput{
 			Content: decision.Format(a.Decision, a.Why, toStrings(a.Rejected)), Key: a.Key, Tags: []string{decision.Tag},
 			Source: memory.SourceAgent, Via: s.appName(), Project: project, Commit: s.commit(project),
+			Sources: s.sources(project, toStrings(a.Sources)),
 		})
 		if err != nil {
 			return "", err
@@ -445,6 +458,31 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			out += "\nShared with the team in .woolly/woolly.md."
 		}
 		return out, nil
+
+	case "why":
+		var a struct {
+			Target string `json:"target"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		if s.Root == "" || s.Project == "" {
+			return "", errors.New("Woolly can't tell which repo you're in, so it can't look up code")
+		}
+		t, err := why.ParseTarget(a.Target, s.Root, s.Root)
+		if err != nil {
+			return "", err
+		}
+		s.pull()
+		mems, err := s.Store.List(true)
+		if err != nil {
+			return "", err
+		}
+		ans := why.Find(mems, s.Project, s.Root, t)
+		var ids []string
+		for _, m := range ans.Matches {
+			ids = append(ids, m.Memory.ID)
+		}
+		s.log("why", ids, a.Target, len(ids))
+		return why.Text(ans), nil
 
 	case "handoff":
 		var a struct {

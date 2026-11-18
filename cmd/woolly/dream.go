@@ -55,6 +55,9 @@ func cmdDream(args []string) error {
 		st.remember(rep)
 		_ = st.save(a.home)
 		a.log.Add(activity.Entry{App: cli, Action: "dream", IDs: results(rep), Count: len(rep.Steps)})
+		r := &recapState{}
+		r.add(rep, *project)
+		a.saveRecap(r)
 	}
 	if *asJSON {
 		return printJSON(rep)
@@ -182,18 +185,22 @@ func (a *app) dreamIfDue() {
 	}
 	d := a.dreamer()
 	total := &dream.Report{}
+	recap := &recapState{}
 	rep, err := d.Dream(ctx, dream.Options{Unrelated: st.set()})
 	if err != nil {
 		return // busy, or the store failed; try again later
 	}
 	st.remember(rep)
 	merge(total, rep)
+	recap.add(rep, "")
 	for p := range projects {
 		if r, err := d.Dream(ctx, dream.Options{Scope: memory.Scope{Project: p}, Learn: true, OnlyLessons: true}); err == nil {
 			merge(total, r)
+			recap.add(r, p)
 		}
 	}
 	_ = st.save(a.home)
+	a.saveRecap(recap)
 	if len(total.Steps) > 0 {
 		a.log.Add(activity.Entry{App: dream.Via, Action: "dream", IDs: results(total), Count: len(total.Steps)})
 		fmt.Fprintf(os.Stderr, "woolly: dreamed: %d merged, %d settled, %d to review, %d lessons\n",

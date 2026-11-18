@@ -13,6 +13,20 @@ woolly init
 git add .woolly .gitattributes && git commit -m "Add project memory"
 ```
 
+## Starting from what you already have
+
+The first time you run `woolly init`, Woolly reads the notes you already keep for your agents, so project memory doesn't start empty.
+
+```
+Created .woolly/woolly.md for acme.
+Reading what you already wrote for your agents...
+  CLAUDE.md                            12 facts
+  .cursor/rules/api.mdc                3 facts
+Brought in 15 facts, and pointed 6 at the code they're about, so Woolly can tell when they go stale.
+```
+
+It reads `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md` and the rules in `.cursor/rules`. Each list item becomes a fact under the heading it fits. It skips code blocks, Woolly's own section, anything personal, anything that looks like a secret, and lines that read like instructions written to trick an AI. Your files aren't changed. To skip this, run `woolly init --no-import`.
+
 ## What's in it
 
 `woolly.md` is plain Markdown with one fact per line, under six headings:

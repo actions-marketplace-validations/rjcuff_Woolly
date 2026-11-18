@@ -7,7 +7,9 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
+	"github.com/rjcuff/woolly/internal/gitinfo"
 	"github.com/rjcuff/woolly/internal/memory"
 	"github.com/rjcuff/woolly/internal/share"
 )
@@ -22,6 +24,7 @@ func cmdInit(args []string) error {
 	noCapture := fs.Bool("no-capture", false, "don't save decisions when a session ends")
 	stop := fs.Bool("stop", false, "stop keeping memory in this repo and remove .woolly/")
 	hooks := fs.Bool("hooks", false, "check project memory against the code after every commit")
+	noImport := fs.Bool("no-import", false, "don't read CLAUDE.md, AGENTS.md and other agent files the first time")
 	noHooks := fs.Bool("no-hooks", false, "stop checking after every commit")
 	if _, err := parse(fs, args); err != nil {
 		return err
@@ -79,6 +82,15 @@ func cmdInit(args []string) error {
 			fmt.Printf(" with %d notes you already had", res.Exported)
 		}
 		fmt.Println(".")
+		if !*noImport {
+			if n, pointed := a.importAgentFiles(r); n > 0 {
+				fmt.Printf("Brought in %s", plural(n, "fact", "facts"))
+				if pointed > 0 {
+					fmt.Printf(", and pointed %d at the code they're about, so Woolly can tell when they go stale", pointed)
+				}
+				fmt.Println(".")
+			}
+		}
 		fmt.Println("Commit .woolly/ and .gitattributes so your team's agents share the same project memory.")
 		fmt.Println("Only notes about this project go there, never anything personal.")
 	} else if d := res.Describe(); d != "" {
@@ -239,4 +251,53 @@ func (a *app) syncRepo(dir string) {
 	if r := share.Find(dir); r != nil && r.Enabled() {
 		_, _ = r.Sync(a.store)
 	}
+}
+
+// importAgentFiles brings in what the repo already tells its agents in
+// CLAUDE.md, AGENTS.md and the rest, then points what it can at the code.
+// It prints each file as it goes.
+func (a *app) importAgentFiles(r *share.Repo) (imported, pointed int) {
+	found := share.ReadAgentFiles(r.Dir)
+	if len(found) == 0 {
+		return 0, 0
+	}
+	fmt.Println("Reading what you already wrote for your agents...")
+	head := gitinfo.Head(r.Dir)
+	byFile := map[string]int{}
+	var order []string
+	var ids []string
+	for _, f := range found {
+		var tags []string
+		if tag := share.TagFor(f.Section); tag != "" {
+			tags = []string{tag}
+		}
+		res, err := a.store.Remember(memory.RememberInput{
+			Content: f.Text, Tags: tags, Source: memory.SourceImport, Via: f.File, Project: r.Project, Commit: head,
+		})
+		if err != nil || res.Duplicate {
+			continue
+		}
+		if byFile[f.File] == 0 {
+			order = append(order, f.File)
+		}
+		byFile[f.File]++
+		ids = append(ids, res.Memory.ID)
+		imported++
+	}
+	for _, name := range order {
+		fmt.Printf("  %-36s %s\n", name, plural(byFile[name], "fact", "facts"))
+	}
+	if imported == 0 {
+		return 0, 0
+	}
+	a.record("import", ids, imported)
+	// Point the new facts at the files and names they mention, so Woolly can
+	// tell when the code moves on.
+	if head != "" {
+		if rep, err := a.checkRepo(r.Dir, r.Project, checkOptions{backfill: true, deadline: time.Now().Add(5 * time.Second)}); err == nil {
+			pointed = rep.Backfilled
+		}
+	}
+	_, _ = r.Sync(a.store)
+	return imported, pointed
 }

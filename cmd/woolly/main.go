@@ -58,8 +58,11 @@ Usage:
                                [--type hardware] [--source-ref main/pins.h:12-18]
   woolly check [--json] [--quiet]  check this repo's facts against the code and flag stale ones
   woolly review                confirm, fix or retire stale facts
+  woolly why <file[:line|#name]> [--json]  the decisions and facts behind this code, and if they still hold
+  woolly caught [--badge]      the stale facts Woolly kept away from your agents in this repo
   woolly learn [text]          pick out facts from text or a conversation with a local model
   woolly dream [--project p] [--dry-run]  tidy memory and learn lessons from past sessions
+  woolly recap                 what Woolly did while you were away
   woolly recall <query> [-n 5] [--project p] [--all] [--json]
   woolly list [--project p] [--all] [--json]
   woolly show <id>
@@ -74,7 +77,7 @@ Usage:
   woolly handoff               where you left off in this project
   woolly init [--hooks] [--export claude,agents] [--no-capture]  keep project memory in this repo for your team
   woolly project [edit]        show or edit this repo's project memory
-  woolly decide <choice> [--why ...] [--rejected "X: reason"]  save a decision
+  woolly decide <choice> [--why ...] [--rejected "X: reason"] [--source-ref src/auth.ts#requireUser]  save a decision
   woolly resolve <id>          keep this memory as the current fact for its key
   woolly ui                    open the review page in your browser
   woolly connect [app...]      add Woolly to Claude, Cursor, VS Code, Codex, Gemini and more
@@ -158,6 +161,12 @@ func run(args []string) error {
 		return cmdCheck(rest)
 	case "review":
 		return cmdReview(rest)
+	case "why":
+		return cmdWhy(rest)
+	case "caught":
+		return cmdCaught(rest)
+	case "recap":
+		return cmdRecap(rest)
 	case "init", "share":
 		return cmdInit(rest)
 	case "project":
@@ -192,7 +201,7 @@ func run(args []string) error {
 }
 
 var commands = []string{"remember", "recall", "list", "show", "forget", "import", "profile", "restore", "trash",
-	"conflicts", "learn", "dream", "sync", "log", "context", "handoff", "init", "project", "decide", "resolve", "ui",
+	"conflicts", "learn", "dream", "sync", "log", "context", "handoff", "check", "review", "why", "caught", "recap", "init", "project", "decide", "resolve", "ui",
 	"serve", "mcp", "proxy", "doctor", "update", "connect", "disconnect", "service", "version", "help"}
 
 // closest is the command a typo was probably meant to be, or "".

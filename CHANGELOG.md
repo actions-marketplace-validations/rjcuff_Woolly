@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.16.0
+
+Woolly shows its work. Ask it why code is the way it is, see what it caught, and let pull requests say which facts they break.
+
+- `woolly why src/auth.ts:42` shows the decisions, conventions and gotchas behind a file, a line or a function. Decisions come first, with the reason and what was rejected, and every fact that points at code is checked against the code as it is now. It also works with `#name` for a function or type. Agents get the same answers from a new MCP `why` tool, and are told to ask before changing code they didn't write. See [Why is this code like this](https://usewoolly.com/docs/why).
+- Decisions can point at code. `woolly decide --source-ref src/auth.ts#requireUser` and the `sources` field of the MCP `decide` tool tie a decision to what it's about, so `woolly why` finds it and `woolly check` flags it when that code changes.
+- A GitHub Action, `rjcuff/woolly`, comments on a pull request when it makes a project fact stale, with a table of what changed. It updates its own comment on later pushes, writes the report to the job summary, and can fail the job with `fail-on-stale`. Nobody on the team needs Woolly installed. See [Pull request checks](https://usewoolly.com/docs/pull-requests).
+- `woolly check --markdown` prints that report, and `woolly check --base <commit>` compares facts that don't record a commit, like ones read from `woolly.md` on a fresh machine, against that commit.
+- Caught it. When a check flags a fact, Woolly says how many it has kept away from your agents in that repo. `woolly caught` lists them, and `woolly caught --badge` prints a README badge with the count.
+- The session brief now names the facts it kept out and why, instead of only counting them, so the agent knows what not to rely on.
+- The next session after a dream opens with what Woolly did while you were away: repeats folded together, facts settled and lessons learned for that project. It shows once per project. `woolly recap` shows it in the terminal, with the mammoth.
+- The first `woolly init` brings in what CLAUDE.md, AGENTS.md, GEMINI.md, Cursor and Windsurf rules and Copilot instructions already say, one fact per list item under the heading it fits, then points those facts at the code they mention. It skips code blocks, anything personal, secrets and lines that read like prompt injection, and doesn't change your files. `--no-import` skips it.
+- A new website: one blue on ice white, a pixel mammoth, and docs to match.
+
 ## 0.15.0
 
 Memory that knows when it's wrong. Project facts now point at the code they're about, and Woolly flags the ones the code no longer backs up.

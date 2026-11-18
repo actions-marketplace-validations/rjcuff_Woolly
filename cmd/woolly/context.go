@@ -54,7 +54,7 @@ func cmdContext(args []string) error {
 	if err != nil || len(mems) == 0 {
 		return nil
 	}
-	text, ids := buildContext(mems, project, repoDir, a.staleLine(memory.NormalizeProject(project)))
+	text, ids := buildContext(mems, project, repoDir, a.staleLine(memory.NormalizeProject(project)), a.awaySection(project))
 	if text == "" {
 		return nil
 	}
@@ -68,7 +68,7 @@ func cmdContext(args []string) error {
 }
 
 // buildContext lists the project's memories, then the profile.
-func buildContext(mems []memory.Memory, project, repoDir, staleLine string) (string, []string) {
+func buildContext(mems []memory.Memory, project, repoDir, staleLine, away string) (string, []string) {
 	var b strings.Builder
 	header := "Notes about the user from Woolly, their local memory."
 	if project != "" {
@@ -109,6 +109,7 @@ func buildContext(mems []memory.Memory, project, repoDir, staleLine string) (str
 	if staleLine != "" {
 		b.WriteString("# Stale facts\n\n" + staleLine + "\n\n")
 	}
+	b.WriteString(away)
 	b.WriteString(handoffText)
 	decided, decidedIDs := decision.Section(mems, p)
 	b.WriteString(decided)

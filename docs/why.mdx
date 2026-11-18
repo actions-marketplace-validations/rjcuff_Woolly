@@ -1,0 +1,54 @@
+---
+title: Why is this code like this
+description: woolly why shows the decisions, conventions and gotchas behind a file, a line or a function, with what was rejected and whether the code still backs each one up.
+---
+
+`git blame` tells you who changed a line. `woolly why` tells you why it's like that.
+
+```sh
+woolly why src/auth.ts:3
+```
+
+```
+src/auth.ts:3, in requireUser
+
+  Decided Nov 3 in Claude Code: Check auth in one middleware.
+  Why: one place to audit.
+  Rejected: Per-route guards: easy to forget one.
+  Still true at c6c4026. Points at src/auth.ts#requireUser.
+
+  Convention, saved Nov 18 in CLAUDE.md
+  Keep auth in requireUser in src/auth.ts, not in each route
+  Still true at c6c4026. Points at src/auth.ts#requireUser.
+```
+
+Decisions come first, with the reason and the options that were turned down. Every fact that points at code is checked against the code as it is right now, so you see whether it still holds, moved, or went [stale](/docs/stale-facts).
+
+## What you can ask about
+
+| You type | Woolly looks at |
+| --- | --- |
+| `woolly why src/auth.ts` | The whole file |
+| `woolly why src/auth.ts:42` | Line 42, and the function or type it's in |
+| `woolly why src/auth.ts#requireUser` | One function, type, macro or constant |
+
+Paths can be relative to the folder you're in. Add `--json` for the answer as JSON.
+
+## Where the answers come from
+
+Facts and decisions in [project memory](/docs/project-memory) show up when one of their sources is the code you asked about. Facts without sources show up too when they name the file or the function, marked as mentions, since Woolly can't check them.
+
+To tie a decision to code when you save it:
+
+```sh
+woolly decide "Check auth in one middleware" --why "one place to audit" \
+  --rejected "Per-route guards: easy to forget one" --source-ref src/auth.ts#requireUser
+```
+
+Agents do the same with the `sources` field of the MCP `decide` tool.
+
+## For agents
+
+Agents can ask too. The MCP `why` tool takes the same targets, and agents are told to call it before changing code they didn't write in the current session. So before an agent "fixes" the per-route guards you already ruled out, it reads why you ruled them out.
+
+`woolly why` only reads. It never changes memory, and it never sends anything anywhere.

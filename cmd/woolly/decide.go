@@ -25,6 +25,7 @@ func cmdDecide(args []string) error {
 	fs.Var(&rejected, "rejected", `an option that was turned down, like "Redis: overkill" (repeat for more)`)
 	key := fs.String("key", "", "a stable name, so a later decision on the same thing replaces this one")
 	project := fs.String("project", "", "the project (default: this repo)")
+	sources := fs.String("source-ref", "", "the code it's about, like src/auth.ts#requireUser (comma-separated), so woolly why finds it")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -41,13 +42,20 @@ func cmdDecide(args []string) error {
 			}
 		}
 	}
+	refs := memory.ParseRefs(*sources)
+	if *sources != "" && len(refs) == 0 {
+		return fmt.Errorf("could not read --source-ref %q; use a path relative to the repo, like src/auth.ts#requireUser", *sources)
+	}
+	if len(refs) > 0 && p == "" {
+		return errors.New("--source-ref is for project decisions: run this inside a git repo or pass --project")
+	}
 	a, err := open()
 	if err != nil {
 		return err
 	}
 	res, err := a.store.Remember(memory.RememberInput{
 		Content: decision.Format(choice, *why, rejected), Key: *key, Tags: []string{decision.Tag},
-		Source: memory.SourceUser, Via: cli, Project: p, Commit: commitFor(p),
+		Source: memory.SourceUser, Via: cli, Project: p, Commit: commitFor(p), Sources: a.ground(p, refs),
 	})
 	if err != nil {
 		return err

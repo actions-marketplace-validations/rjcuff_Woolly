@@ -1,0 +1,65 @@
+---
+title: Pull request checks
+description: A GitHub Action that comments on a pull request when it makes a project fact stale, so the whole team sees it before it merges.
+---
+
+When a pull request changes code that a fact in `.woolly/woolly.md` points at, Woolly comments on it.
+
+> **Woolly** checked 12 project facts against this change. **1 fact went stale.**
+>
+> | Fact | What changed |
+> | --- | --- |
+> | The IMU chip select is GPIO 5 | main/pins.h#IMU_CS: 5 is no longer there in 229f599 |
+>
+> After this merges, run `woolly review` to confirm, fix or retire each one. Nothing is deleted.
+
+Nobody on the team needs Woolly installed for this. The facts come from `.woolly/woolly.md` in the repo, and the check runs on GitHub with no model and no network calls beyond downloading Woolly.
+
+## Set it up
+
+Add `.github/workflows/woolly.yml` to your repo.
+
+```yaml
+name: Woolly
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rjcuff/woolly@main
+```
+
+That's it. The repo needs [project memory](/docs/project-memory) committed with `woolly init`, and facts that point at code. See [Stale facts](/docs/stale-facts) for how they do.
+
+## How it works
+
+1. It installs Woolly with the same script as [Download](/download).
+2. It reads the facts from `.woolly/woolly.md` into a Woolly of its own for the job.
+3. It runs `woolly check --markdown --base <the pull request's base commit>`. Facts were true on the branch you're merging into, so that's what the change is compared against.
+4. It writes the report to the job summary. When something went stale, it comments on the pull request. If it commented before, it updates that comment instead of adding another.
+
+## Options
+
+| Input | Default | What it does |
+| --- | --- | --- |
+| `comment` | `true` | Comment on the pull request when something goes stale. `false` only writes the job summary |
+| `fail-on-stale` | `false` | Fail the job when the change makes a fact stale |
+| `token` | `github.token` | The token for commenting. It needs `pull-requests: write` |
+
+The action also sets two outputs, `stale` and `checked`, for later steps.
+
+## Pull requests from forks
+
+GitHub gives pull requests from forks a token that can't comment. The check still runs and the report is still in the job summary.
+
+## Run the same check yourself
+
+```sh
+woolly check --markdown --base origin/main
+```

@@ -1,0 +1,97 @@
+name: Woolly check
+description: Comment on a pull request when it makes project memory stale, like a renamed function or a changed value that a fact still names.
+author: Woolly
+branding:
+  icon: alert-circle
+  color: blue
+
+inputs:
+  comment:
+    description: Post the report as a pull request comment when something goes stale, and keep that comment up to date. "false" only writes the job summary.
+    default: "true"
+  fail-on-stale:
+    description: Fail the job when the change makes a fact stale.
+    default: "false"
+  token:
+    description: Token for posting the comment. Needs pull-requests write permission.
+    default: ${{ github.token }}
+
+outputs:
+  stale:
+    description: How many facts this change made stale.
+    value: ${{ steps.check.outputs.stale }}
+  checked:
+    description: How many facts that point at code were checked.
+    value: ${{ steps.check.outputs.checked }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Woolly
+      shell: bash
+      run: |
+        export WOOLLY_INSTALL_DIR="$RUNNER_TEMP/woolly-bin"
+        mkdir -p "$WOOLLY_INSTALL_DIR"
+        curl -fsSL https://usewoolly.com/install.sh | sh
+        echo "$WOOLLY_INSTALL_DIR" >> "$GITHUB_PATH"
+
+    - name: Check project memory against this change
+      id: check
+      shell: bash
+      env:
+        # A Woolly of its own for this job. The facts come from the repo's .woolly/woolly.md.
+        WOOLLY_HOME: ${{ runner.temp }}/woolly-home
+        WOOLLY_NO_EMBED: "1"
+        # Facts were true on the branch this pull request merges into.
+        BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+      run: |
+        report="$RUNNER_TEMP/woolly-report.md"
+        args="--markdown --no-backfill"
+        if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
+          # A shallow checkout may not have the base commit yet.
+          git cat-file -e "$BASE^{commit}" 2>/dev/null || git fetch --quiet --no-tags --depth=1 origin "$BASE" || true
+          args="$args --base $BASE"
+        fi
+        set +e
+        woolly check $args > "$report"
+        code=$?
+        set -e
+        if [ "$code" -gt 1 ]; then
+          echo "::error::woolly check failed"
+          cat "$report"
+          exit "$code"
+        fi
+        stale=$(grep -oE '\*\*[0-9]+ facts? went stale' "$report" | grep -oE '[0-9]+' || true)
+        checked=$(grep -oE 'checked [0-9]+ project facts?' "$report" | grep -oE '[0-9]+' || true)
+        echo "stale=${stale:-0}" >> "$GITHUB_OUTPUT"
+        echo "checked=${checked:-0}" >> "$GITHUB_OUTPUT"
+        echo "report=$report" >> "$GITHUB_OUTPUT"
+        cat "$report" >> "$GITHUB_STEP_SUMMARY"
+        cat "$report"
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event.pull_request.number
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        PR: ${{ github.event.pull_request.number }}
+        STALE: ${{ steps.check.outputs.stale }}
+        REPORT: ${{ steps.check.outputs.report }}
+      run: |
+        # Update Woolly's own comment if there is one. Only start a new one when something went stale.
+        existing=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+          --jq '.[] | select(.body | startswith("<!-- woolly-check -->")) | .id' 2>/dev/null | head -n 1 || true)
+        if [ -n "$existing" ]; then
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$REPORT" > /dev/null \
+            || echo "::warning::Woolly couldn't update its comment. Give the job pull-requests write permission."
+        elif [ "$STALE" != "0" ]; then
+          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F "body=@$REPORT" > /dev/null \
+            || echo "::warning::Woolly couldn't comment. Give the job pull-requests write permission. The report is in the job summary."
+        fi
+
+    - name: Fail when facts went stale
+      if: inputs.fail-on-stale == 'true' && steps.check.outputs.stale != '0'
+      shell: bash
+      run: |
+        echo "::error::This change made ${{ steps.check.outputs.stale }} project facts stale. See the report above."
+        exit 1

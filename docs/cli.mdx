@@ -7,8 +7,11 @@ description: Everything the woolly command can do.
 | --- | --- |
 | `woolly remember <text>` | Save a fact |
 | `woolly recall <query>` | Search your memories |
-| `woolly check` | Check this repo's facts against the code and flag the ones that went stale. Exits with status 1 when a fact went stale. See [Stale facts](/docs/stale-facts) |
+| `woolly check` | Check this repo's facts against the code and flag the ones that went stale. Exits with status 1 when a fact went stale. `--markdown` prints a pull request comment, and `--base <commit>` compares facts that don't record a commit against that one. See [Stale facts](/docs/stale-facts) and [Pull request checks](/docs/pull-requests) |
 | `woolly review` | Confirm, fix or retire stale facts, one at a time. `--list` only lists them, and `--confirm <id>` or `--retire <id>` settle one |
+| `woolly why <file[:line\|#name]>` | The decisions, conventions and gotchas behind a file, a line or a function, and whether the code still backs each one up. See [Why is this code like this](/docs/why) |
+| `woolly caught` | The stale facts Woolly kept away from your agents in this repo. `--badge` prints a README badge with the count |
+| `woolly recap` | What Woolly did while you were away: what the last dream tidied and the lessons it learned. See [Dreaming](/docs/dreaming) |
 | `woolly list` | Show current memories |
 | `woolly show <id>` | Show one memory in full |
 | `woolly forget <id>` | Move a memory to the trash |
@@ -22,11 +25,11 @@ description: Everything the woolly command can do.
 | `woolly learn [text]` | Pick out facts from text with a local model. See [Smart memory](/docs/learn) |
 | `woolly sync` | Keep memories in step between your devices. See [Sync your devices](/docs/sync) |
 | `woolly handoff` | Where you left off in this project. See [Pick up where you left off](/docs/connect#pick-up-where-you-left-off) |
-| `woolly decide <choice>` | Save a decision, with `--why` and `--rejected "option: reason"`. See [Decisions](/docs/projects#decisions) |
-| `woolly init` | Keep this repo's project memory in `.woolly/woolly.md`, shared with your team through git. `--export claude,agents` also keeps a section in CLAUDE.md and AGENTS.md. `--no-capture` stops saving decisions when a session ends. `--hooks` checks memory against the code after every commit, and `--no-hooks` stops that. `--stop` removes it. See [Project memory](/docs/project-memory) |
+| `woolly decide <choice>` | Save a decision, with `--why` and `--rejected "option: reason"`. `--source-ref` ties it to the code it's about, so `woolly why` finds it. See [Decisions](/docs/projects#decisions) |
+| `woolly init` | Keep this repo's project memory in `.woolly/woolly.md`, shared with your team through git. `--export claude,agents` also keeps a section in CLAUDE.md and AGENTS.md. `--no-capture` stops saving decisions when a session ends. `--hooks` checks memory against the code after every commit, and `--no-hooks` stops that. `--stop` removes it. The first time, it brings in what CLAUDE.md, AGENTS.md and other agent files already say, unless you pass `--no-import`. See [Project memory](/docs/project-memory) |
 | `woolly project` | Show this repo's project memory by heading. `woolly project edit` opens it in your editor |
 | `woolly log` | What each app saved, read and deleted |
-| `woolly context` | Print your profile and notes about the current project, for an app to read at startup. Facts that went stale are left out, with one line saying how many |
+| `woolly context` | Print your profile and notes about the current project, for an app to read at startup. Facts that went stale are left out and named, and the last dream's recap shows once |
 | `woolly connect [app...]` | Add Woolly to your AI apps. See [Connect your apps](/docs/connect) |
 | `woolly disconnect [app...]` | Remove Woolly from your AI apps |
 | `woolly service install` | Run Woolly in the background and start it at login |

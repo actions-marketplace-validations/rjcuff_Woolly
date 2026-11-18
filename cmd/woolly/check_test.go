@@ -175,15 +175,42 @@ func TestStaleLine(t *testing.T) {
 	}
 	breakBoth(t, dir)
 	a.checkRepo(dir, "drone", checkOptions{})
-	if line := a.staleLine("drone"); line != "2 facts went stale since last session. Run woolly review, and don't rely on them until then." {
-		t.Fatalf("first brief: %q", line)
+	line := a.staleLine("drone")
+	for _, want := range []string{
+		"Woolly kept 2 stale facts out of this session. The code no longer backs them up:",
+		`- "The IMU chip select is GPIO 5" (main/pins.h#IMU_CS: 5 is no longer there in `,
+		`- "imu_read_accel returns raw counts" (main/imu.c: imu_read_accel was renamed to imu_read_accel_g in `,
+		"Don't rely on them until someone runs woolly review.",
+	} {
+		if !strings.Contains(line, want) {
+			t.Fatalf("first brief is missing %q:\n%s", want, line)
+		}
 	}
 	if line := a.staleLine("drone"); line != "2 stale facts are waiting for review. Run woolly review." {
 		t.Fatalf("next brief: %q", line)
 	}
-	out, _ := buildContext(nil, "drone", dir, "x went stale")
+	out, _ := buildContext(nil, "drone", dir, "x went stale", "")
 	if !strings.Contains(out, "# Stale facts\n\nx went stale") {
 		t.Fatalf("brief: %s", out)
+	}
+}
+
+func TestCaughtCountsEachFactOnce(t *testing.T) {
+	a, dir := droneApp(t)
+	if n := len(a.caught("drone")); n != 0 {
+		t.Fatalf("caught before anything changed: %d", n)
+	}
+	breakBoth(t, dir)
+	rep, _ := a.checkRepo(dir, "drone", checkOptions{})
+	if rep.Caught != 2 || len(a.caught("drone")) != 2 {
+		t.Fatalf("caught after the change: %+v", rep)
+	}
+	// Checking again doesn't count them twice.
+	if rep, _ = a.checkRepo(dir, "drone", checkOptions{}); rep.Caught != 2 {
+		t.Fatalf("caught after a second check: %d", rep.Caught)
+	}
+	if u := badgeURL(2); u != "https://img.shields.io/badge/woolly-2%20stale%20facts%20caught-1a3fd1" {
+		t.Fatalf("badge: %s", u)
 	}
 }
 
@@ -212,5 +239,52 @@ func TestPostCommitHook(t *testing.T) {
 	removeHook(dir)
 	if _, err := os.Stat(p); !os.IsNotExist(err) {
 		t.Fatal("a hook with only Woolly's lines should be deleted")
+	}
+}
+
+// In CI there's no Woolly home: the facts come only from .woolly/woolly.md in
+// the repo. The pull request report still names what a change made stale.
+func TestCheckMarkdownFromRepoFileOnly(t *testing.T) {
+	a, dir := droneApp(t)
+	r := share.Find(dir)
+	if _, err := r.Init(a.store, share.Options{}); err != nil {
+		t.Fatal(err)
+	}
+	gitRun(t, dir, "add", ".")
+	gitRun(t, dir, "commit", "-q", "-m", "share memory")
+
+	// A fresh machine with nothing but the repo.
+	t.Setenv("WOOLLY_HOME", t.TempDir())
+	ci, err := open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ci.syncRepo(dir)
+	base := commitAt(t, dir)
+	rep, err := ci.checkRepo(dir, r.Project, checkOptions{base: base})
+	if err != nil || rep.Checked != 2 || rep.NewStale != 0 {
+		t.Fatalf("before the change: %+v %v", rep, err)
+	}
+	if md := markdownCheck(rep); !strings.HasPrefix(md, CommentMarker) || !strings.Contains(md, "Nothing went stale.") {
+		t.Fatalf("clean report:\n%s", md)
+	}
+
+	// CI runs once, after the change, on another fresh machine. The pull
+	// request's base commit is what the facts were true at.
+	breakBoth(t, dir)
+	t.Setenv("WOOLLY_HOME", t.TempDir())
+	if ci, err = open(); err != nil {
+		t.Fatal(err)
+	}
+	ci.syncRepo(dir)
+	rep, err = ci.checkRepo(dir, r.Project, checkOptions{base: base})
+	if err != nil || rep.NewStale != 2 {
+		t.Fatalf("after the change: %+v %v", rep, err)
+	}
+	md := markdownCheck(rep)
+	for _, want := range []string{"**2 facts went stale.**", "| The IMU chip select is GPIO 5 |", "5 is no longer there", "woolly review"} {
+		if !strings.Contains(md, want) {
+			t.Fatalf("report is missing %q:\n%s", want, md)
+		}
 	}
 }

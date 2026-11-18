@@ -28,6 +28,18 @@ An inferred fact never replaces something you said yourself. If one disagrees wi
 
 When `woolly serve` or the background service is running, Woolly dreams on its own at most once a day: only when memories changed since the last dream, and only when the chat model is installed. It writes lessons for the projects you worked in since then. Dreams show up in `woolly log`.
 
+The next session starts with what the dream did, once per project.
+
+```
+# While you were away
+
+While you were away, Woolly dreamed overnight. It folded 4 repeats together and settled 1 fact that disagreed. It learned 2 lessons from recent sessions:
+- Run make check before every commit
+- The site deploys from main, so test the build before pushing
+```
+
+`woolly recap` shows the same thing in your terminal.
+
 To turn it off, set `WOOLLY_DREAM=off`. A dream remembers which pairs of facts it found unrelated, in `~/.woolly/dream.json`, so it doesn't ask the model about them again.
 
 ## From the API
