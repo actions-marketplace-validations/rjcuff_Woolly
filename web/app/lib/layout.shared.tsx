@@ -1,15 +1,19 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { SiteThemeToggle } from '@/components/brand';
+import { DitherMammoth } from '@/components/frost/dither-mammoth';
 import { githubUrl } from './shared';
 
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: <span className="font-sans text-[19px] font-medium tracking-[-0.02em]">Woolly</span>,
+      title: (
+        <span className="flex items-center gap-2.5 text-[var(--color-brand)]">
+          <DitherMammoth small className="h-[24px] w-auto" />
+          <span className="text-[20px] font-medium tracking-[-0.03em]">woolly</span>
+        </span>
+      ),
     },
     githubUrl,
-    slots: {
-      themeSwitch: SiteThemeToggle,
-    },
+    // Light only: no theme switch anywhere on the site.
+    themeSwitch: { enabled: false },
   };
 }

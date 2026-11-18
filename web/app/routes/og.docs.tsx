@@ -1,6 +1,5 @@
 import type { Route } from './+types/og.docs';
 import { source } from '@/lib/source';
-import { tagline } from '@/lib/shared';
 import { ogImage } from '@/lib/og';
 
 export function loader({ params }: Route.LoaderArgs) {
@@ -11,5 +10,6 @@ export function loader({ params }: Route.LoaderArgs) {
   const page = source.getPage(slugs);
   if (!page) throw new Response(undefined, { status: 404 });
 
-  return ogImage(slugs.length === 0 ? tagline : page.data.title);
+  // Every page shares the same simple preview: the mammoth on Woolly blue.
+  return ogImage();
 }

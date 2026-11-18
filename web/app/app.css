@@ -28,28 +28,37 @@ html > body[data-scroll-locked] {
 }
 
 @theme {
-  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter Tight', 'Helvetica Neue', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   /* EASE_OUT from lib/ease.ts, as a Tailwind class: ease-ui. */
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
   /* EASE_DRAWER from lib/ease.ts: ease-drawer. */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-  /* Woolly red: Apple's system red (#ff3b30), deepened the way Apple's web
-     blue #0071e3 deepens #007aff, so white text on it and links on white pass AA. */
-  --color-brand: #de3329;
-  --color-brand-light: #ff3b30;
-  --color-brand-foreground: #ffffff;
-  /* The docs use the same red for links, the active page and buttons. */
-  --color-fd-primary: #de3329;
-  --color-fd-primary-foreground: #ffffff;
+  /* Woolly blue, on ice white. The site is one color. */
+  --color-brand: #1a3fd1;
+  --color-brand-light: #4a68e0;
+  --color-brand-foreground: #eef4fb;
+  --color-fd-primary: #1a3fd1;
+  --color-fd-primary-foreground: #eef4fb;
 }
 
-.dark {
-  /* The same red reads on dark too (4.6:1), so buttons keep white text. */
-  --color-brand: #de3329;
-  --color-brand-light: #ff453a;
-  --color-fd-primary: #de3329;
-  --color-fd-primary-foreground: #ffffff;
+/* The site is light only. Every page, docs included, shares these colors:
+   ice white paper, deep blue ink for long reading, and Woolly blue for
+   everything you can click. */
+:root {
+  --color-fd-background: #eef4fb;
+  --color-fd-foreground: #10225f;
+  --color-fd-muted: #e2eaf6;
+  --color-fd-muted-foreground: #4b5c8f;
+  --color-fd-card: #f6f9fd;
+  --color-fd-popover: #f7faff;
+  --color-fd-popover-foreground: #10225f;
+  --color-fd-secondary: #e2eaf6;
+  --color-fd-secondary-foreground: #10225f;
+  --color-fd-accent: #dfe8f7;
+  --color-fd-accent-foreground: #1a3fd1;
+  --color-fd-border: #cad8ee;
+  --color-fd-ring: #1a3fd1;
 }
 
 /* easeUI's token names, mapped onto the site's own so its blocks drop in. */
@@ -115,7 +124,7 @@ a[role='button'] {
 }
 /* Disclosures (FAQ rows, menus) are left out: a full-width row that shrinks
    reads as a jitter, not a press. */
-button:active:not(:disabled):not([aria-expanded]),
+button:active:not(:disabled):not([aria-expanded]):not(.no-press),
 a[role='button']:active,
 .btn-press:active {
   transform: scale(0.97);
@@ -154,23 +163,20 @@ button:has(> svg.lucide-check) svg {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.75;
-  color: var(--color-fd-muted-foreground);
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--color-fd-foreground);
 }
 .legal h2 {
-  margin-top: 3rem;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
+  margin-top: 2.5rem;
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--color-brand);
 }
-.legal strong,
-.legal a,
-.legal code {
-  color: var(--color-fd-foreground);
+.legal strong {
+  font-weight: 500;
 }
 .legal ul {
   display: flex;
@@ -180,31 +186,20 @@ button:has(> svg.lucide-check) svg {
   list-style: disc;
 }
 .legal a {
-  font-weight: 500;
-  transition: color 150ms ease;
+  color: var(--color-brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklch, var(--color-brand) 40%, transparent);
 }
 .legal a:hover {
-  color: var(--color-fd-muted-foreground);
+  text-decoration-color: currentColor;
 }
-
 .legal code {
   font-family: var(--font-mono);
-  font-size: 0.88em;
+  font-size: 0.86em;
   padding: 1px 6px;
+  border-radius: 6px;
   background: var(--color-fd-muted);
-}
-
-/* The homepage reads like a document: pure white in light mode. */
-:root:not(.dark) .home-doc {
-  --color-fd-background: #e6e7ea;
-  --color-fd-muted: #dcdee2;
-  --color-fd-card: #e0e2e5;
-  --color-fd-border: #c9ccd1;
-  --color-fd-muted-foreground: #63666d;
-}
-:root:not(.dark):has(.home-doc),
-:root:not(.dark):has(.home-doc) body {
-  background-color: #e6e7ea;
 }
 
 /* Sections rise in the first time they scroll into view. Set by a script, so
@@ -246,157 +241,122 @@ button:has(> svg.lucide-check) svg {
   }
 }
 
-/* The docs, in the same quiet style as the front pages: the soft gray, Geist
-   Mono, no borders or dividers, square code blocks and plain headings. */
-:root:not(.dark) #nd-notebook-layout,
-:root:not(.dark):has(#nd-notebook-layout),
-:root:not(.dark):has(#nd-notebook-layout) body {
-  --color-fd-background: #e6e7ea;
-  --color-fd-muted: #dcdee2;
-  --color-fd-card: #dcdee2;
-  --color-fd-secondary: #dcdee2;
-  --color-fd-accent: #dcdee2;
-  --color-fd-popover: #eceef0;
-  --color-fd-border: #c9ccd1;
-  --color-fd-muted-foreground: #63666d;
-  background-color: #e6e7ea;
-}
+/* The docs, in the homepage's style: ice white, Inter Tight, Woolly blue
+   for headings, links and the current page, rounded code blocks. */
 #nd-notebook-layout,
 #nd-notebook-layout ~ div,
 [role='dialog']:has([cmdk-input], input[type='search']) {
-  --color-fd-primary: var(--color-fd-foreground);
-  --color-fd-primary-foreground: var(--color-fd-background);
-  font-family: var(--font-mono);
-}
-#nd-notebook-layout .border-b,
-#nd-notebook-layout .border-t,
-#nd-notebook-layout .border,
-#nd-notebook-layout header,
-#nd-notebook-layout aside,
-#nd-notebook-layout kbd {
-  border-color: transparent;
-}
-#nd-notebook-layout #nd-subnav > div {
-  background: var(--color-fd-background);
-}
-/* Search: a plain gray field. */
-#nd-notebook-layout #nd-subnav button[class*='bg-fd-secondary'] {
-  border-radius: 0;
-  background: var(--color-fd-muted);
-}
-#nd-notebook-layout kbd {
-  border-radius: 0;
-  background: transparent;
-}
-/* The sidebar: the current page in the foreground, no pill behind it. */
-#nd-sidebar a {
-  border-radius: 0;
   font-family: var(--font-sans);
+}
+#nd-notebook-layout header,
+#nd-notebook-layout #nd-subnav > div {
+  background: rgb(238 244 251 / 0.92);
+}
+#nd-notebook-layout header,
+#nd-notebook-layout #nd-subnav {
+  border-color: rgb(26 63 209 / 0.2);
+}
+/* The sidebar: the current page is a blue pill, like the homepage's labels. */
+#nd-sidebar a {
   font-size: 15px;
-  padding-top: 0.45rem;
-  padding-bottom: 0.45rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  border-radius: 999px;
 }
 #nd-sidebar a[data-active='true'] {
-  background: transparent;
-  color: var(--color-fd-foreground);
-}
-#nd-sidebar a[data-active='true']::before {
-  content: '[';
-  margin-right: 0.35ch;
-}
-#nd-sidebar a[data-active='true']::after {
-  content: ']';
-  margin-left: 0.35ch;
+  width: fit-content;
+  background: var(--color-brand);
+  color: var(--color-brand-foreground);
 }
 #nd-sidebar p,
 #nd-sidebar [data-section] {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-fd-muted-foreground);
-}
-/* The table of contents: no rail, just text. */
-#nd-toc *,
-#nd-notebook-layout [id^='nd-toc'] * {
-  border-color: transparent !important;
+  color: var(--color-brand);
 }
 #nd-notebook-layout a[data-active='true'] {
-  color: var(--color-fd-foreground);
+  color: var(--color-brand);
+}
+#nd-sidebar a[data-active='true'] {
+  color: var(--color-brand-foreground);
 }
 /* The page. */
 #nd-page {
-  font-size: 16px;
+  font-size: 17px;
   max-width: 820px;
   padding-top: 3rem;
   padding-bottom: 6rem;
 }
 #nd-page h1 {
-  font-size: 28px;
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-size: 44px;
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--color-brand);
 }
 #nd-page h1 + p {
-  font-family: var(--font-sans);
-  font-size: 17px;
-  line-height: 1.7;
+  font-size: 18px;
+  line-height: 1.6;
 }
-/* Reading text in Geist, which is easier on the eyes than mono in long runs. */
 #nd-page .prose {
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.85;
+  font-size: 17px;
+  line-height: 1.75;
 }
 #nd-page .prose :where(p, ul, ol, table, figure, blockquote) {
-  margin-top: 1.4em;
-  margin-bottom: 1.4em;
+  margin-top: 1.3em;
+  margin-bottom: 1.3em;
 }
 #nd-page .prose :where(li) {
-  margin-top: 0.5em;
-  margin-bottom: 0.5em;
+  margin-top: 0.45em;
+  margin-bottom: 0.45em;
 }
 #nd-page .prose :where(code, pre, kbd) {
   font-family: var(--font-mono);
 }
-#nd-page .prose :where(h2, h3) {
-  font-family: var(--font-mono);
-}
 #nd-page .prose :where(h2) {
-  margin-top: 4.5em;
-  margin-bottom: 1.5em;
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-fd-muted-foreground);
+  margin-top: 2.6em;
+  margin-bottom: 0.8em;
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--color-brand);
 }
 #nd-page .prose :where(h3) {
-  margin-top: 2.5em;
-  font-size: 16px;
+  margin-top: 2em;
+  font-size: 20px;
   font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--color-brand);
 }
 #nd-page .prose :where(strong) {
   font-weight: 500;
 }
 #nd-page .prose :where(a):not(:where([class~='not-prose'] *)) {
-  color: var(--color-fd-foreground);
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 150ms ease;
+  color: var(--color-brand);
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklch, var(--color-brand) 40%, transparent);
 }
 #nd-page .prose :where(a):hover {
-  color: var(--color-fd-muted-foreground);
+  text-decoration-color: currentColor;
+}
+/* Headings link to themselves; they shouldn't look like links. */
+#nd-page .prose :where(h1, h2, h3, h4) a {
+  color: inherit;
+  text-decoration: none;
 }
 #nd-page .prose :where(code):not(:where(pre code)) {
   border: 0;
-  border-radius: 0;
+  border-radius: 6px;
   background: var(--color-fd-muted);
 }
 #nd-page figure.shiki,
 #nd-page .shiki {
-  border: 0;
-  border-radius: 0;
-  background: var(--color-fd-muted);
+  border: 1px solid var(--color-fd-border);
+  border-radius: 14px;
+  background: var(--color-fd-card);
 }
 #nd-page table {
   font-size: 15px;
@@ -405,39 +365,81 @@ button:has(> svg.lucide-check) svg {
 #nd-page td {
   padding: 0.85em 1.25em;
   vertical-align: top;
+  border-color: var(--color-fd-border);
 }
 #nd-page th {
   font-weight: 500;
+  color: var(--color-brand);
 }
 #nd-page table,
 #nd-page div:has(> table) {
-  border-radius: 0 !important;
-}
-#nd-page th,
-#nd-page td {
-  border-color: var(--color-fd-border);
-}
-#nd-page [class*='rounded'] {
-  border-radius: 0;
+  border-radius: 14px !important;
 }
 #nd-page button[class*='rounded-md'] {
-  border-color: transparent;
-  background: var(--color-fd-muted);
-}
-#nd-toc [class*='overflow-y-auto'] svg,
-#nd-toc [class*='overflow-y-auto'] [class*='absolute'] {
-  display: none;
+  border-radius: 999px;
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: transparent;
 }
 #nd-toc a {
-  padding-inline-start: 0 !important;
-  margin-inline-start: 0 !important;
-  font-family: var(--font-sans);
   font-size: 14px;
 }
-#nd-sidebar a[data-active='true'] {
-  width: fit-content;
+
+/* The site frame for the homepage and the plain pages: ice white and one blue. */
+.home-frost {
+  --snow: #eef4fb;
+  --ice-1: #e7f0f5;
+  --ice-2: #d4e5ee;
+  --line: #d3e0e7;
+  --line-strong: #a7bdc9;
+  --deep: #0e2433;
+  --muted: #475e6d;
+  --faint: #687f8d;
+  --glacier: #1d6a90;
+  /* One blue on ice white, used for everything below the nav. */
+  --blue: #1a3fd1;
+  --paper: #eef4fb;
+  --color-fd-foreground: #1a3fd1;
+  --color-fd-muted-foreground: #4f68cc;
+  font-family: var(--font-sans);
 }
-#nd-page .prose :where(h2, h3) a {
-  text-decoration: none !important;
-  color: inherit !important;
+:root:has(.home-frost),
+:root:has(.home-frost) body {
+  background-color: #eef4fb;
 }
+.home-frost ::selection {
+  background: #1a3fd1;
+  color: #eef4fb;
+}
+/* A pill button whose arrow grows on hover. */
+.home-frost .pill-arrow {
+  display: inline-block;
+  height: 1px;
+  width: 22px;
+  background: currentColor;
+  position: relative;
+  transition: width 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.home-frost .pill-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -4px;
+  width: 9px;
+  height: 9px;
+  border-top: 1px solid currentColor;
+  border-right: 1px solid currentColor;
+  transform: rotate(45deg);
+  transform-origin: center;
+  margin-right: 1px;
+}
+.home-frost a:hover .pill-arrow,
+.home-frost a:focus-visible .pill-arrow {
+  width: 46px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-frost .pill-arrow {
+    transition: none;
+  }
+}
+

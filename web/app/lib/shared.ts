@@ -3,7 +3,7 @@ import { createGetUrl } from 'fumadocs-core/source';
 export const appName = 'Woolly';
 export const tagline = 'Project memory your coding agents can trust';
 export const siteDescription =
-  'Project memory your coding agents can trust. Local, and it knows when a fact goes stale. Woolly gives Claude Code, Cursor and Codex one memory for your repo. Every fact cites its commit, and stale facts get flagged automatically. Open source, private and free.';
+  'Local project memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones a commit made stale. Free and open source.';
 // The public URL of the site. Update this once the domain is live.
 export const siteUrl = 'https://usewoolly.com';
 export const docsRoute = '/docs';

@@ -1,6 +1,7 @@
 import type { Route } from './+types/not-found';
-import { BlockButton, FrameButton, Label } from '@/components/doc/parts';
 import { DocShell } from '@/components/doc/shell';
+import { DitherMammoth } from '@/components/frost/dither-mammoth';
+import { Pill } from '@/components/frost/home-content';
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: 'Not Found | Woolly' }];
@@ -9,19 +10,16 @@ export function meta({}: Route.MetaArgs) {
 export default function NotFound() {
   return (
     <DocShell>
-      <section className="pb-24 pt-14">
-        <Label className="text-brand">404</Label>
-        <h1 className="mt-4 text-[40px] font-normal leading-[1.06] tracking-[-0.035em] sm:text-[56px]">
-          Even a mammoth forgets sometimes
-        </h1>
-        <p className="mt-6 max-w-[480px] text-pretty text-[18px] leading-relaxed text-fd-muted-foreground">
-          This page doesn&apos;t exist, or it moved. The docs or the homepage will get you back on track.
-        </p>
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <BlockButton href="/docs">Read the docs</BlockButton>
-          <FrameButton href="/">Go home</FrameButton>
-        </div>
-      </section>
+      <DitherMammoth className="w-[160px]" />
+      <span className="mt-10 inline-block rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">404</span>
+      <h1 className="mt-6 text-balance text-[44px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px]">Even a mammoth forgets sometimes</h1>
+      <p className="mt-6 max-w-[480px] text-[17px] leading-[1.6]">This page doesn’t exist, or it moved. The docs or the homepage will get you back on track.</p>
+      <div className="mt-9 flex flex-wrap gap-3">
+        <Pill href="/docs" solid>
+          Read the docs
+        </Pill>
+        <Pill href="/">Go home</Pill>
+      </div>
     </DocShell>
   );
 }

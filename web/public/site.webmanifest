@@ -1,0 +1,14 @@
+{
+  "name": "Woolly",
+  "short_name": "Woolly",
+  "description": "Local project memory for Claude Code, Cursor and Codex that knows when a fact goes stale.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#eef4fb",
+  "theme_color": "#1a3fd1",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}

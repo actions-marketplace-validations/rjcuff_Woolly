@@ -1,29 +1,17 @@
 import type { ReactNode } from 'react';
-import { DocFooter } from '@/components/doc/footer';
-import { HeroNav, type Mode } from '@/components/doc/rail';
+import { Foot } from '@/components/frost/home-content';
+import { FrostNav } from '@/components/frost/nav';
 
 /**
- * The frame for every page except the docs: one narrow centered column in
- * monospace, with the name and links on top.
+ * The frame for the plain pages (download, privacy, terms, not found): the
+ * homepage's nav and footer, with the page in one readable column.
  */
-export function DocShell({
-  children,
-  stars,
-  mode,
-  onMode,
-}: {
-  children: ReactNode;
-  stars?: number | null;
-  mode?: Mode;
-  onMode?: (mode: Mode) => void;
-}) {
+export function DocShell({ children, stars }: { children: ReactNode; stars?: number | null }) {
   return (
-    <div className="home-doc flex min-h-svh flex-col bg-fd-background font-mono text-fd-foreground">
-      <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col px-[max(20px,env(safe-area-inset-left))] sm:px-14">
-        <HeroNav stars={stars} />
-        <main className="flex-1">{children}</main>
-        <DocFooter mode={mode} onMode={onMode} />
-      </div>
+    <div className="home-frost flex min-h-svh flex-col bg-[var(--paper)] text-[var(--blue)]">
+      <FrostNav stars={stars} />
+      <main className="mx-auto w-full max-w-[760px] flex-1 px-5 pb-24 pt-14 sm:px-10 sm:pt-20">{children}</main>
+      <Foot />
     </div>
   );
 }

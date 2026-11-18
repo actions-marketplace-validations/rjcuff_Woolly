@@ -8,6 +8,9 @@ type SeoInput = {
   type?: 'website' | 'article';
 };
 
+// Every page shares one preview image: the dithered mammoth on Woolly blue.
+const IMAGE_ALT = 'Woolly, a pixel mammoth in white on blue';
+
 // Tags for search engines and link previews. Titles never use colons or dashes.
 export function seo({ title, description, path, image, type = 'website' }: SeoInput) {
   const url = new URL(path, siteUrl).toString();
@@ -28,7 +31,7 @@ export function seo({ title, description, path, image, type = 'website' }: SeoIn
           { property: 'og:image:type', content: 'image/png' },
           { property: 'og:image:width', content: '1200' },
           { property: 'og:image:height', content: '630' },
-          { property: 'og:image:alt', content: title },
+          { property: 'og:image:alt', content: IMAGE_ALT },
         ]
       : []),
     { name: 'twitter:card', content: imageUrl ? 'summary_large_image' : 'summary' },
@@ -37,7 +40,7 @@ export function seo({ title, description, path, image, type = 'website' }: SeoIn
     ...(imageUrl
       ? [
           { name: 'twitter:image', content: imageUrl },
-          { name: 'twitter:image:alt', content: title },
+          { name: 'twitter:image:alt', content: IMAGE_ALT },
         ]
       : []),
   ];

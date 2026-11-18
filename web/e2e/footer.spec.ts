@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 test('footer shows the trademark and links', async ({ page }) => {
-  await page.goto('/');
+  // The homepage is only the nav for now; the other pages keep the footer.
+  await page.goto('/download');
   const footer = page.getByRole('contentinfo');
   await footer.scrollIntoViewIfNeeded();
   await expect(footer).toBeInViewport();

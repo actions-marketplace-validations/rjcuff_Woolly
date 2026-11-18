@@ -1,13 +1,8 @@
 import type { Route } from './+types/home';
-import { useEffect, useState } from 'react';
-import { AgentView } from '@/components/doc/agent-view';
-import { HomeArticle } from '@/components/doc/home-article';
-import type { Mode } from '@/components/doc/rail';
-import { DocShell } from '@/components/doc/shell';
-import { detectOS, macApp, windowsApp, type OS } from '@/lib/download';
+import { Audiences, Closing, Foot, HeroContent, Numbers, Panels } from '@/components/frost/home-content';
+import { Band, Split } from '@/components/frost/layout';
+import { FrostNav } from '@/components/frost/nav';
 import { getStars } from '@/lib/github';
-import { changelog } from '@/lib/changelog';
-import { getReleases } from '@/lib/releases';
 import { seo } from '@/lib/seo';
 import { appName, blueskyUrl, githubUrl, linkedinUrl, siteDescription, tagline } from '@/lib/shared';
 
@@ -36,33 +31,28 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export async function loader() {
-  const [stars, releases] = await Promise.all([getStars(), getReleases(changelog)]);
-  return { stars, releases };
+  return { stars: await getStars() };
 }
 
-// Linux has no app yet, so it goes to the download page for the install command.
-const DOWNLOADS: Record<OS, { href: string; label: string }> = {
-  mac: { href: macApp, label: 'Download for Mac' },
-  windows: { href: windowsApp, label: 'Download for Windows' },
-  linux: { href: '/download', label: 'Download for Linux' },
-};
-
+// The homepage: a split intro (the hero stays while the steps scroll past),
+// then full-width sections.
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const [os, setOS] = useState<OS>('mac');
-  const [mode, setMode] = useState<Mode>('human');
-  useEffect(() => {
-    setOS(detectOS());
-  }, []);
-
-  const releases = loaderData?.releases ?? [];
-  const switchMode = (next: Mode) => {
-    setMode(next);
-    window.scrollTo({ top: 0 });
-  };
-
   return (
-    <DocShell mode={mode} onMode={switchMode} stars={loaderData?.stars}>
-      {mode === 'human' ? <HomeArticle download={DOWNLOADS[os]} releases={releases} /> : <AgentView releases={releases} />}
-    </DocShell>
+    <div className="home-frost flex min-h-svh flex-col bg-[var(--snow)] text-[var(--deep)]">
+      <FrostNav stars={loaderData?.stars} />
+      <main className="flex-1">
+        <Split left={<HeroContent />} right={<Panels />} />
+        <Band label="Measured on a laptop">
+          <Numbers />
+        </Band>
+        <Band label="Who it’s for">
+          <Audiences />
+        </Band>
+        <Band label="Get started" className="bg-[var(--blue)]">
+          <Closing />
+        </Band>
+      </main>
+      <Foot />
+    </div>
   );
 }

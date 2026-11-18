@@ -23,9 +23,16 @@ export const links: Route.LinksFunction = () => [
   // isn't ready in time the first visit keeps the fallback, and later visits use it.
   {
     rel: 'stylesheet',
-    href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=optional',
+    href: 'https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=optional',
+  },
+  // Inter Tight for every page, light and large for headings.
+  {
+    rel: 'stylesheet',
+    href: 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&display=swap',
   },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+  { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+  { rel: 'manifest', href: '/site.webmanifest' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -34,13 +41,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#eef4fb" />
         <Meta />
         <Links />
       </head>
       <body className="flex flex-col min-h-screen">
-        <RootProvider search={{ options: { type: 'static' } }} theme={{ disableTransitionOnChange: true }}>{children}</RootProvider>
+        <RootProvider search={{ options: { type: 'static' } }} theme={{ forcedTheme: 'light', defaultTheme: 'light', enableSystem: false, disableTransitionOnChange: true }}>{children}</RootProvider>
         <Analytics />
         <ScrollRestoration />
         <Scripts />

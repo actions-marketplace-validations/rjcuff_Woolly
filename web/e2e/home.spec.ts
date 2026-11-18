@@ -8,45 +8,46 @@ async function navLink(page: Page, _isMobile: boolean, name: string) {
   return page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name, exact: true });
 }
 
-test('home leads with the headline and buttons', async ({ page }) => {
+test('home splits on large screens, then flows into full-width sections', async ({ page, isMobile }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('Woolly | Project memory your coding agents can trust');
+  const hero = page.getByRole('region', { name: 'Hero' });
+  await expect(hero).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Memory that knows when it’s wrong.');
-  await expect(page.getByRole('main').getByRole('link', { name: 'Get started' }).first()).toBeInViewport();
+  await expect(hero.getByRole('link', { name: 'Get started' })).toBeVisible();
+  for (const step of ['One memory for all your coding agents', 'Agents forget, and notes go stale', 'Every fact is tied to its code', 'On your machine, in plain text']) {
+    await expect(page.getByRole('heading', { name: step })).toBeAttached();
+  }
+  await expect(page.getByRole('region', { name: 'Scrolling panels' })).toBeAttached();
+  await expect(page.getByRole('region', { name: 'Measured on a laptop' })).toBeAttached();
 
   // Never sideways, on any screen.
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 
-  await page.getByRole('main').getByRole('link', { name: 'Get started' }).first().click();
-  await expect(page).toHaveURL(/\/docs\/quickstart$/);
+  if (isMobile) return;
+  // The hero stays under the nav while the panels scroll past it...
+  await page.evaluate(() => window.scrollTo(0, 1200));
+  await expect.poll(async () => Math.round((await hero.boundingBox())?.y ?? -1)).toBe(56);
+  // ...and scrolls away with everything else once they run out.
+  await page.getByRole('region', { name: 'Who it’s for' }).scrollIntoViewIfNeeded();
+  await expect.poll(async () => (await hero.boundingBox())?.y ?? 0).toBeLessThan(0);
 });
 
-test('raw .md shows the page as Markdown and back', async ({ page, isMobile }) => {
+test('nav links work and the site stays light', async ({ page, isMobile }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/');
-  await openNav(page, isMobile);
-  await page.getByRole('contentinfo').getByRole('button', { name: 'Raw .md' }).click();
-  await expect(page.getByRole('main')).toContainText("# Woolly, memory that knows when it's wrong");
-  await expect(page.getByRole('main')).toContainText('woolly connect');
-  await openNav(page, isMobile);
-  await page.getByRole('contentinfo').getByRole('button', { name: 'Page' }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-});
-
-test('nav links and theme toggle are visible and work', async ({ page, isMobile }) => {
-  await page.goto('/');
-  await openNav(page, isMobile);
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /GitHub/ })).toHaveAttribute(
     'href',
     'https://github.com/rjcuff/woolly',
   );
-
-  const toggle = page.getByRole('button', { name: /switch to (dark|light) mode/i });
-  await expect(toggle).toBeInViewport();
-  const before = await page.evaluate(() => document.documentElement.classList.contains('dark'));
-  await toggle.click();
-  await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!before);
-
   await expect(await navLink(page, isMobile, 'Docs')).toBeVisible();
+
+  // Light only, even when the computer asks for dark, and no theme switch.
+  for (const path of ['/', '/download', '/docs']) {
+    await page.goto(path);
+    expect(await page.evaluate(() => document.documentElement.classList.contains('dark')), path).toBe(false);
+    await expect(page.getByRole('button', { name: /switch to (dark|light) mode|toggle theme/i })).toHaveCount(0);
+  }
 });
 
 test('link previews point at the Woolly image', async ({ page, request }) => {
@@ -64,15 +65,6 @@ test('sitemap, robots and install script are served', async ({ request }) => {
     expect((await request.get(path)).status(), path).toBe(200);
   }
   expect(await (await request.get('/sitemap.xml')).text()).toContain('https://usewoolly.com/docs/quickstart');
-});
-
-test('works with logos and features are shown', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('link', { name: 'Ollama', exact: true }).first()).toHaveAttribute('href', '/docs/ollama');
-  await expect(page.getByRole('link', { name: 'Claude Code', exact: true })).toBeVisible();
-  await expect(page.getByRole('img', { name: /rectangle of small squares/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'It knows when a fact goes stale' })).toBeAttached();
-  await expect(page.getByRole('heading', { name: 'Memory you can read' })).toBeAttached();
 });
 
 test('download page offers the Mac and Windows apps and install commands', async ({ page, isMobile }) => {
@@ -93,41 +85,3 @@ test('download page offers the Mac and Windows apps and install commands', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
 
-test.describe('on Windows', () => {
-  test.use({
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
-  });
-
-  test('home page offers the Windows app', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Windows' }).first()).toHaveAttribute(
-      'href',
-      /Woolly-windows\.exe$/,
-    );
-  });
-});
-
-test.describe('on a Mac', () => {
-  test.use({
-    userAgent:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15',
-  });
-
-  test('home page offers the Mac app', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('link', { name: 'Download for Mac' }).first()).toHaveAttribute(
-      'href',
-      /Woolly-mac\.dmg$/,
-    );
-  });
-});
-
-test('home shows what shipped lately', async ({ page }) => {
-  await page.goto('/');
-  const main = page.getByRole('main');
-  await expect(page.getByRole('heading', { name: 'Shipping weekly' })).toBeVisible();
-  const releases = main.getByRole('list').filter({ hasText: /^v\d/ }).first().getByRole('listitem');
-  expect(await releases.count()).toBe(4);
-  await expect(releases.first()).toContainText(/v\d+\.\d+\.\d+/);
-});
