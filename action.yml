@@ -1,5 +1,5 @@
 name: Woolly check
-description: Comment on a pull request when it makes project memory or a line in CLAUDE.md, AGENTS.md or Cursor rules stale, like a renamed function, a moved file or a removed script.
+description: Flag lines in CLAUDE.md, AGENTS.md, Cursor rules and project memory that a pull request makes stale.
 author: Woolly
 branding:
   icon: alert-circle
