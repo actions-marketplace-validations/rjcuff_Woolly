@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-19",
+  "reviewed_by": "Claude (AI coding agent), checking each line against the repo at head with git. Not yet checked by a person.",
+  "findings": [
+    {"repo": "TanStack/router", "head": "ce46b21b90", "file": "e2e/AGENTS.md", "line": 5, "verdict": "right", "note": "git grep finds E2E_PORT_KEY nowhere in the code outside AGENTS.md."},
+    {"repo": "TanStack/router", "head": "ce46b21b90", "file": "e2e/AGENTS.md", "line": 6, "verdict": "right", "note": "Same name, same check."},
+    {"repo": "TanStack/router", "head": "ce46b21b90", "file": "packages/AGENTS.md", "line": 8, "verdict": "right", "note": "useValueStable was removed in d740d8bf2d, \"perf(react-router): fewer hooks per Link\", and git grep finds it nowhere in the code."},
+    {"repo": "langchain-ai/langchainjs", "head": "7309848b9", "file": "AGENTS.md", "line": 48, "verdict": "right", "note": "libs/ has no standard-tests folder; the package is in internal/standard-tests/."},
+    {"repo": "anthropics/anthropic-sdk-typescript", "head": "4d36e538", "file": "CLAUDE.md", "line": 145, "verdict": "right", "note": "The line says release-please-config.json lists the commit types; the file isn't in the repo."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 30, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 36, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 37, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 39, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 50, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."},
+    {"repo": "cline/cline", "head": "20b042723", "file": ".github/copilot-instructions.md", "line": 51, "verdict": "right", "note": "Neither the old path nor the apps/vscode one exists."}
+  ]
+}

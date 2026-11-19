@@ -1,7 +1,27 @@
 ---
 title: Benchmark
-description: Measure how well Woolly remembers long conversations with LOCOMO, on your own computer.
+description: Every number Woolly publishes, and how to get it yourself. Stale lines in real repos' agent files, and LOCOMO for long conversation memory.
 ---
+
+## Agent files in real repos
+
+`woolly check` on the agent files of 20 well-known open source repos, including TanStack Router, LangChain.js, the Anthropic and OpenAI SDKs, Cline, Codex, Gemini CLI and Vite.
+
+```sh
+python3 bench/agentfiles/run.py
+```
+
+| | Nov 19, 2026 |
+| --- | --- |
+| Lines checked | 2,990 |
+| Repos with a line that names code that's gone | 4 of 20 |
+| Lines flagged | 11 |
+| Flags that were right | 11 of 11 |
+| Median check time | 0.67 s |
+
+Every flag is in [verdicts.json](https://github.com/rjcuff/woolly/blob/main/bench/agentfiles/verdicts.json) with a note on why it's right. Among them: TanStack Router's AGENTS.md names `useValueStable`, which a performance change removed, and LangChain.js's points at `libs/langchain-standard-tests/`, which moved to `internal/standard-tests/`. These maintainers keep their files up to date by hand, so expect more in a typical repo. See [Check your agent files](/docs/memory-files).
+
+## LOCOMO
 
 Woolly comes with a [LOCOMO](https://github.com/snap-research/locomo) benchmark, the test of long conversation memory that mem0 and others report. It runs on your computer with Ollama, so you can check the numbers yourself.
 

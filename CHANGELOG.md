@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.17.0
+
+Woolly checks the memory your agents already have. No setup, no moving your notes.
+
+- `woolly check` now reads CLAUDE.md, AGENTS.md, GEMINI.md, Cursor and Windsurf rules, Copilot instructions, Claude Code's auto memory for the repo, Codex memories that mention it and claude-mem's observations, and flags every line that names a function, file, package script or make target the code no longer has. Git history decides, so only things that were in the code and are gone get flagged, each with the commit that did it. A rename says what the new name is, and a moved file says where it went. It works in any git repo, before `woolly init`. See [Check your agent files](https://usewoolly.com/docs/memory-files).
+- `woolly check --fix` writes the new name or path into lines whose function was renamed or file was moved.
+- `woolly check` warns when AGENTS.md is over the 32 KB Codex reads, when Claude Code's MEMORY.md is over the 200 lines it loads, and when CLAUDE.md doesn't pull in AGENTS.md.
+- Session briefs list out of date lines in those files, so the agent doesn't follow them. The post-commit hook refreshes the list in the background.
+- A new MCP tool, `check_memory_files`, so agents can check before trusting a note.
+- The GitHub Action reports lines in the repo's agent files that a pull request makes stale, apart from lines that were already out of date, and counts them in its `stale` output.
+- The Woolly section in CLAUDE.md and AGENTS.md leaves stale facts out and stays under 16 KB, so every agent reads it whole.
+- A new benchmark runs `woolly check` on the agent files of well-known open source repos: `python3 bench/agentfiles/run.py`.
+- The installer ends with the pixel mammoth and the three commands to start with. `woolly` on its own shows a header, and the terminal output has color when it's a terminal. Set `NO_COLOR` to turn it off.
+
 ## 0.16.0
 
 Woolly shows its work. Ask it why code is the way it is, see what it caught, and let pull requests say which facts they break.

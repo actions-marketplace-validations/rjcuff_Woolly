@@ -1,6 +1,7 @@
 package share
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -349,5 +350,37 @@ func TestOldWoollyMDWithoutNewSectionsIsUnchanged(t *testing.T) {
 	}
 	if after := read(t, r); after != before || strings.Contains(after, "src=") || strings.Contains(after, "## Hardware") {
 		t.Fatalf("sync changed a plain file:\n%s", after)
+	}
+}
+
+func TestExportLeavesStaleFactsOut(t *testing.T) {
+	r := repo(t)
+	me := store(t)
+	me.Remember(memory.RememberInput{Content: "acme deploys with Fly", Project: "acme"})
+	old, _ := me.Remember(memory.RememberInput{Content: "acme reads config from settings_v1.yaml", Project: "acme"})
+	r.Init(me, Options{Export: []string{"agents"}})
+	if _, err := me.MarkStale(old.Memory.ID, memory.StaleInput{Reason: "settings_v1.yaml was deleted"}); err != nil {
+		t.Fatal(err)
+	}
+	r.Sync(me)
+	agents, _ := os.ReadFile(filepath.Join(r.Dir, "AGENTS.md"))
+	if !strings.Contains(string(agents), "acme deploys with Fly") || strings.Contains(string(agents), "settings_v1") {
+		t.Fatalf("a stale fact reached AGENTS.md:\n%s", agents)
+	}
+	if !strings.Contains(read(t, r), "settings_v1") {
+		t.Fatal("the stale fact stays in woolly.md for review")
+	}
+}
+
+func TestExportStaysSmall(t *testing.T) {
+	r := repo(t)
+	me := store(t)
+	for i := 0; i < 400; i++ {
+		me.Remember(memory.RememberInput{Content: fmt.Sprintf("acme convention number %d says to keep handlers small and name files after what they export", i), Project: "acme"})
+	}
+	r.Init(me, Options{Export: []string{"agents"}})
+	agents, _ := os.ReadFile(filepath.Join(r.Dir, "AGENTS.md"))
+	if len(agents) > 20<<10 || !strings.Contains(string(agents), "More in .woolly/woolly.md") {
+		t.Fatalf("AGENTS.md is %d bytes", len(agents))
 	}
 }

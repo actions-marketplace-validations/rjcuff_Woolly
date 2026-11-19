@@ -1,5 +1,5 @@
 name: Woolly check
-description: Comment on a pull request when it makes project memory stale, like a renamed function or a changed value that a fact still names.
+description: Comment on a pull request when it makes project memory or a line in CLAUDE.md, AGENTS.md or Cursor rules stale, like a renamed function, a moved file or a removed script.
 author: Woolly
 branding:
   icon: alert-circle
@@ -18,7 +18,7 @@ inputs:
 
 outputs:
   stale:
-    description: How many facts this change made stale.
+    description: How many facts and agent file lines this change made stale.
     value: ${{ steps.check.outputs.stale }}
   checked:
     description: How many facts that point at code were checked.
@@ -61,7 +61,9 @@ runs:
           cat "$report"
           exit "$code"
         fi
-        stale=$(grep -oE '\*\*[0-9]+ facts? went stale' "$report" | grep -oE '[0-9]+' || true)
+        facts=$(grep -oE '\*\*[0-9]+ facts? went stale' "$report" | grep -oE '[0-9]+' || true)
+        lines=$(grep -oE '\*\*[0-9]+ lines? in agent files went stale' "$report" | grep -oE '[0-9]+' || true)
+        stale=$(( ${facts:-0} + ${lines:-0} ))
         checked=$(grep -oE 'checked [0-9]+ project facts?' "$report" | grep -oE '[0-9]+' || true)
         echo "stale=${stale:-0}" >> "$GITHUB_OUTPUT"
         echo "checked=${checked:-0}" >> "$GITHUB_OUTPUT"

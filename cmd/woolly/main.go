@@ -56,7 +56,7 @@ const usage = `Woolly: project memory your coding agents can trust. Local, and i
 Usage:
   woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]
                                [--type hardware] [--source-ref main/pins.h:12-18]
-  woolly check [--json] [--quiet]  check this repo's facts against the code and flag stale ones
+  woolly check [--fix] [--json] [--quiet]  check facts, CLAUDE.md, AGENTS.md and agents' memory against the code
   woolly review                confirm, fix or retire stale facts
   woolly why <file[:line|#name]> [--json]  the decisions and facts behind this code, and if they still hold
   woolly caught [--badge]      the stale facts Woolly kept away from your agents in this repo
@@ -114,6 +114,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
+		fmt.Printf("%s %s  %s\n\n", paint(blue, "▄█▄ woolly"), paint(dim, version), "Memory that knows when it's wrong.")
 		fmt.Print(usage)
 		return nil
 	}
@@ -122,6 +123,8 @@ func run(args []string) error {
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 		return nil
+	case "welcome":
+		return cmdWelcome(rest)
 	case "version", "--version", "-v":
 		fmt.Println("woolly", version)
 		return nil

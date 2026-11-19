@@ -183,7 +183,7 @@ func cmdRecap(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(mammoth)
+	fmt.Println(paint(blue, mammoth))
 	fmt.Println()
 	text := recapText(a.loadRecap(), p)
 	if text == "" {

@@ -1,0 +1,432 @@
+{
+  "summary": {
+    "date": "2026-11-19",
+    "repos_checked": 20,
+    "repos_with_stale_lines": 4,
+    "lines_checked": 2990,
+    "stale_lines": 11,
+    "repos_with_notes": 3,
+    "median_seconds": 0.67
+  },
+  "repos": [
+    {
+      "repo": "TanStack/router",
+      "head": "ce46b21b90",
+      "seconds": 4.69,
+      "files": [
+        "AGENTS.md",
+        "benchmarks/AGENTS.md",
+        "docs/AGENTS.md",
+        "e2e/AGENTS.md",
+        "examples/AGENTS.md",
+        "packages/AGENTS.md",
+        "packages/history/AGENTS.md",
+        "packages/router-core/AGENTS.md",
+        "packages/router-generator/AGENTS.md",
+        "packages/router-plugin/AGENTS.md",
+        "packages/router-ssr-query-core/AGENTS.md",
+        "packages/start-client-core/AGENTS.md",
+        "packages/start-plugin-core/AGENTS.md",
+        "packages/start-server-core/AGENTS.md"
+      ],
+      "lines": 84,
+      "partial": false,
+      "notes": [],
+      "findings": [
+        {
+          "file": "e2e/AGENTS.md",
+          "line": 5,
+          "text": "- For inferred Playwright modes, Nx builds first and supplies `MODE`, `E2E_TOOLCHAIN`, `E2E_DIST_DIR`, and `E2E_PORT_KEY`. Preserve these in server/config changes; let Nx own the build while `webServer.command` only starts the selected server. Target generation lives in [`scripts/nx/playwright-plugin.ts`](../scripts/nx/playwright-plugin.ts).",
+          "what": "E2E_PORT_KEY",
+          "kind": "name",
+          "reason": "E2E_PORT_KEY was removed from e2e/react-router/basic-file-based/tests/document-navigation.spec.ts",
+          "commit": "fda8a77405",
+          "date": "2026-09-14",
+          "fix": null
+        },
+        {
+          "file": "e2e/AGENTS.md",
+          "line": 6,
+          "text": "- Use the same `E2E_PORT_KEY`-aware key throughout config, app, and dummy-server setup/teardown. Clean only that key's port files, before allocation, when `TEST_WORKER_INDEX === undefined`; worker config reloads must not remap a running server's port.",
+          "what": "E2E_PORT_KEY",
+          "kind": "name",
+          "reason": "E2E_PORT_KEY was removed from e2e/react-router/basic-file-based/tests/document-navigation.spec.ts",
+          "commit": "fda8a77405",
+          "date": "2026-09-14",
+          "fix": null
+        },
+        {
+          "file": "packages/AGENTS.md",
+          "line": 8,
+          "text": "- In navigation params/search, an explicit `undefined` can clear an inherited value; an absent key can inherit it. Preserve that distinction when comparing or memoizing options; React's `useValueStable` uses `deepEqual` with `ignoreUndefined: false`.",
+          "what": "useValueStable",
+          "kind": "name",
+          "reason": "useValueStable was removed from packages/react-router/src/link.tsx",
+          "commit": "d740d8bf2d",
+          "date": "2026-09-13",
+          "fix": null
+        }
+      ]
+    },
+    {
+      "repo": "langchain-ai/langchainjs",
+      "head": "7309848b9",
+      "seconds": 8.53,
+      "files": [
+        "AGENTS.md"
+      ],
+      "lines": 212,
+      "partial": false,
+      "notes": [],
+      "findings": [
+        {
+          "file": "AGENTS.md",
+          "line": 48,
+          "text": "| `@langchain/standard-tests` | `libs/langchain-standard-tests/` | Standard test suite for integrations |",
+          "what": "libs/langchain-standard-tests/",
+          "kind": "path",
+          "reason": "libs/langchain-standard-tests/ was moved to internal/standard-tests/",
+          "commit": "ddd72b812",
+          "date": "2026-01-08",
+          "fix": "internal/standard-tests/"
+        }
+      ]
+    },
+    {
+      "repo": "anthropics/anthropic-sdk-typescript",
+      "head": "4d36e538",
+      "seconds": 3.76,
+      "files": [
+        "CLAUDE.md"
+      ],
+      "lines": 220,
+      "partial": false,
+      "notes": [],
+      "findings": [
+        {
+          "file": "CLAUDE.md",
+          "line": 145,
+          "text": "- An entry's type is one of `feat`, `fix`, `perf`, `revert`, `chore`, `docs`, `style`, `refactor` and `build`. `test` and `ci` are hidden commit types, so CI fails a PR whose entry has one, with or without a `!`. Where release automation writes `CHANGELOG.md` from commit subjects, `release-please-config.json` lists the commit types, and a subject with no type doesn't reach the changelog.",
+          "what": "release-please-config.json",
+          "kind": "path",
+          "reason": "release-please-config.json was deleted",
+          "commit": "1089832d",
+          "date": "2026-10-08",
+          "fix": null
+        }
+      ]
+    },
+    {
+      "repo": "anthropics/anthropic-sdk-python",
+      "head": "bf5a883f",
+      "seconds": 4.63,
+      "files": [
+        "CLAUDE.md"
+      ],
+      "lines": 214,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "cline/cline",
+      "head": "20b042723",
+      "seconds": 17.48,
+      "files": [
+        "AGENTS.md",
+        ".github/copilot-instructions.md",
+        "sdk/AGENTS.md",
+        "sdk/packages/llms/AGENTS.md"
+      ],
+      "lines": 133,
+      "partial": false,
+      "notes": [],
+      "findings": [
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 30,
+          "text": "Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`, `src/core/api/index.ts`, `webview-ui/.../providerUtils.ts`, `webview-ui/.../validate.ts`, `webview-ui/.../ApiOptions.tsx`.",
+          "what": "src/shared/providers/providers.json",
+          "kind": "path",
+          "reason": "src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        },
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 36,
+          "text": "2. Create definition in `src/core/prompts/system-prompt/tools/` (export `[GENERIC]` minimum).",
+          "what": "src/core/prompts/system-prompt/tools/",
+          "kind": "path",
+          "reason": "src/core/prompts/system-prompt/tools/ was moved to apps/vscode/src/core/prompts/system-prompt/tools/, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        },
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 37,
+          "text": "3. Register in `src/core/prompts/system-prompt/tools/init.ts`.",
+          "what": "src/core/prompts/system-prompt/tools/init.ts",
+          "kind": "path",
+          "reason": "src/core/prompts/system-prompt/tools/init.ts was moved to apps/vscode/src/core/prompts/system-prompt/tools/init.ts, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        },
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 39,
+          "text": "5. Handler in `src/core/task/tools/handlers/`, wire in `ToolExecutor.ts`.",
+          "what": "src/core/task/tools/handlers/",
+          "kind": "path",
+          "reason": "src/core/task/tools/handlers/ was moved to apps/vscode/src/core/task/tools/handlers/, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        },
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 50,
+          "text": "- `src/core/slash-commands/index.ts` \u2014 definitions.",
+          "what": "src/core/slash-commands/index.ts",
+          "kind": "path",
+          "reason": "src/core/slash-commands/index.ts was moved to apps/vscode/src/core/slash-commands/index.ts, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        },
+        {
+          "file": ".github/copilot-instructions.md",
+          "line": 51,
+          "text": "- `src/core/prompts/commands.ts` \u2014 system prompt integration.",
+          "what": "src/core/prompts/commands.ts",
+          "kind": "path",
+          "reason": "src/core/prompts/commands.ts was moved to apps/vscode/src/core/prompts/commands.ts, which is gone now too",
+          "commit": "791d23899",
+          "date": "2026-05-25",
+          "fix": null
+        }
+      ]
+    },
+    {
+      "repo": "openai/codex",
+      "head": "6eea328081",
+      "seconds": 1.67,
+      "files": [
+        "codex-rs/code-mode-host/AGENTS.md",
+        "codex-rs/exec-server/src/sandbox_integrity/AGENTS.md",
+        "codex-rs/rollout-trace/AGENTS.md",
+        "codex-rs/tui/src/bottom_pane/AGENTS.md"
+      ],
+      "lines": 56,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "openai/openai-agents-python",
+      "head": "91fb508a",
+      "seconds": 8.19,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "lines": 124,
+      "partial": false,
+      "notes": [
+        "Claude Code reads CLAUDE.md, not AGENTS.md. Add a line with @AGENTS.md to CLAUDE.md so it gets the same notes as Codex and Cursor."
+      ],
+      "findings": []
+    },
+    {
+      "repo": "openai/openai-node",
+      "head": "b1d43788",
+      "seconds": 0.1,
+      "files": [
+        "AGENTS.md"
+      ],
+      "lines": 31,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "google-gemini/gemini-cli",
+      "head": "808199f5c",
+      "seconds": 0.88,
+      "files": [
+        "GEMINI.md",
+        "packages/a2a-server/GEMINI.md",
+        "packages/cli/GEMINI.md",
+        "packages/core/GEMINI.md",
+        "packages/devtools/GEMINI.md",
+        "packages/sdk/GEMINI.md",
+        "packages/test-utils/GEMINI.md",
+        "packages/vscode-ide-companion/GEMINI.md"
+      ],
+      "lines": 261,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "block/goose",
+      "head": "3a394d31b",
+      "seconds": 0.55,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md",
+        ".github/copilot-instructions.md",
+        "documentation/AGENTS.md",
+        "documentation/CLAUDE.md"
+      ],
+      "lines": 147,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "modelcontextprotocol/python-sdk",
+      "head": "77001c96",
+      "seconds": 0.18,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "lines": 127,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "modelcontextprotocol/typescript-sdk",
+      "head": "5ee54ee3",
+      "seconds": 0.15,
+      "files": [
+        "CLAUDE.md",
+        "test/e2e/CLAUDE.md"
+      ],
+      "lines": 62,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "browser-use/browser-use",
+      "head": "ccbdb809",
+      "seconds": 0.13,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "lines": 66,
+      "partial": false,
+      "notes": [
+        "Claude Code reads CLAUDE.md, not AGENTS.md. Add a line with @AGENTS.md to CLAUDE.md so it gets the same notes as Codex and Cursor."
+      ],
+      "findings": []
+    },
+    {
+      "repo": "humanlayer/humanlayer",
+      "head": "2f5b58d3",
+      "seconds": 0.58,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md",
+        "apps/riptide-api/CLAUDE.md",
+        "apps/riptide-cloud/CLAUDE.md",
+        "apps/riptide-daemon/CLAUDE.md",
+        "apps/riptide-ui/CLAUDE.md",
+        "apps/riptide-ui/src/minimalist/AGENTS.md",
+        "apps/riptide-ui/src/minimalist/CLAUDE.md",
+        "packages/logger/CLAUDE.md",
+        "packages/ui/CLAUDE.md"
+      ],
+      "lines": 554,
+      "partial": false,
+      "notes": [
+        "Claude Code reads CLAUDE.md, not AGENTS.md. Add a line with @AGENTS.md to CLAUDE.md so it gets the same notes as Codex and Cursor."
+      ],
+      "findings": []
+    },
+    {
+      "repo": "tldraw/tldraw",
+      "head": "e242d25a6",
+      "seconds": 0.59,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "lines": 147,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "vercel/ai",
+      "head": "15bfd6b262",
+      "seconds": 9.85,
+      "files": [
+        "AGENTS.md",
+        "apps/docs/AGENTS.md",
+        "apps/docs/CLAUDE.md",
+        "packages/ai/AGENTS.md"
+      ],
+      "lines": 280,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "astral-sh/ruff",
+      "head": "912ba68f54",
+      "seconds": 0.76,
+      "files": [
+        "CLAUDE.md",
+        "AGENTS.md"
+      ],
+      "lines": 112,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "microsoft/typescript-go",
+      "head": "89d5d5b28",
+      "seconds": 0.27,
+      "files": [
+        ".github/copilot-instructions.md"
+      ],
+      "lines": 89,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "vitejs/vite",
+      "head": "c7326770e",
+      "seconds": 0.22,
+      "files": [
+        ".github/copilot-instructions.md"
+      ],
+      "lines": 24,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    },
+    {
+      "repo": "biomejs/biome",
+      "head": "ea3b347b1d",
+      "seconds": 0.57,
+      "files": [
+        "AGENTS.md"
+      ],
+      "lines": 47,
+      "partial": false,
+      "notes": [],
+      "findings": []
+    }
+  ]
+}

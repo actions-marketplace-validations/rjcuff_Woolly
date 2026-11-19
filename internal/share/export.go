@@ -39,22 +39,39 @@ func importsAgents(path string) bool {
 	return err == nil && strings.Contains(string(data), "@AGENTS.md")
 }
 
+// maxExport keeps Woolly's section well under 32 KiB, where Codex stops
+// reading AGENTS.md, leaving room for what people write themselves.
+const maxExport = 16 << 10
+
 func exportSection(d doc) string {
 	var b strings.Builder
 	b.WriteString(markStart + "\n## Project memory\n\n")
 	b.WriteString("Kept up to date by Woolly from .woolly/woolly.md. Edit that file, not this section.\n")
-	found := false
+	found, full := false, false
 	for _, name := range SectionNames() {
 		_, facts := d.in(name)
 		var items []string
 		for _, ln := range facts {
+			// Stale facts stay in woolly.md for review, not in files agents
+			// read as true.
+			if ln.stale != "" {
+				continue
+			}
 			items = append(items, "- "+ln.text)
 		}
-		if len(items) == 0 {
+		if len(items) == 0 || full {
+			continue
+		}
+		part := "\n### " + name + "\n\n" + strings.Join(items, "\n") + "\n"
+		if b.Len()+len(part) > maxExport {
+			full = true
 			continue
 		}
 		found = true
-		b.WriteString("\n### " + name + "\n\n" + strings.Join(items, "\n") + "\n")
+		b.WriteString(part)
+	}
+	if full {
+		b.WriteString("\nMore in .woolly/woolly.md, left out here to keep this file small enough for every agent to read whole.\n")
 	}
 	if !found {
 		b.WriteString("\nNothing yet. Woolly adds notes here as AI tools learn about this project.\n")

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rjcuff/woolly/internal/audit"
 	"io"
 	"os"
 	"strings"
@@ -253,6 +254,12 @@ var tools = []map[string]any{
 		}, "target"),
 	},
 	{
+		"name":        "check_memory_files",
+		"title":       "Check memory files",
+		"description": "Check the notes agents read for this repo (CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's memory, Codex memories and claude-mem) against the code. Lists each line that names a function, file or script that's gone, with the commit that changed it and the new name when there is one. Call it before trusting a note that names code, or when the user asks if their agent files are up to date.",
+		"inputSchema": obj(map[string]any{}),
+	},
+	{
 		"name":        "handoff",
 		"title":       "Save handoff",
 		"description": "Save a short note on where this session left off: what you were working on, what got done, what was decided and what's next. The next session in any app starts with it. One per project; a new one replaces the last.",
@@ -483,6 +490,14 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		s.log("why", ids, a.Target, len(ids))
 		return why.Text(ans), nil
+
+	case "check_memory_files":
+		if s.Root == "" {
+			return "", errors.New("Woolly can't tell which repo you're in, so it can't check memory files")
+		}
+		rep := audit.Run(s.Root, audit.Options{Env: audit.DefaultEnv(), Deadline: time.Now().Add(20 * time.Second)})
+		s.log("check", nil, "memory files", len(rep.Findings))
+		return audit.Text(rep), nil
 
 	case "handoff":
 		var a struct {

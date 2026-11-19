@@ -32,17 +32,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: rjcuff/woolly@main
 ```
 
-That's it. The repo needs [project memory](/docs/project-memory) committed with `woolly init`, and facts that point at code. See [Stale facts](/docs/stale-facts) for how they do.
+That's it. It checks the repo's agent files, like CLAUDE.md, AGENTS.md and Cursor rules, with no setup. See [Check your agent files](/docs/memory-files). With [project memory](/docs/project-memory) committed by `woolly init`, it checks those facts too. See [Stale facts](/docs/stale-facts). `fetch-depth: 0` lets Woolly read the history it needs to tell what changed.
 
 ## How it works
 
 1. It installs Woolly with the same script as [Download](/download).
 2. It reads the facts from `.woolly/woolly.md` into a Woolly of its own for the job.
 3. It runs `woolly check --markdown --base <the pull request's base commit>`. Facts were true on the branch you're merging into, so that's what the change is compared against.
-4. It writes the report to the job summary. When something went stale, it comments on the pull request. If it commented before, it updates that comment instead of adding another.
+4. It checks every line in the repo's agent files and reports the ones this change made stale. Lines that were already out of date are listed separately, folded away.
+5. It writes the report to the job summary. When something went stale, it comments on the pull request. If it commented before, it updates that comment instead of adding another.
 
 ## Options
 

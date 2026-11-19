@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rjcuff/woolly/internal/audit"
 	"github.com/rjcuff/woolly/internal/gitinfo"
 	"github.com/rjcuff/woolly/internal/ground"
 	"github.com/rjcuff/woolly/internal/handoff"
@@ -44,6 +45,9 @@ type checkReport struct {
 	Backfilled int             `json:"backfilled"`
 	Caught     int             `json:"caught"` // stale facts caught in this project so far
 	Results    []ground.Result `json:"results"`
+	// Memory is the check of the memory files agents already read, like
+	// CLAUDE.md and Claude Code's auto memory.
+	Memory *audit.Report `json:"memory_files,omitempty"`
 }
 
 // checkRepo checks the project's facts against the code in dir, marks the
@@ -122,6 +126,8 @@ func cmdCheck(args []string) error {
 	hook := fs.Bool("hook", false, "run from the git post-commit hook: never fail, print nothing")
 	dir := fs.String("dir", "", "the repo (default: the current folder)")
 	base := fs.String("base", "", "compare against this commit for facts that don't record one, like a pull request's base branch")
+	fix := fs.Bool("fix", false, "rewrite lines in memory files whose function was renamed or file was moved")
+	noFiles := fs.Bool("no-memory-files", false, "don't check CLAUDE.md, AGENTS.md, Cursor rules and other agents' memory")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
@@ -161,6 +167,41 @@ func cmdCheck(args []string) error {
 	if rep.NewStale > 0 || rep.Backfilled > 0 {
 		a.syncRepo(r.Dir)
 	}
+	if !*noFiles {
+		limit := time.Minute
+		if *hook {
+			limit = 2 * time.Minute
+		}
+		stopSpin := func() {}
+		if !*hook && !*asJSON && !*asMarkdown {
+			stopSpin = spin("Reading your agents' memory and the code's history")
+		}
+		ar := a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
+		stopSpin()
+		if *fix && len(ar.Findings) > 0 {
+			fixed, err := audit.Fix(ar.Findings)
+			for _, f := range fixed {
+				if *asJSON || *asMarkdown {
+					break
+				}
+				fmt.Printf("%s %s: %s %s %s\n", paint(green, "fixed"), f.Where(), f.What, paint(dim, "->"), f.Fix)
+			}
+			if err != nil {
+				return err
+			}
+			if len(fixed) > 0 {
+				if !*asJSON && !*asMarkdown {
+					fmt.Println()
+				}
+				ar = a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
+			}
+		}
+		rep.Memory = &ar
+	}
+	stale := rep.NewStale
+	if rep.Memory != nil {
+		stale += len(rep.Memory.Findings)
+	}
 	var ids []string
 	for _, res := range rep.Results {
 		ids = append(ids, res.ID)
@@ -176,11 +217,27 @@ func cmdCheck(args []string) error {
 			return err
 		}
 	} else if *asMarkdown {
-		fmt.Print(markdownCheck(rep))
-	} else if !*quiet || rep.NewStale > 0 {
-		printCheck(rep)
+		md := markdownCheck(rep)
+		if rep.Memory != nil {
+			md += markdownAudit(r.Dir, *rep.Memory, strings.TrimSpace(*base))
+		}
+		fmt.Print(md)
+	} else if !*quiet || stale > 0 {
+		hasFiles := rep.Memory != nil && len(rep.Memory.Files) > 0
+		if rep.Checked > 0 || rep.Waiting > 0 || !hasFiles {
+			printCheck(rep)
+		}
+		if hasFiles {
+			if rep.Checked > 0 || rep.Waiting > 0 {
+				fmt.Println()
+			}
+			printAudit(*rep.Memory)
+			if rep.Checked == 0 && rep.Waiting == 0 && !r.Enabled() {
+				fmt.Println(paint(dim, "Run woolly init --hooks to check again after every commit and warn your agents in each session."))
+			}
+		}
 	}
-	if rep.NewStale > 0 {
+	if stale > 0 {
 		return exitError(1)
 	}
 	return nil
@@ -249,6 +306,8 @@ func markdownCheck(rep checkReport) string {
 		}
 	}
 	switch {
+	case rep.Checked == 0 && rep.Memory != nil && len(rep.Memory.Files) > 0:
+		// Only memory files to report; markdownAudit follows.
 	case rep.Checked == 0:
 		b.WriteString("**Woolly** found no project facts that point at code yet, so there was nothing to check.\n")
 		return b.String()

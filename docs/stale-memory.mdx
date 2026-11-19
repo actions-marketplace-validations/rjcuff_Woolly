@@ -1,0 +1,49 @@
+---
+title: Agent memory is a cache with no invalidation
+description: Every coding agent now keeps notes about your repo. None of them check whether the notes are still true. We ran Woolly on the agent files of 20 well-known open source repos to see how often they're wrong.
+---
+
+Every coding agent keeps notes about your repo now. Claude Code has CLAUDE.md and its auto memory. Codex has AGENTS.md and memories. Cursor has rules. claude-mem records every session. People write more of them every week, because an agent with notes makes fewer mistakes than one without.
+
+Notes about code are a cache of the code. And none of these tools ever invalidate it.
+
+## How a note goes wrong
+
+A note is true the day it's written. Then someone renames `useValueStable`, moves `providers.json` into `apps/vscode`, or drops the `lint` script for `check`. The code changes in a commit that has nothing to do with the note, so nobody touches the note. The agent reads it in the next session and follows it, sounding just as sure as it did when the note was right.
+
+A stale note is worse than no note. With no note, the agent goes and looks. With a stale note, it doesn't.
+
+## How often it happens
+
+We ran `woolly check` on the agent files of 20 well-known open source repos, including TanStack Router, LangChain.js, the Anthropic and OpenAI SDKs, Cline, Codex, Gemini CLI and Vite. These are repos with careful maintainers and agent files that are clearly kept up to date by hand.
+
+Woolly checked 2,990 lines and flagged 11, in 4 of the 20 repos. All 11 were right: each line names a function, file or folder the code no longer has. Some examples:
+
+- TanStack Router's `packages/AGENTS.md` tells agents that React's `useValueStable` uses `deepEqual`. A performance change, "fewer hooks per Link", removed `useValueStable` in September.
+- LangChain.js's AGENTS.md lists the standard test suite in `libs/langchain-standard-tests/`. It moved to `internal/standard-tests/` in January.
+- Cline's Copilot instructions name six source paths that moved into `apps/vscode` in a monorepo split. None of them are at the paths given, or at the new ones.
+- The Anthropic TypeScript SDK's CLAUDE.md says `release-please-config.json` lists the commit types. That file was deleted in October.
+
+One in five repos, maintained by people who care, had at least one. A repo where nobody tends the agent files will have more.
+
+The benchmark is in the repo, so you can run it yourself: `python3 bench/agentfiles/run.py`. Each finding is saved with the line, what changed and the commit that changed it. Every one was checked against the repo, and the verdicts are in [verdicts.json](https://github.com/rjcuff/woolly/blob/main/bench/agentfiles/verdicts.json).
+
+## Invalidation needs the code
+
+A memory tool that only sees conversations can't tell when a note goes stale, because nothing in the conversation changes. The thing that changed is the code. So the check has to happen next to the repo, against git:
+
+- A line names a function, file, script or make target.
+- That thing was in the code, and git can say which commit took it out.
+- If the same commit added something similar, that's probably what it was renamed to.
+
+No model is needed for any of this, and nothing leaves your machine. On most repos it takes a few seconds.
+
+## Try it on your repo
+
+```sh
+curl -fsSL https://usewoolly.com/install.sh | sh
+cd your-repo
+woolly check
+```
+
+It reads CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, Claude Code's memory, Codex memories and claude-mem, with no setup. `woolly check --fix` rewrites the lines whose function was renamed or file was moved. See [Check your agent files](/docs/memory-files).

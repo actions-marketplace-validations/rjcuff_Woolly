@@ -147,16 +147,16 @@ export function HeroContent() {
   return (
     <div className="flex flex-col gap-8 px-5 py-10 text-[var(--blue)] sm:px-10 sm:py-14 lg:px-12 lg:py-[clamp(32px,6vh,72px)]">
       <div>
-        <Link to="/docs/why" className="group inline-flex items-center gap-3 text-[14px] outline-none">
-          <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New in 0.16</span>
-          <span className="underline-offset-4 group-hover:underline">woolly why shows the decisions behind any line of code</span>
+        <Link to="/docs/memory-files" className="group inline-flex items-center gap-3 text-[14px] outline-none">
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New</span>
+          <span className="underline-offset-4 group-hover:underline">woolly check reads your CLAUDE.md, AGENTS.md and Claude memory</span>
         </Link>
         <h1 className="mt-8 max-w-[620px] text-balance text-[44px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px] lg:text-[clamp(48px,6.4vh,76px)]">
           Memory that knows when it’s wrong.
         </h1>
         <p className="mt-6 max-w-[500px] text-[17px] leading-[1.55] sm:text-[18px]">
-          One local memory for Claude Code, Cursor and Codex. Every fact points at the code it’s about, and when a commit changes that code, Woolly flags the fact before your
-          agent acts on it.
+          Your agents read CLAUDE.md, AGENTS.md and their own memory as true. Woolly checks every line against the code and flags the ones a commit made wrong, before your
+          agent acts on them. No setup, no model, nothing leaves your machine.
         </p>
       </div>
 
@@ -229,52 +229,72 @@ function Rows({ items, onBlue }: { items: [string, string][]; onBlue?: boolean }
 const PANELS: { step: string; title: string; body: string; more: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
   {
     step: 'What it is',
-    title: 'One memory for all your coding agents',
-    body: 'Woolly is a small program that runs on your computer. Claude Code, Cursor, Codex and the rest connect to it and share what they learn about your project, so a fact one agent saves is there for the next.',
-    more: 'Run woolly connect once and every agent on your machine is set up. The first woolly init in a repo brings in what your CLAUDE.md, AGENTS.md and Cursor rules already say, so you never start from an empty page.',
+    title: 'A fact-checker for your agents’ notes',
+    body: 'Woolly reads every note your coding agents load, from CLAUDE.md to Claude Code’s own memory, and checks each line against your code and its git history. It also keeps one shared memory for all your agents, so a fact one of them saves is there for the next.',
+    more: 'There’s nothing to set up and nothing to move. Run woolly check in any repo and you get an answer in about a second.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
         items={[
-          ['Decisions', 'What you chose, why, and what you ruled out'],
-          ['Conventions', 'How this repo does things'],
-          ['Gotchas', 'The traps that cost someone an afternoon'],
-          ['Commands', 'How to build, test and ship this repo'],
-          ['Handoffs', 'Where the last session left off'],
+          ['CLAUDE.md, AGENTS.md', 'Including the ones in subfolders'],
+          ['Cursor, Copilot', 'Rules and instructions files'],
+          ['Claude Code memory', 'The notes it saves on its own'],
+          ['Codex, claude-mem', 'Memories and sessions about this repo'],
+        ]}
+      />
+    ),
+  },
+  {
+    step: 'Real repos',
+    title: 'We checked 20 open source repos',
+    body: 'TanStack Router, LangChain.js, the Anthropic and OpenAI SDKs, Cline, Codex, Vite and more. Woolly flagged 11 lines that name code a commit took away, in 4 of the 20. All 11 were right.',
+    more: 'These maintainers keep their agent files up to date by hand. This is what TanStack Router’s agents read today:',
+    onBlue: true,
+    show: (onBlue) => (
+      <Code
+        onBlue={onBlue}
+        lines={[
+          '$ woolly check',
+          'Checked 84 lines in AGENTS.md (14 files) against ce46b21.',
+          '  packages/AGENTS.md:8',
+          '    React’s useValueStable uses deepEqual with ignoreUndefined: false.',
+          '    useValueStable was removed from',
+          '    packages/react-router/src/link.tsx in d740d8bf2d (2026-09-13)',
+          '3 lines name code that’s gone. Your agents still read them as true.',
         ]}
       />
     ),
   },
   {
     step: 'Why it matters',
-    title: 'Agents forget, and notes go stale',
-    body: 'Every new session starts from zero, so you explain the repo again. A notes file helps until the code changes. Then your agent follows a note that stopped being true, and it sounds just as sure.',
-    more: 'The usual fix is a longer CLAUDE.md. It grows, nobody prunes it, and after a few weeks of refactors part of it is wrong. Your agent has no way to tell which part.',
-    onBlue: true,
+    title: 'A stale note is worse than none',
+    body: 'Every new session starts from zero, so teams write notes for their agents. The notes help until the code changes. Then your agent follows a note that stopped being true, and it sounds just as sure.',
+    more: 'With no note, an agent goes and looks. With a wrong one, it doesn’t. Nothing in Claude Code, Codex or Cursor tells you when a note goes out of date.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
         items={[
-          ['Without memory', 'You repeat yourself in every session and every tool'],
-          ['With a notes file', 'It drifts from the code, and nothing tells you'],
+          ['Without notes', 'You repeat yourself in every session and every tool'],
+          ['With notes', 'They drift from the code, and nothing tells you'],
           ['With a memory tool', 'It remembers what was said, not whether it’s still true'],
-          ['With Woolly', 'Facts are checked against the code after every commit'],
+          ['With Woolly', 'Every line is checked against the code after every commit'],
         ]}
       />
     ),
   },
   {
     step: 'How it works',
-    title: 'Every fact is tied to its code',
-    body: 'When an agent saves a fact, Woolly records the file or function it’s about and the commit it was true at. After each commit it checks those facts against the code as it is now.',
-    more: 'Checking needs no AI model. Woolly reads the code itself, so a check takes milliseconds and works offline. woolly why shows the decisions behind any line and whether the code still backs each one up.',
+    title: 'Git knows what changed',
+    body: 'A line is flagged only when it names something that was in the code and isn’t anymore, and git can say which commit took it out. A name the code never had is never flagged.',
+    more: 'No model and no network. Woolly’s own facts go further: each one points at the file or function it’s about, and a git hook checks them after every commit.',
+    onBlue: true,
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
         {[
-          ['Save', 'An agent saves a fact along with the code it points at.'],
-          ['Check', 'A git hook checks every fact after each commit, in the background.'],
-          ['Flag', 'If the code no longer backs a fact up, it’s marked stale with the reason. Nothing is deleted.'],
-          ['Review', 'Stale facts stay out of new sessions until you confirm, fix or retire them.'],
+          ['Read', 'Every note your agents load, from every tool.'],
+          ['Look', 'The functions, files, scripts and make targets each line names.'],
+          ['Flag', 'The ones the code no longer has, with the commit that changed them.'],
+          ['Fix', 'woolly check --fix rewrites renamed names and moved paths for you.'],
         ].map(([k, v], i) => (
           <li key={k} className={cn('grid grid-cols-[32px_minmax(0,1fr)] gap-4 border-b py-4', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
             <span className={cn('flex size-7 items-center justify-center rounded-full border text-[12px]', onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>{i + 1}</span>
@@ -290,9 +310,8 @@ const PANELS: { step: string; title: string; body: string; more: string; onBlue?
   {
     step: 'Where it runs',
     title: 'On your machine, in plain text',
-    body: 'No account, no cloud and no telemetry. A repo’s memory is a Markdown file you can read, edit and commit, so your teammates’ agents start from the same facts.',
+    body: 'No account, no cloud and no telemetry. A repo’s own memory is a Markdown file you can read, edit and commit, so your teammates’ agents start from the same facts.',
     more: 'Passwords and API keys are refused, and an agent can’t plant instructions in your memory. Ollama is optional. With it, Woolly also searches by meaning and tidies up memory while you’re away.',
-    onBlue: true,
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
@@ -342,9 +361,9 @@ export function Panels() {
 /* --------------------------------------------------------------- numbers */
 
 const NUMBERS = [
-  { value: '100%', label: 'of stale flags were right', sub: '28 of 28' },
-  { value: '93%', label: 'of wrong facts caught', sub: '28 of 30' },
-  { value: '35 ms', label: 'for a woolly check', sub: 'median, on a laptop' },
+  { value: '11 of 11', label: 'stale-line flags were right', sub: '20 open source repos' },
+  { value: '4 of 20', label: 'repos had a line naming code that’s gone', sub: '2,990 lines checked' },
+  { value: '0.7 s', label: 'for a woolly check', sub: 'median, on a laptop' },
   { value: '0', label: 'cloud calls', sub: 'no account, no telemetry' },
 ];
 
@@ -352,13 +371,13 @@ export function Numbers() {
   return (
     <div className="text-[var(--blue)]">
       <div className="flex flex-wrap items-end justify-between gap-6">
-        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on a laptop</h2>
+        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repos</h2>
         <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className="text-[15px] underline underline-offset-4 outline-none">
           How we measure
         </a>
       </div>
       <p className="mt-4 max-w-[560px] text-[16.5px] leading-[1.6] opacity-90">
-        50 scripted changes to a small ESP32 drone firmware repo: renames, deleted files, changed values, comments and moved code. No hosted model, no API key.
+        The agent files of 20 well-known open source repos, checked with git and nothing else. Every flag is published with why it’s right. Woolly’s own facts catch 93% of 30 breaking changes to a drone firmware repo, with no false alarms.
       </p>
       <dl className="mt-12 grid grid-cols-2 border-t border-[var(--blue)]/25 lg:grid-cols-4">
         {NUMBERS.map((n, i) => (

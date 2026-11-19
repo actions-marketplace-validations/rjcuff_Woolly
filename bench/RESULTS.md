@@ -2,6 +2,22 @@
 
 Every number Woolly publishes, with how to get it yourself. All of them run on a laptop with no hosted model and no API key.
 
+## Agent files in real repos
+
+How often do the notes well-known open source repos keep for their agents (CLAUDE.md, AGENTS.md, Copilot instructions and the like) name code that's gone, and is Woolly right when it says so? [How it works](agentfiles/README.md)
+
+```sh
+python3 bench/agentfiles/run.py
+```
+
+| | Nov 19, 2026, 20 repos |
+| --- | --- |
+| Lines checked | 2,990 |
+| Repos with a line that names code that's gone | 4 of 20 |
+| Lines flagged | 11 |
+| Flags that were right | 11 of 11 ([verdicts](agentfiles/verdicts.json), checked by Claude against each repo) |
+| Median `woolly check` time | 0.67 s |
+
 ## Stale facts
 
 Does Woolly flag a fact when the code under it changes? 50 scripted changes to a small ESP32 drone firmware repo. [How it works](stale/README.md)

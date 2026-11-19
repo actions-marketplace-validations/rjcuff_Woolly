@@ -1,0 +1,23 @@
+# Well-known open source repos that keep notes for coding agents.
+# Every repo here has CLAUDE.md, AGENTS.md, GEMINI.md, Cursor rules or
+# Copilot instructions. Kept to 20 so a run takes a few minutes.
+TanStack/router
+langchain-ai/langchainjs
+anthropics/anthropic-sdk-typescript
+anthropics/anthropic-sdk-python
+cline/cline
+openai/codex
+openai/openai-agents-python
+openai/openai-node
+google-gemini/gemini-cli
+block/goose
+modelcontextprotocol/python-sdk
+modelcontextprotocol/typescript-sdk
+browser-use/browser-use
+humanlayer/humanlayer
+tldraw/tldraw
+vercel/ai
+astral-sh/ruff
+microsoft/typescript-go
+vitejs/vite
+biomejs/biome

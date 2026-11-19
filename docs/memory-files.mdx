@@ -1,0 +1,86 @@
+---
+title: Check your agent files
+description: Woolly checks CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's memory, Codex memories and claude-mem against the code, and flags lines that name a function, file or script that's gone.
+---
+
+Your agents already read a pile of notes: CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's auto memory, Codex memories, claude-mem. None of them check whether the notes are still true. When a refactor renames a function or moves a file, the note keeps saying the old thing, and your agent follows it.
+
+`woolly check` reads all of them and checks every line against the code. You don't need to set anything up or move your notes into Woolly.
+
+```sh
+cd your-repo
+woolly check
+```
+
+```
+Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b0427.
+  .github/copilot-instructions.md:30  Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`
+    src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json in 791d23899 (2026-05-25)
+1 line names code that's gone. Your agents still read it as true.
+```
+
+## What it reads
+
+| Tool | Where |
+| --- | --- |
+| Claude Code | `CLAUDE.md`, `CLAUDE.local.md`, and its auto memory in `~/.claude/projects/<this folder>/memory` |
+| Codex, Cursor, Amp and others | `AGENTS.md` |
+| Codex memories | `~/.codex/memories` (or `CODEX_HOME`), only files that mention this repo |
+| Cursor | `.cursorrules` and `.cursor/rules/*.mdc` |
+| Gemini CLI | `GEMINI.md` |
+| Windsurf | `.windsurfrules` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| claude-mem | its 500 newest observations for this project, read with the `sqlite3` command when it's installed |
+
+Woolly's own section in CLAUDE.md and AGENTS.md is skipped, since those lines are [project facts](/docs/stale-facts) that are checked already.
+
+## What counts as gone
+
+A line is flagged when it names something that **was in the code** and **isn't anymore**. Git history decides both, so a name the code never had, like an idea for later, is never flagged.
+
+| A line names | It's flagged when |
+| --- | --- |
+| A function, type or constant, like `imu_read_accel` or `requireUser()` | No file has it now, and a commit removed it. If the same commit added a similar name, Woolly says what it was renamed to. |
+| A file or folder, like `src/flight.ts` | It's gone, and git deleted or moved it. A move says where it went. Paths written from a subfolder, like `components/Button.tsx`, count as long as some file still ends with them. |
+| A script, like `pnpm lint` or `npm run test:unit` | No package.json in the repo has it now, and one used to. |
+| A make target, like `make release` | The Makefile doesn't have it now, and used to. |
+
+Lines that say something is gone, like "Don't use legacyMixer" or "`fetchUser` was renamed", aren't flagged.
+
+## Fix it
+
+```sh
+woolly check --fix
+```
+
+When Woolly knows what a name or path became, `--fix` writes the new one into the line, in files on disk. It doesn't touch lines it can't fix, like a removed script, and it never edits claude-mem's database.
+
+```
+fixed CLAUDE.md:4: imu_read_accel -> imu_read_accel_g
+fixed CLAUDE.md:8: src/flight.ts -> src/control/flight.ts
+```
+
+## Files your tools can't read whole
+
+`woolly check` also tells you when a file is set up so an agent misses part of it:
+
+- **AGENTS.md over 32 KB.** Codex stops reading there, and says nothing.
+- **Claude Code's MEMORY.md over 200 lines.** Claude Code loads only the first 200 at the start of a session.
+- **AGENTS.md without `@AGENTS.md` in CLAUDE.md.** Claude Code reads CLAUDE.md, so it misses what you wrote for Codex and Cursor.
+
+## In every session
+
+With `woolly connect` and `woolly init --hooks`, every commit checks the files again in the background, and each Claude Code session starts with the lines that are out of date, so the agent knows not to follow them. Agents can also ask at any time with the `check_memory_files` [MCP tool](/docs/mcp).
+
+## In pull requests
+
+The [GitHub Action](/docs/pull-requests) reports lines in the repo's agent files that a pull request makes stale, apart from the ones that were already out of date. Check out with `fetch-depth: 0` so Woolly can read history.
+
+## Options
+
+| Flag | What it does |
+| --- | --- |
+| `--fix` | Rewrite renamed names and moved paths in the files |
+| `--json` | Print everything as JSON, under `memory_files` |
+| `--markdown` | Print a pull request comment |
+| `--no-memory-files` | Check only Woolly's own facts |
