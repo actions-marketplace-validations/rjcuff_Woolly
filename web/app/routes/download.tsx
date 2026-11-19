@@ -114,7 +114,7 @@ export default function Download({ loaderData }: Route.ComponentProps) {
       <p className="mt-14 text-[17px] leading-[1.6]">
         Then connect your AI apps with <code className="whitespace-nowrap font-mono text-[0.9em]">woolly connect</code>, and run{' '}
         <code className="whitespace-nowrap font-mono text-[0.9em]">woolly init --hooks</code> in your repo. See the{' '}
-        <Link to="/docs/quickstart" className="underline underline-offset-4">
+        <Link to="/docs/quickstart" className="link-soft text-[var(--color-brand)]">
           quickstart
         </Link>
         .

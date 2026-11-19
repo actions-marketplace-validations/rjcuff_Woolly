@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 export const WRAP = 'mx-auto w-full max-w-[1080px] px-4 sm:px-8';
 
-const ITEM = 'text-[15px] underline-offset-4 outline-none hover:underline focus-visible:underline';
+const ITEM = 'link-soft text-[15px] outline-none';
 
 /** The homepage nav, in the page's one blue: the dithered mammoth, the name, and a few plain links. */
 export function FrostNav({ stars }: { stars?: number | null }) {

@@ -149,7 +149,7 @@ export function HeroContent() {
       <div>
         <Link to="/docs/memory-files" className="group inline-flex items-center gap-3 text-[14px] outline-none">
           <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New</span>
-          <span className="underline-offset-4 group-hover:underline">woolly check reads your CLAUDE.md, AGENTS.md and Claude memory</span>
+          <span className="link-soft">woolly check reads your CLAUDE.md, AGENTS.md and Claude memory</span>
         </Link>
         <h1 className="mt-8 max-w-[620px] text-balance text-[44px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px] lg:text-[clamp(48px,6.4vh,76px)]">
           Memory that knows when it’s wrong.
@@ -184,7 +184,7 @@ export function HeroContent() {
             </li>
           ))}
           <li>
-            <Link to="/docs/connect" className="underline underline-offset-4 outline-none">
+            <Link to="/docs/connect" className="link-soft outline-none">
               and more
             </Link>
           </li>
@@ -372,7 +372,7 @@ export function Numbers() {
     <div className="text-[var(--blue)]">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repos</h2>
-        <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className="text-[15px] underline underline-offset-4 outline-none">
+        <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className="link-soft text-[15px] outline-none">
           How we measure
         </a>
       </div>
@@ -475,11 +475,11 @@ export function Foot() {
             {FOOT.map((l) => (
               <li key={l.label}>
                 {l.href.startsWith('/') ? (
-                  <Link to={l.href} className="underline-offset-4 outline-none hover:underline">
+                  <Link to={l.href} className="link-soft outline-none">
                     {l.label}
                   </Link>
                 ) : (
-                  <a href={l.href} className="underline-offset-4 outline-none hover:underline">
+                  <a href={l.href} className="link-soft outline-none">
                     {l.label}
                   </a>
                 )}
