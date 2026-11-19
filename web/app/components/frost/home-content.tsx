@@ -226,11 +226,12 @@ function Rows({ items, onBlue }: { items: [string, string][]; onBlue?: boolean }
   );
 }
 
-const PANELS: { step: string; title: string; body: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
+const PANELS: { step: string; title: string; body: string; more: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
   {
     step: 'What it is',
     title: 'One memory for all your coding agents',
     body: 'Woolly is a small program that runs on your computer. Claude Code, Cursor, Codex and the rest connect to it and share what they learn about your project, so a fact one agent saves is there for the next.',
+    more: 'Run woolly connect once and every agent on your machine is set up. The first woolly init in a repo brings in what your CLAUDE.md, AGENTS.md and Cursor rules already say, so you never start from an empty page.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
@@ -238,6 +239,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
           ['Decisions', 'What you chose, why, and what you ruled out'],
           ['Conventions', 'How this repo does things'],
           ['Gotchas', 'The traps that cost someone an afternoon'],
+          ['Commands', 'How to build, test and ship this repo'],
           ['Handoffs', 'Where the last session left off'],
         ]}
       />
@@ -247,6 +249,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     step: 'Why it matters',
     title: 'Agents forget, and notes go stale',
     body: 'Every new session starts from zero, so you explain the repo again. A notes file helps until the code changes. Then your agent follows a note that stopped being true, and it sounds just as sure.',
+    more: 'The usual fix is a longer CLAUDE.md. It grows, nobody prunes it, and after a few weeks of refactors part of it is wrong. Your agent has no way to tell which part.',
     onBlue: true,
     show: (onBlue) => (
       <Rows
@@ -254,6 +257,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
         items={[
           ['Without memory', 'You repeat yourself in every session and every tool'],
           ['With a notes file', 'It drifts from the code, and nothing tells you'],
+          ['With a memory tool', 'It remembers what was said, not whether it’s still true'],
           ['With Woolly', 'Facts are checked against the code after every commit'],
         ]}
       />
@@ -263,6 +267,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     step: 'How it works',
     title: 'Every fact is tied to its code',
     body: 'When an agent saves a fact, Woolly records the file or function it’s about and the commit it was true at. After each commit it checks those facts against the code as it is now.',
+    more: 'Checking needs no AI model. Woolly reads the code itself, so a check takes milliseconds and works offline. woolly why shows the decisions behind any line and whether the code still backs each one up.',
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
         {[
@@ -286,6 +291,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     step: 'Where it runs',
     title: 'On your machine, in plain text',
     body: 'No account, no cloud and no telemetry. A repo’s memory is a Markdown file you can read, edit and commit, so your teammates’ agents start from the same facts.',
+    more: 'Passwords and API keys are refused, and an agent can’t plant instructions in your memory. Ollama is optional. With it, Woolly also searches by meaning and tidies up memory while you’re away.',
     onBlue: true,
     show: (onBlue) => (
       <Code
@@ -315,7 +321,7 @@ export function Panels() {
           key={p.step}
           aria-label={p.step}
           className={cn(
-            'flex min-w-0 flex-col justify-start gap-9 px-5 py-14 sm:px-10 sm:py-16 lg:min-h-[calc(100svh-3.5rem)] lg:justify-center lg:px-12 lg:py-[clamp(48px,8vh,96px)]',
+            'flex min-w-0 flex-col justify-start gap-9 px-5 py-14 sm:px-10 sm:py-16 lg:min-h-[calc(100svh-3.5rem)] lg:px-12 lg:py-[clamp(32px,6vh,72px)]',
             p.onBlue ? 'bg-[var(--blue)] text-[var(--paper)]' : 'text-[var(--blue)]',
             !p.onBlue && i > 0 && 'border-t border-[var(--blue)]/20',
           )}
@@ -324,6 +330,7 @@ export function Panels() {
           <div>
             <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">{p.title}</h2>
             <p className="mt-6 max-w-[540px] text-[17px] leading-[1.6] opacity-90 sm:text-[18px]">{p.body}</p>
+            <p className="mt-4 max-w-[540px] text-[16px] leading-[1.6] opacity-75 sm:text-[17px]">{p.more}</p>
           </div>
           <div className="max-w-[600px]">{p.show(p.onBlue)}</div>
         </section>
