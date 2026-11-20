@@ -1,19 +1,21 @@
 ---
 title: Pull request checks
-description: A GitHub Action that comments on a pull request when it makes a project fact stale, so the whole team sees it before it merges.
+description: A GitHub Action that comments on a pull request when it makes a line in CLAUDE.md, AGENTS.md or a project fact stale, with the commit that did it, so someone reviews it before it merges.
 ---
 
-When a pull request changes code that a fact in `.woolly/woolly.md` points at, Woolly comments on it.
+When a pull request changes code that a line in CLAUDE.md, AGENTS.md, Cursor rules or `.woolly/woolly.md` names, Woolly comments on it.
 
-> **Woolly** checked 12 project facts against this change. **1 fact went stale.**
+> **Woolly** checked 48 lines in CLAUDE.md and AGENTS.md. **1 line in agent files went stale.**
 >
-> | Fact | What changed |
-> | --- | --- |
-> | The IMU chip select is GPIO 5 | main/pins.h#IMU_CS: 5 is no longer there in 229f599 |
+> Agents read these as true, but the code no longer has what they name. Each one is a line for a person to review, with the commit that changed the code. Woolly doesn't check whether the code itself is right.
 >
-> After this merges, run `woolly review` to confirm, fix or retire each one. Nothing is deleted.
+> | Line | Says | What changed |
+> | --- | --- | --- |
+> | `CLAUDE.md:12` | `- Handlers call requireUser first` | requireUser was renamed to requireSession in src/auth.ts in 229f599 (2026-11-20) |
 
-Nobody on the team needs Woolly installed for this. The facts come from `.woolly/woolly.md` in the repo, and the check runs on GitHub with no model and no network calls beyond downloading Woolly.
+Each finding is evidence, not a verdict: the line, what it names, and the commit where that name, file, script or make target went away. A person decides whether the line is wrong. Woolly matches names against git history with no model, so it can miss a line whose meaning went stale while every name in it still exists.
+
+Nobody on the team needs Woolly installed for this.
 
 ## Set it up
 
@@ -34,32 +36,103 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: rjcuff/woolly@main
+      - uses: rjcuff/woolly@action-v1
+        with:
+          version: "0.18.0"
 ```
 
 That's it. It checks the repo's agent files, like CLAUDE.md, AGENTS.md and Cursor rules, with no setup. See [Check your agent files](/docs/memory-files). With [project memory](/docs/project-memory) committed by `woolly init`, it checks those facts too. See [Stale facts](/docs/stale-facts). `fetch-depth: 0` lets Woolly read the history it needs to tell what changed.
 
+### Pin what runs
+
+`version` pins the Woolly release the Action downloads, so a new release can't change your checks until you choose it. `action-v1` pins the Action's own steps to its major version. To pin those exactly too, use a full commit SHA instead, like `rjcuff/woolly@<40-character SHA>`, and let Dependabot or Renovate propose updates.
+
+### Permissions
+
+| Permission | Why |
+| --- | --- |
+| `contents: read` | To check out the repo and read its history |
+| `pull-requests: write` | To post and update Woolly's one comment. Leave it out, and set `comment: "false"`, to only write the job summary |
+
+The Action needs nothing else, and it never pushes commits.
+
 ## How it works
 
-1. It installs Woolly with the same script as [Download](/download).
+1. It downloads Woolly from the [GitHub release](https://github.com/rjcuff/woolly/releases) you pinned and checks it against the checksum published with that release. If the checksum doesn't match, the job stops.
 2. It reads the facts from `.woolly/woolly.md` into a Woolly of its own for the job.
 3. It runs `woolly check --markdown --base <the pull request's base commit>`. Facts were true on the branch you're merging into, so that's what the change is compared against.
 4. It checks every line in the repo's agent files and reports the ones this change made stale. Lines that were already out of date are listed separately, folded away.
 5. It writes the report to the job summary. When something went stale, it comments on the pull request. If it commented before, it updates that comment instead of adding another.
 
+The comment quotes each stale line as code, so a line can't mention people, load images, add links or render HTML in the comment. A line that looks like it holds an API key, token or password is not quoted at all.
+
+## Where your data goes
+
+- The check runs on your GitHub runner, GitHub's or your own, against your checkout. It uses no model, and Woolly has no servers.
+- The runner downloads Woolly from GitHub releases. With the default comment setting it also calls the GitHub API to post the comment.
+- The report, which quotes the stale lines, goes to the job log, the job summary and, when something went stale, a pull request comment. Anyone who can read the repo's Actions and pull requests can read those. In a public repo that's everyone.
+- Personal memory, like Claude Code's auto memory and Codex memories, lives in the home folder of your own computer, not on GitHub's runners, so the Action doesn't see it. On a self-hosted runner, run the job as a user who has none.
+
 ## Options
 
 | Input | Default | What it does |
 | --- | --- | --- |
+| `version` | `latest` | The Woolly release to run, like `0.18.0`. `latest` runs the newest one. `preinstalled` uses the `woolly` already on the PATH, for runners that install it themselves |
+| `base` | the pull request's base commit | The commit or branch to compare against. On a push, it defaults to the commit before the push |
 | `comment` | `true` | Comment on the pull request when something goes stale. `false` only writes the job summary |
-| `fail-on-stale` | `false` | Fail the job when the change makes a fact stale |
+| `fail-on-stale` | `false` | Fail the job when the change makes something stale |
 | `token` | `github.token` | The token for commenting. It needs `pull-requests: write` |
 
-The action also sets two outputs, `stale` and `checked`, for later steps.
+## Outputs
+
+| Output | What it is |
+| --- | --- |
+| `new-stale` | Facts and agent file lines this change made stale |
+| `already-stale` | Ones that were already stale before this change, or waiting for review |
+| `lines-checked` | Lines checked in the repo's committed agent files |
+| `checked` | Project facts that point at code that were checked |
+| `stale` | The same as `new-stale`, kept for workflows that use it |
+| `status-file` | The path of the `--status-json` file for this check, described below |
+
+`new-stale`, `already-stale` and `lines-checked` need Woolly 0.18.0 or later. With an older `version`, they're 0 and the job warns.
 
 ## Pull requests from forks
 
+Use `on: pull_request`. Don't use `pull_request_target` for this check: it runs with a token that can write to your repo while checking out code from someone else's fork.
+
 GitHub gives pull requests from forks a token that can't comment. The check still runs and the report is still in the job summary.
+
+## Status for other tools
+
+`woolly check --status-json` prints the result as counts and pointers: the commit checked, how many facts and lines, how many went stale in this change and how many already were, and for each stale line its file, line number, kind and the commit that changed the code. It has no text from your agent files, facts or code, and leaves out memory that isn't a file committed to the repo. `--status-file <path>` writes the same thing next to `--markdown`.
+
+```json
+{
+  "schema": "woolly.check.status/v1",
+  "woolly_version": "0.18.0",
+  "head": "48382c1db93c",
+  "base": "02e5cfb5528a",
+  "checked": { "facts": 0, "files": 1, "lines": 3 },
+  "stale": { "new": 2, "before": 1 },
+  "findings": [
+    { "type": "agent_file_line", "state": "new", "file": "CLAUDE.md", "line": 2, "kind": "name", "commit": "48382c1" }
+  ]
+}
+```
+
+The Action writes this file for every check. To keep it with the workflow run, give the Woolly step an `id` and upload the file:
+
+```yaml
+      - uses: rjcuff/woolly@action-v1
+        id: woolly
+        with:
+          version: "0.18.0"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: woolly-status
+          path: ${{ steps.woolly.outputs.status-file }}
+          retention-days: 14
+```
 
 ## Run the same check yourself
 

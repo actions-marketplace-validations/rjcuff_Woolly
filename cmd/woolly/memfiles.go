@@ -132,32 +132,45 @@ func markdownAudit(dir string, rep audit.Report, base string) string {
 		return ""
 	}
 	cell := func(s string) string { return strings.ReplaceAll(strings.ReplaceAll(s, "|", "\\|"), "\n", " ") }
-	var now, before []audit.Finding
-	for _, f := range rep.Findings {
+	now, before := splitByBase(dir, rep.Findings, base)
+	var b strings.Builder
+	if len(now) == 0 {
+		fmt.Fprintf(&b, "\n**Woolly** checked %s in %s. None of them went stale.\n", plural(rep.Lines, "line", "lines"), inert(fileNames(rep)))
+	} else {
+		fmt.Fprintf(&b, "\n**Woolly** checked %s in %s. **%s in agent files went stale.**\n\n", plural(rep.Lines, "line", "lines"), inert(fileNames(rep)), plural(len(now), "line", "lines"))
+		b.WriteString("Agents read these as true, but the code no longer has what they name. Each one is a line for a person to review, with the commit that changed the code. Woolly doesn't check whether the code itself is right.\n\n| Line | Says | What changed |\n| --- | --- | --- |\n")
+		for _, f := range now {
+			fmt.Fprintf(&b, "| %s | %s | %s |\n", cell(codeSpan(f.Where())), cell(quoted(clip(f.Text, 120))), cell(inert(findingWhy(f))))
+		}
+	}
+	if len(before) > 0 {
+		fmt.Fprintf(&b, "\n<details><summary>%s already out of date before this change</summary>\n\n", plural(len(before), "line was", "lines were"))
+		for _, f := range before {
+			fmt.Fprintf(&b, "- %s %s (%s)\n", codeSpan(f.Where()), quoted(clip(f.Text, 100)), inert(findingWhy(f)))
+		}
+		b.WriteString("\n</details>\n")
+	}
+	return b.String()
+}
+
+// Finding states: whether a change made a line stale, or it already was on
+// the base commit.
+const (
+	stateNew    = "new"
+	stateBefore = "before"
+)
+
+// splitByBase sorts findings into the ones this change made stale and the
+// ones that were already stale on base. With no base, all of them are new.
+func splitByBase(dir string, findings []audit.Finding, base string) (now, before []audit.Finding) {
+	for _, f := range findings {
 		if base != "" && f.Commit != "" && gitinfo.IsAncestor(dir, f.Commit, base) {
 			before = append(before, f)
 		} else {
 			now = append(now, f)
 		}
 	}
-	var b strings.Builder
-	if len(now) == 0 {
-		fmt.Fprintf(&b, "\n**Woolly** checked %s in %s. None of them went stale.\n", plural(rep.Lines, "line", "lines"), fileNames(rep))
-	} else {
-		fmt.Fprintf(&b, "\n**Woolly** checked %s in %s. **%s in agent files went stale.**\n\n", plural(rep.Lines, "line", "lines"), fileNames(rep), plural(len(now), "line", "lines"))
-		b.WriteString("Agents read these as true, but the code no longer has what they name.\n\n| Line | Says | What changed |\n| --- | --- | --- |\n")
-		for _, f := range now {
-			fmt.Fprintf(&b, "| `%s` | %s | %s |\n", cell(f.Where()), cell(clip(f.Text, 120)), cell(findingWhy(f)))
-		}
-	}
-	if len(before) > 0 {
-		fmt.Fprintf(&b, "\n<details><summary>%s already out of date before this change</summary>\n\n", plural(len(before), "line was", "lines were"))
-		for _, f := range before {
-			fmt.Fprintf(&b, "- `%s` %s (%s)\n", cell(f.Where()), cell(clip(f.Text, 100)), cell(findingWhy(f)))
-		}
-		b.WriteString("\n</details>\n")
-	}
-	return b.String()
+	return now, before
 }
 
 // auditSection is what a session brief says about memory files that name

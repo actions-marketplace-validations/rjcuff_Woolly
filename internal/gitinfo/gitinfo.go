@@ -130,6 +130,29 @@ func Files(dir string) []string {
 	return strings.Split(out, "\n")
 }
 
+// Tracked lists the files git tracks, leaving out untracked and ignored
+// ones like a personal CLAUDE.local.md.
+func Tracked(dir string) []string {
+	out, err := gitFor(dir, 10*time.Second, "-c", "core.quotepath=off", "ls-files", "--cached")
+	if err != nil || out == "" {
+		return nil
+	}
+	return strings.Split(out, "\n")
+}
+
+// ShortCommit is rev, like a branch name or a commit, as an abbreviated
+// commit id. It returns "" when git doesn't know rev.
+func ShortCommit(dir, rev string) string {
+	if rev == "" || strings.HasPrefix(rev, "-") {
+		return ""
+	}
+	h, err := git(dir, "rev-parse", "--verify", "--quiet", "--short=12", rev+"^{commit}")
+	if err != nil {
+		return ""
+	}
+	return h
+}
+
 // Dirty reports whether path has changes that aren't committed.
 func Dirty(dir, path string) bool {
 	out, err := git(dir, "status", "--porcelain", "--", path)

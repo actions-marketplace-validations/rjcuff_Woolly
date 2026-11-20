@@ -15,25 +15,90 @@ inputs:
   token:
     description: Token for posting the comment. Needs pull-requests write permission.
     default: ${{ github.token }}
+  version:
+    description: The Woolly release to run, like "0.18.0". "latest" runs the newest release. "preinstalled" uses the woolly already on the PATH, for runners that install it themselves.
+    default: latest
+  base:
+    description: The commit or branch to compare against. Defaults to the pull request's base commit, or the commit before a push.
+    default: ""
 
 outputs:
   stale:
-    description: How many facts and agent file lines this change made stale.
+    description: How many facts and agent file lines this change made stale. Same as new-stale.
     value: ${{ steps.check.outputs.stale }}
+  new-stale:
+    description: How many facts and agent file lines this change made stale.
+    value: ${{ steps.check.outputs.new-stale }}
+  already-stale:
+    description: How many were already stale before this change, or waiting for review.
+    value: ${{ steps.check.outputs.already-stale }}
   checked:
-    description: How many facts that point at code were checked.
+    description: How many project facts that point at code were checked.
     value: ${{ steps.check.outputs.checked }}
+  lines-checked:
+    description: How many lines in committed agent files, like CLAUDE.md and AGENTS.md, were checked.
+    value: ${{ steps.check.outputs.lines-checked }}
+  status-file:
+    description: The path of this check's woolly check --status-json file, with counts and file:line pointers and no text. Empty with Woolly before 0.18.0.
+    value: ${{ steps.check.outputs.status-file }}
 
 runs:
   using: composite
   steps:
     - name: Install Woolly
       shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
       run: |
-        export WOOLLY_INSTALL_DIR="$RUNNER_TEMP/woolly-bin"
-        mkdir -p "$WOOLLY_INSTALL_DIR"
-        curl -fsSL https://usewoolly.com/install.sh | sh
-        echo "$WOOLLY_INSTALL_DIR" >> "$GITHUB_PATH"
+        set -euo pipefail
+        if [ "$VERSION" = "preinstalled" ]; then
+          if ! command -v woolly >/dev/null 2>&1; then
+            echo "::error::version is \"preinstalled\", but there's no woolly on the PATH."
+            exit 1
+          fi
+          woolly version
+          exit 0
+        fi
+        case "$RUNNER_OS" in
+          Linux) os=linux ;;
+          macOS) os=darwin ;;
+          *) echo "::error::The Woolly check runs on Linux and macOS runners, not $RUNNER_OS."; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          ARM) arch=arm ;;
+          *) echo "::error::Woolly has no build for $RUNNER_ARCH runners."; exit 1 ;;
+        esac
+        if [ "$VERSION" = "latest" ]; then
+          url="https://github.com/rjcuff/Woolly/releases/latest/download"
+        elif printf '%s' "$VERSION" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+$'; then
+          url="https://github.com/rjcuff/Woolly/releases/download/v${VERSION#v}"
+        else
+          echo "::error::version should be a release like 0.18.0, \"latest\" or \"preinstalled\", not \"$VERSION\"."
+          exit 1
+        fi
+        file="woolly_${os}_${arch}.tar.gz"
+        tmp=$(mktemp -d)
+        curl -fsSL --retry 3 "$url/$file" -o "$tmp/$file"
+        curl -fsSL --retry 3 "$url/checksums.txt" -o "$tmp/checksums.txt"
+        expected=$(awk -v f="$file" '$2 == f { print $1 }' "$tmp/checksums.txt")
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual=$(sha256sum "$tmp/$file" | awk '{ print $1 }')
+        else
+          actual=$(shasum -a 256 "$tmp/$file" | awk '{ print $1 }')
+        fi
+        if [ -z "$expected" ] || [ "$expected" != "$actual" ]; then
+          echo "::error::The Woolly download doesn't match the checksum published with the release."
+          exit 1
+        fi
+        dir="$RUNNER_TEMP/woolly-bin"
+        mkdir -p "$dir"
+        tar -xzf "$tmp/$file" -C "$tmp"
+        mv "$tmp/woolly" "$dir/woolly"
+        chmod 755 "$dir/woolly"
+        echo "$dir" >> "$GITHUB_PATH"
+        "$dir/woolly" version
 
     - name: Check project memory against this change
       id: check
@@ -43,17 +108,25 @@ runs:
         WOOLLY_HOME: ${{ runner.temp }}/woolly-home
         WOOLLY_NO_EMBED: "1"
         # Facts were true on the branch this pull request merges into.
-        BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        BASE_INPUT: ${{ inputs.base }}
+        EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       run: |
         report="$RUNNER_TEMP/woolly-report.md"
-        args="--markdown --no-backfill"
+        status="$RUNNER_TEMP/woolly-status.json"
+        rm -f "$status"
+        BASE="${BASE_INPUT:-$EVENT_BASE}"
+        args=(--markdown --no-backfill)
         if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
           # A shallow checkout may not have the base commit yet.
           git cat-file -e "$BASE^{commit}" 2>/dev/null || git fetch --quiet --no-tags --depth=1 origin "$BASE" || true
-          args="$args --base $BASE"
+          args+=(--base "$BASE")
+        fi
+        # Woolly 0.18.0 and later write the counts as JSON next to the report.
+        if woolly check --help 2>&1 | grep -q -- '--status-file'; then
+          args+=(--status-file "$status")
         fi
         set +e
-        woolly check $args > "$report"
+        woolly check "${args[@]}" > "$report"
         code=$?
         set -e
         if [ "$code" -gt 1 ]; then
@@ -61,13 +134,41 @@ runs:
           cat "$report"
           exit "$code"
         fi
-        facts=$(grep -oE '\*\*[0-9]+ facts? went stale' "$report" | grep -oE '[0-9]+' || true)
-        lines=$(grep -oE '\*\*[0-9]+ lines? in agent files went stale' "$report" | grep -oE '[0-9]+' || true)
-        stale=$(( ${facts:-0} + ${lines:-0} ))
-        checked=$(grep -oE 'checked [0-9]+ project facts?' "$report" | grep -oE '[0-9]+' || true)
-        echo "stale=${stale:-0}" >> "$GITHUB_OUTPUT"
-        echo "checked=${checked:-0}" >> "$GITHUB_OUTPUT"
-        echo "report=$report" >> "$GITHUB_OUTPUT"
+        # num reads a count like checked.lines from the status file.
+        num() {
+          if command -v jq >/dev/null 2>&1; then
+            jq -r ".$1 // 0" "$status"
+          else
+            python3 -c 'import json, sys
+        v = json.load(open(sys.argv[1]))
+        for k in sys.argv[2].split("."):
+            v = v.get(k, 0) if isinstance(v, dict) else 0
+        print(int(v or 0))' "$status" "$1"
+          fi
+        }
+        if [ -s "$status" ] && { command -v jq >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1; }; then
+          new=$(num stale.new)
+          before=$(num stale.before)
+          checked=$(num checked.facts)
+          lines=$(num checked.lines)
+        else
+          echo "::warning::This Woolly can't report lines-checked or already-stale. Use version 0.18.0 or later, and a runner with jq or python3."
+          facts=$(grep -oE '\*\*[0-9]+ facts? went stale' "$report" | grep -oE '[0-9]+' || true)
+          flines=$(grep -oE '\*\*[0-9]+ lines? in agent files went stale' "$report" | grep -oE '[0-9]+' || true)
+          new=$(( ${facts:-0} + ${flines:-0} ))
+          before=0
+          checked=$(grep -oE 'checked [0-9]+ project facts?' "$report" | grep -oE '[0-9]+' || true)
+          lines=0
+        fi
+        {
+          echo "stale=${new:-0}"
+          echo "new-stale=${new:-0}"
+          echo "already-stale=${before:-0}"
+          echo "checked=${checked:-0}"
+          echo "lines-checked=${lines:-0}"
+          echo "report=$report"
+          if [ -s "$status" ]; then echo "status-file=$status"; else echo "status-file="; fi
+        } >> "$GITHUB_OUTPUT"
         cat "$report" >> "$GITHUB_STEP_SUMMARY"
         cat "$report"
 
@@ -94,6 +195,8 @@ runs:
     - name: Fail when facts went stale
       if: inputs.fail-on-stale == 'true' && steps.check.outputs.stale != '0'
       shell: bash
+      env:
+        STALE: ${{ steps.check.outputs.stale }}
       run: |
-        echo "::error::This change made ${{ steps.check.outputs.stale }} project facts stale. See the report above."
+        echo "::error::This change made $STALE project facts or agent file lines stale. See the report above."
         exit 1

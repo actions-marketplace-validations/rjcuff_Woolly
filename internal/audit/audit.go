@@ -26,6 +26,10 @@ type Finding struct {
 	// Fix is what What became, when Woolly can tell: a function's new name
 	// or a file's new path. check --fix writes it into the line.
 	Fix string `json:"fix,omitempty"`
+	// State is "new" when the change being checked made the line stale and
+	// "before" when it already was on the base commit. The check command
+	// fills it in.
+	State string `json:"state,omitempty"`
 }
 
 // Where is the line's place, like CLAUDE.md:42.
