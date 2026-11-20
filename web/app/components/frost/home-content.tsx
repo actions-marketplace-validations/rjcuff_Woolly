@@ -148,7 +148,7 @@ export function HeroContent() {
           Memory that knows when it’s wrong.
         </h1>
         <p className="mt-6 max-w-[500px] text-[17px] leading-[1.55] sm:text-[18px]">
-          Your agents trust CLAUDE.md, AGENTS.md and their memory. Woolly checks every line against the code and flags the ones a commit made wrong. It runs locally with no setup.
+          Woolly checks CLAUDE.md, AGENTS.md and agent memory against your code and flags every line a commit made inaccurate. Free, open source and local.
         </p>
       </div>
 
@@ -199,24 +199,24 @@ function Rows({ items, onBlue }: { items: [string, string][]; onBlue?: boolean }
 
 const PANELS: { step: string; title: string; body: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
   {
-    step: 'What it is',
-    title: 'A fact-checker for your agents’ notes',
-    body: 'It reads every note your agents load, from every tool. Then it checks each line against your code and its history.',
+    step: 'Overview',
+    title: 'Verify every note your agents read',
+    body: 'Woolly reads CLAUDE.md, AGENTS.md, Cursor rules and agent memory, then checks each line against your code and its history.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
         items={[
-          ['Agent files', 'CLAUDE.md, AGENTS.md, Cursor rules'],
-          ['Agent memory', 'Claude Code, Codex, claude-mem'],
-          ['Answer', 'In about a second'],
+          ['Agent files', 'CLAUDE.md, AGENTS.md, Cursor and Copilot rules'],
+          ['Agent memory', 'Claude Code, Codex and claude-mem'],
+          ['Speed', 'Results in under a second'],
         ]}
       />
     ),
   },
   {
-    step: 'Real repos',
-    title: 'We checked 20 open source repos',
-    body: 'Agent files in TanStack, LangChain.js, the Anthropic SDK and more. Woolly flagged 11 lines naming code that’s gone, and all 11 were right.',
+    step: 'Results',
+    title: 'Proven on real repositories',
+    body: 'Across 20 open source projects, Woolly flagged 11 lines that reference removed code. All 11 were confirmed correct.',
     onBlue: true,
     show: (onBlue) => (
       <Code
@@ -231,16 +231,16 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     ),
   },
   {
-    step: 'How it works',
-    title: 'Git knows what changed',
-    body: 'A line is flagged only when git shows the commit that took its code away. No model and no guessing, so it doesn’t cry wolf.',
+    step: 'Method',
+    title: 'Precise, evidence-based detection',
+    body: 'A line is flagged only when git identifies the commit that removed its code. No model and no guesswork.',
     onBlue: true,
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
         {[
           ['Read', 'Every note your agents load'],
-          ['Flag', 'Lines naming code that’s gone'],
-          ['Fix', 'woolly check --fix renames them for you'],
+          ['Verify', 'Each name, path and command against git history'],
+          ['Fix', 'woolly check --fix updates renamed code automatically'],
         ].map(([k, v], i) => (
           <li key={k} className={cn('grid grid-cols-[32px_minmax(0,1fr)] gap-4 border-b py-4', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
             <span className={cn('flex size-7 items-center justify-center rounded-full border text-[12px]', onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>{i + 1}</span>
@@ -254,9 +254,9 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     ),
   },
   {
-    step: 'Where it runs',
-    title: 'On your machine, in plain text',
-    body: 'No account, no cloud and no telemetry. Project memory is a Markdown file in your repo that you can read and commit.',
+    step: 'Privacy',
+    title: 'Local and private by default',
+    body: 'No account, no cloud and no telemetry. Project memory is a Markdown file your team can read, review and commit.',
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
@@ -309,13 +309,13 @@ export function Numbers() {
   return (
     <div className="text-[var(--blue)]">
       <div className="flex flex-wrap items-end justify-between gap-6">
-        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repos</h2>
+        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repositories</h2>
         <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className="link-soft text-[15px] outline-none">
           How we measure
         </a>
       </div>
       <p className="mt-4 max-w-[560px] text-[16.5px] leading-[1.6] opacity-90">
-        The agent files of 20 open source repos, checked with git and nothing else. Every flag is published with why it’s right.
+        We ran Woolly against the agent files of 20 open source projects using git alone. Every result is published with its evidence.
       </p>
       <dl className="mt-12 grid grid-cols-2 border-t border-[var(--blue)]/25 lg:grid-cols-4">
         {NUMBERS.map((n, i) => (
@@ -334,18 +334,18 @@ export function Numbers() {
 
 const WHO: { title: string; body: string; link: { label: string; href: string } }[] = [
   {
-    title: 'For the agents you use',
-    body: 'One command connects Claude Code, Cursor, Codex and more. They all share the same memory.',
+    title: 'Every coding agent',
+    body: 'One command connects Claude Code, Cursor, Codex and more to a single shared memory.',
     link: { label: 'Connect your apps', href: '/docs/connect' },
   },
   {
-    title: 'For your team',
-    body: 'Project memory lives in git. Every teammate’s agent starts from the same facts, checked against the code.',
+    title: 'Your whole team',
+    body: 'Project memory lives in git, so every teammate’s agent starts from the same verified facts.',
     link: { label: 'Project memory', href: '/docs/project-memory' },
   },
   {
-    title: 'For agents you build',
-    body: 'A local HTTP API with TypeScript and Python clients. Give your own agents memory that knows when it’s stale.',
+    title: 'Agents you build',
+    body: 'A local HTTP API with TypeScript and Python clients gives your own agents memory that stays accurate.',
     link: { label: 'Memory API', href: '/docs/memory-api' },
   },
 ];
@@ -381,16 +381,16 @@ export function TeamCallout() {
     <div className="grid items-center gap-12 text-[var(--blue)] lg:grid-cols-2">
       <div className="flex min-w-0 flex-col gap-6">
         <span className="self-start whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">Woolly Team</span>
-        <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Running agents across a team’s repos?</h2>
-        <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">See every repo on one page, what each pull request made stale, and a review queue your team clears together. It never reads your code.</p>
+        <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Visibility across every repository</h2>
+        <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">Woolly Team brings stale-context findings from every repository into one dashboard with a shared review queue. It never reads your code.</p>
         <p className="text-[15px]">
-          <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> a month per organization. Free during the pilot.
+          <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> per month per organization. Free during the pilot.
         </p>
         <div className="flex flex-wrap gap-3">
           <Pill href={teamUrl} solid>
-            Try Woolly Team
+            Explore Woolly Team
           </Pill>
-          <Pill href={`${teamUrl}/#pricing`}>See pricing</Pill>
+          <Pill href={`${teamUrl}/#pricing`}>View pricing</Pill>
         </div>
       </div>
       <div aria-hidden="true" className="rounded-[22px] border border-[var(--blue)] bg-[var(--blue)] p-5 text-[var(--paper)] sm:p-6">
@@ -425,8 +425,8 @@ export function Closing() {
   return (
     <div className="relative grid items-end gap-12 text-[var(--paper)] lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
       <div className="flex min-w-0 flex-col gap-8">
-        <h2 className="max-w-[620px] text-balance text-[40px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px]">Try it on the repo you’re in.</h2>
-        <p className="max-w-[480px] text-[17px] leading-[1.6] opacity-90">Install it and keep working. Woolly tells you when a commit breaks a note.</p>
+        <h2 className="max-w-[620px] text-balance text-[40px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px]">Start with the repository you’re in.</h2>
+        <p className="max-w-[480px] text-[17px] leading-[1.6] opacity-90">Install Woolly in under a minute. It flags the next commit that makes a note inaccurate.</p>
         <Install onBlue />
         <div className="flex flex-wrap gap-3">
           <Pill href="/docs/quickstart" solid onBlue>

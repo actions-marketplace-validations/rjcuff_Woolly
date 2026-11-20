@@ -15,11 +15,11 @@ test('home splits on large screens, then flows into full-width sections', async 
   await expect(hero).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Memory that knows when it’s wrong.');
   await expect(hero.getByRole('link', { name: 'Get started' })).toBeVisible();
-  for (const step of ['A fact-checker for your agents’ notes', 'We checked 20 open source repos', 'Git knows what changed', 'On your machine, in plain text']) {
+  for (const step of ['Verify every note your agents read', 'Proven on real repositories', 'Precise, evidence-based detection', 'Local and private by default']) {
     await expect(page.getByRole('heading', { name: step })).toBeAttached();
   }
   await expect(page.getByRole('region', { name: 'Scrolling panels' })).toBeAttached();
-  await expect(page.getByRole('region', { name: 'Measured on real repos' })).toBeAttached();
+  await expect(page.getByRole('region', { name: 'Measured on real repositories' })).toBeAttached();
   // The numbers are the published benchmark's.
   await expect(page.getByText('11 of 11')).toBeVisible();
   // The newest feature is the first thing in the hero.
@@ -94,9 +94,9 @@ test('Teams link and the Woolly Team section point at team.usewoolly.com', async
   await page.goto('/');
   await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Teams', exact: true })).toHaveAttribute('href', 'https://team.usewoolly.com');
   const team = page.getByRole('region', { name: 'Woolly Team' });
-  await expect(team.getByRole('heading', { name: /Running agents across a team/ })).toBeVisible();
-  await expect(team.getByRole('link', { name: 'Try Woolly Team' })).toHaveAttribute('href', 'https://team.usewoolly.com');
-  await expect(team.getByRole('link', { name: 'See pricing' })).toHaveAttribute('href', 'https://team.usewoolly.com/#pricing');
+  await expect(team.getByRole('heading', { name: /Visibility across every repository/ })).toBeVisible();
+  await expect(team.getByRole('link', { name: 'Explore Woolly Team' })).toHaveAttribute('href', 'https://team.usewoolly.com');
+  await expect(team.getByRole('link', { name: 'View pricing' })).toHaveAttribute('href', 'https://team.usewoolly.com/#pricing');
   await expect(team).toContainText('$299');
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);

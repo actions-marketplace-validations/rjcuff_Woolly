@@ -42,7 +42,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <FrostNav stars={loaderData?.stars} />
       <main className="flex-1">
         <Split left={<HeroContent />} right={<Panels />} />
-        <Band label="Measured on real repos">
+        <Band label="Measured on real repositories">
           <Numbers />
         </Band>
         <Band label="Who it’s for">
