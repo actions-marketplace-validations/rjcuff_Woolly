@@ -11,6 +11,7 @@ import { Analytics } from '@vercel/analytics/react';
 import type { Route } from './+types/root';
 import './app.css';
 import NotFound from './routes/not-found';
+import { LaunchBanner } from './components/launch-banner';
 
 export const links: Route.LinksFunction = () => [
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
@@ -46,6 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="flex flex-col min-h-screen">
+        <LaunchBanner />
         <RootProvider search={{ options: { type: 'static' } }} theme={{ forcedTheme: 'light', defaultTheme: 'light', enableSystem: false, disableTransitionOnChange: true }}>{children}</RootProvider>
         <Analytics />
         <ScrollRestoration />
