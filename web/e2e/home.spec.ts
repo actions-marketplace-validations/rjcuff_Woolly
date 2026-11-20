@@ -15,7 +15,7 @@ test('home splits on large screens, then flows into full-width sections', async 
   await expect(hero).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Memory that knows when it’s wrong.');
   await expect(hero.getByRole('link', { name: 'Get started' })).toBeVisible();
-  for (const step of ['A fact-checker for your agents’ notes', 'We checked 20 open source repos', 'A stale note is worse than none', 'Git knows what changed', 'On your machine, in plain text']) {
+  for (const step of ['A fact-checker for your agents’ notes', 'We checked 20 open source repos', 'Git knows what changed', 'On your machine, in plain text']) {
     await expect(page.getByRole('heading', { name: step })).toBeAttached();
   }
   await expect(page.getByRole('region', { name: 'Scrolling panels' })).toBeAttached();
@@ -23,7 +23,7 @@ test('home splits on large screens, then flows into full-width sections', async 
   // The numbers are the published benchmark's.
   await expect(page.getByText('11 of 11')).toBeVisible();
   // The newest feature is the first thing in the hero.
-  await expect(hero.getByRole('link', { name: /woolly check reads your CLAUDE\.md/ })).toHaveAttribute('href', '/docs/memory-files');
+  await expect(hero.getByRole('link', { name: /woolly check reads CLAUDE\.md/ })).toHaveAttribute('href', '/docs/memory-files');
 
   // Never sideways, on any screen.
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
