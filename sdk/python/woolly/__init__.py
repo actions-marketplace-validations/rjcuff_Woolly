@@ -43,7 +43,7 @@ __all__ = [
     "search",
 ]
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 
 _default = None
 
