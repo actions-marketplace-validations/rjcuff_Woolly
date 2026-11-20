@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { DitherMammoth } from '@/components/frost/dither-mammoth';
 import { WRAP } from '@/components/frost/nav';
 import { integrations } from '@/lib/integrations';
-import { blueskyUrl, githubUrl, linkedinUrl } from '@/lib/shared';
+import { blueskyUrl, githubUrl, linkedinUrl, teamUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
 /* Everything below the nav is one blue on ice white. Panels marked "solid"
@@ -425,6 +425,60 @@ export function Audiences() {
           </Link>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ teams */
+
+const TEAM_ROWS: [string, string][] = [
+  ['acme/api', '3 to review'],
+  ['acme/web', '2 to review'],
+  ['acme/worker', 'all reviewed'],
+];
+
+/** Woolly Team: the view across a team's repos, for when one repo's pull request comments aren't enough. */
+export function TeamCallout() {
+  return (
+    <div className="grid items-center gap-12 text-[var(--blue)] lg:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-6">
+        <span className="self-start whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">Woolly Team</span>
+        <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Running agents across a team’s repos?</h2>
+        <p className="max-w-[520px] text-[16.5px] leading-[1.6] opacity-90">
+          Woolly Team puts every repo on one page: which ones run the check, what each pull request made stale, and a review queue your team clears together. It never reads your code, only the counts and line pointers each check leaves.
+        </p>
+        <p className="text-[15px]">
+          <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> per organization, per month. Free during the founding pilot.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Pill href={teamUrl} solid>
+            Try Woolly Team
+          </Pill>
+          <Pill href={`${teamUrl}/#pricing`}>See pricing</Pill>
+        </div>
+      </div>
+      <div aria-hidden="true" className="rounded-[22px] border border-[var(--blue)] bg-[var(--blue)] p-5 text-[var(--paper)] sm:p-6">
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            ['Needs review', '5'],
+            ['Coverage', '83%'],
+            ['Repos', '12'],
+          ].map(([k, v]) => (
+            <div key={k} className="flex flex-col gap-1 rounded-[12px] bg-[var(--paper)]/10 p-3">
+              <span className="text-[12px] opacity-80">{k}</span>
+              <span className="text-[30px] font-light leading-none tracking-[-0.03em]">{v}</span>
+            </div>
+          ))}
+        </div>
+        <ul className="mt-3">
+          {TEAM_ROWS.map(([repo, state]) => (
+            <li key={repo} className="flex justify-between gap-3 border-t border-[var(--paper)]/25 px-0.5 py-2.5 text-[15px]">
+              <span>{repo}</span>
+              <span className="opacity-80">{state}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

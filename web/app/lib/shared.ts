@@ -16,6 +16,8 @@ export const gitConfig = {
   branch: 'main',
 };
 export const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
+// Woolly Team, the paid service for teams with many repos.
+export const teamUrl = 'https://team.usewoolly.com';
 export const blueskyUrl = 'https://bsky.app/profile/usewoolly.com';
 export const linkedinUrl = 'https://www.linkedin.com/company/usewoolly';
 export const productHuntUrl =

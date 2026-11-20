@@ -89,3 +89,15 @@ test('download page offers the Mac and Windows apps and install commands', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
 
+
+test('Teams link and the Woolly Team section point at team.usewoolly.com', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Teams', exact: true })).toHaveAttribute('href', 'https://team.usewoolly.com');
+  const team = page.getByRole('region', { name: 'Woolly Team' });
+  await expect(team.getByRole('heading', { name: /Running agents across a team/ })).toBeVisible();
+  await expect(team.getByRole('link', { name: 'Try Woolly Team' })).toHaveAttribute('href', 'https://team.usewoolly.com');
+  await expect(team.getByRole('link', { name: 'See pricing' })).toHaveAttribute('href', 'https://team.usewoolly.com/#pricing');
+  await expect(team).toContainText('$299');
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});

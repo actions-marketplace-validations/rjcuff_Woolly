@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { GitHubIcon } from '@/components/brand';
 import { DitherMammoth } from '@/components/frost/dither-mammoth';
 import { formatStars, STAR_THRESHOLD } from '@/lib/github';
-import { githubUrl } from '@/lib/shared';
+import { githubUrl, teamUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
 export const WRAP = 'mx-auto w-full max-w-[1080px] px-4 sm:px-8';
@@ -30,6 +30,11 @@ export function FrostNav({ stars }: { stars?: number | null }) {
               <Link to="/download" className={ITEM}>
                 Download
               </Link>
+            </li>
+            <li>
+              <a href={teamUrl} className={ITEM}>
+                Teams
+              </a>
             </li>
             <li className="max-sm:hidden">
               <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className={ITEM}>

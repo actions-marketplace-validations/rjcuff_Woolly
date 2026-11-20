@@ -1,5 +1,5 @@
 import type { Route } from './+types/home';
-import { Audiences, Closing, Foot, HeroContent, Numbers, Panels } from '@/components/frost/home-content';
+import { Audiences, Closing, Foot, HeroContent, Numbers, Panels, TeamCallout } from '@/components/frost/home-content';
 import { Band, Split } from '@/components/frost/layout';
 import { FrostNav } from '@/components/frost/nav';
 import { getStars } from '@/lib/github';
@@ -47,6 +47,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </Band>
         <Band label="Who it’s for">
           <Audiences />
+        </Band>
+        <Band label="Woolly Team">
+          <TeamCallout />
         </Band>
         <Band label="Get started" className="bg-[var(--blue)]">
           <Closing />
