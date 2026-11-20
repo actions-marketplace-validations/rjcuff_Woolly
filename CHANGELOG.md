@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.18.0
 
 Pull request checks you can pin, trust with outside text, and read from other tools.
 
