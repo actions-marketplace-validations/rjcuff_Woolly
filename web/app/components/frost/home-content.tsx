@@ -234,7 +234,6 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     step: 'Method',
     title: 'Precise, evidence-based detection',
     body: 'A line is flagged only when git identifies the commit that removed its code. No model and no guesswork.',
-    onBlue: true,
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
         {[
@@ -257,6 +256,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
     step: 'Privacy',
     title: 'Local and private by default',
     body: 'No account, no cloud and no telemetry. Project memory is a Markdown file your team can read, review and commit.',
+    onBlue: true,
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
