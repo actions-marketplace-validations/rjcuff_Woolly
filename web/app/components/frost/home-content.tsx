@@ -148,7 +148,7 @@ export function HeroContent() {
           Memory that knows when it’s wrong.
         </h1>
         <p className="mt-6 max-w-[500px] text-[17px] leading-[1.55] sm:text-[18px]">
-          Woolly checks your agents’ notes against the code and flags the lines a commit made wrong. Local, no setup.
+          Your agents trust CLAUDE.md, AGENTS.md and their memory. Woolly checks every line against the code and flags the ones a commit made wrong. It runs locally with no setup.
         </p>
       </div>
 
@@ -201,7 +201,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
   {
     step: 'What it is',
     title: 'A fact-checker for your agents’ notes',
-    body: 'It reads every note your agents load and checks each line against your code.',
+    body: 'It reads every note your agents load, from every tool. Then it checks each line against your code and its history.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
@@ -216,7 +216,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
   {
     step: 'Real repos',
     title: 'We checked 20 open source repos',
-    body: 'It flagged 11 lines naming code that’s gone. All 11 were right.',
+    body: 'Agent files in TanStack, LangChain.js, the Anthropic SDK and more. Woolly flagged 11 lines naming code that’s gone, and all 11 were right.',
     onBlue: true,
     show: (onBlue) => (
       <Code
@@ -233,7 +233,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
   {
     step: 'How it works',
     title: 'Git knows what changed',
-    body: 'A line is flagged only when git shows which commit took its code away.',
+    body: 'A line is flagged only when git shows the commit that took its code away. No model and no guessing, so it doesn’t cry wolf.',
     onBlue: true,
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
@@ -256,7 +256,7 @@ const PANELS: { step: string; title: string; body: string; onBlue?: boolean; sho
   {
     step: 'Where it runs',
     title: 'On your machine, in plain text',
-    body: 'No account, no cloud, no telemetry. Project memory is a Markdown file in your repo.',
+    body: 'No account, no cloud and no telemetry. Project memory is a Markdown file in your repo that you can read and commit.',
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
@@ -315,7 +315,7 @@ export function Numbers() {
         </a>
       </div>
       <p className="mt-4 max-w-[560px] text-[16.5px] leading-[1.6] opacity-90">
-        20 open source repos, checked with git and nothing else.
+        The agent files of 20 open source repos, checked with git and nothing else. Every flag is published with why it’s right.
       </p>
       <dl className="mt-12 grid grid-cols-2 border-t border-[var(--blue)]/25 lg:grid-cols-4">
         {NUMBERS.map((n, i) => (
@@ -335,17 +335,17 @@ export function Numbers() {
 const WHO: { title: string; body: string; link: { label: string; href: string } }[] = [
   {
     title: 'For the agents you use',
-    body: 'One command connects Claude Code, Cursor, Codex and more to the same memory.',
+    body: 'One command connects Claude Code, Cursor, Codex and more. They all share the same memory.',
     link: { label: 'Connect your apps', href: '/docs/connect' },
   },
   {
     title: 'For your team',
-    body: 'Project memory lives in git, so every teammate’s agent starts from the same facts.',
+    body: 'Project memory lives in git. Every teammate’s agent starts from the same facts, checked against the code.',
     link: { label: 'Project memory', href: '/docs/project-memory' },
   },
   {
     title: 'For agents you build',
-    body: 'A local API with TypeScript and Python clients.',
+    body: 'A local HTTP API with TypeScript and Python clients. Give your own agents memory that knows when it’s stale.',
     link: { label: 'Memory API', href: '/docs/memory-api' },
   },
 ];
@@ -382,7 +382,7 @@ export function TeamCallout() {
       <div className="flex min-w-0 flex-col gap-6">
         <span className="self-start whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">Woolly Team</span>
         <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Running agents across a team’s repos?</h2>
-        <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">Every repo on one page, with a review queue your team clears together.</p>
+        <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">See every repo on one page, what each pull request made stale, and a review queue your team clears together. It never reads your code.</p>
         <p className="text-[15px]">
           <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> a month per organization. Free during the pilot.
         </p>
