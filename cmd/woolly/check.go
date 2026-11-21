@@ -48,6 +48,42 @@ type checkReport struct {
 	// Memory is the check of the memory files agents already read, like
 	// CLAUDE.md and Claude Code's auto memory.
 	Memory *audit.Report `json:"memory_files,omitempty"`
+	// Summary counts facts and agent file lines together, split into what
+	// this change made stale and what already was.
+	Summary checkSummary `json:"summary"`
+}
+
+// checkSummary is the whole check in numbers.
+type checkSummary struct {
+	FactsChecked int `json:"facts_checked"`
+	FilesChecked int `json:"files_checked"`
+	LinesChecked int `json:"lines_checked"`
+	NewStale     int `json:"new_stale"`     // facts and lines this change made stale
+	AlreadyStale int `json:"already_stale"` // facts waiting for review and lines stale on the base commit
+}
+
+// summarize fills in the summary, and marks each memory file finding as new
+// or already stale against base.
+func summarize(dir string, rep *checkReport, base string) {
+	s := checkSummary{FactsChecked: rep.Checked, NewStale: rep.NewStale, AlreadyStale: rep.Waiting}
+	if m := rep.Memory; m != nil {
+		s.FilesChecked = len(m.Files)
+		s.LinesChecked = m.Lines
+		now, before := splitByBase(dir, m.Findings, base)
+		state := map[string]string{}
+		for _, f := range now {
+			state[f.Where()+"\x00"+f.What] = stateNew
+		}
+		for _, f := range before {
+			state[f.Where()+"\x00"+f.What] = stateBefore
+		}
+		for i := range m.Findings {
+			m.Findings[i].State = state[m.Findings[i].Where()+"\x00"+m.Findings[i].What]
+		}
+		s.NewStale += len(now)
+		s.AlreadyStale += len(before)
+	}
+	rep.Summary = s
 }
 
 // checkRepo checks the project's facts against the code in dir, marks the
@@ -128,8 +164,13 @@ func cmdCheck(args []string) error {
 	base := fs.String("base", "", "compare against this commit for facts that don't record one, like a pull request's base branch")
 	fix := fs.Bool("fix", false, "rewrite lines in memory files whose function was renamed or file was moved")
 	noFiles := fs.Bool("no-memory-files", false, "don't check CLAUDE.md, AGENTS.md, Cursor rules and other agents' memory")
+	asStatus := fs.Bool("status-json", false, "print counts and file:line pointers as JSON, with no text from memory or code")
+	statusFile := fs.String("status-file", "", "also write the --status-json output to this file")
 	if _, err := parse(fs, args); err != nil {
 		return err
+	}
+	if *asStatus && (*asJSON || *asMarkdown) {
+		return errors.New("--status-json can't be combined with --json or --markdown; use --status-file to write it alongside them")
 	}
 	cwd := *dir
 	if cwd == "" {
@@ -173,7 +214,7 @@ func cmdCheck(args []string) error {
 			limit = 2 * time.Minute
 		}
 		stopSpin := func() {}
-		if !*hook && !*asJSON && !*asMarkdown {
+		if !*hook && !*asJSON && !*asMarkdown && !*asStatus {
 			stopSpin = spin("Reading your agents' memory and the code's history")
 		}
 		ar := a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
@@ -181,7 +222,7 @@ func cmdCheck(args []string) error {
 		if *fix && len(ar.Findings) > 0 {
 			fixed, err := audit.Fix(ar.Findings)
 			for _, f := range fixed {
-				if *asJSON || *asMarkdown {
+				if *asJSON || *asMarkdown || *asStatus {
 					break
 				}
 				fmt.Printf("%s %s: %s %s %s\n", paint(green, "fixed"), f.Where(), f.What, paint(dim, "->"), f.Fix)
@@ -190,7 +231,7 @@ func cmdCheck(args []string) error {
 				return err
 			}
 			if len(fixed) > 0 {
-				if !*asJSON && !*asMarkdown {
+				if !*asJSON && !*asMarkdown && !*asStatus {
 					fmt.Println()
 				}
 				ar = a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
@@ -198,6 +239,7 @@ func cmdCheck(args []string) error {
 		}
 		rep.Memory = &ar
 	}
+	summarize(r.Dir, &rep, strings.TrimSpace(*base))
 	stale := rep.NewStale
 	if rep.Memory != nil {
 		stale += len(rep.Memory.Findings)
@@ -210,19 +252,37 @@ func cmdCheck(args []string) error {
 	if *hook {
 		return nil
 	}
-	if *asJSON {
+	if *asStatus || *statusFile != "" {
+		b, err := json.MarshalIndent(buildStatus(r.Dir, rep, strings.TrimSpace(*base)), "", "  ")
+		if err != nil {
+			return err
+		}
+		b = append(b, '\n')
+		if *statusFile != "" {
+			if err := os.WriteFile(*statusFile, b, 0o644); err != nil {
+				return err
+			}
+		}
+		if *asStatus {
+			os.Stdout.Write(b)
+		}
+	}
+	switch {
+	case *asStatus:
+		// Printed above.
+	case *asJSON:
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(rep); err != nil {
 			return err
 		}
-	} else if *asMarkdown {
+	case *asMarkdown:
 		md := markdownCheck(rep)
 		if rep.Memory != nil {
 			md += markdownAudit(r.Dir, *rep.Memory, strings.TrimSpace(*base))
 		}
 		fmt.Print(md)
-	} else if !*quiet || stale > 0 {
+	case !*quiet || stale > 0:
 		hasFiles := rep.Memory != nil && len(rep.Memory.Files) > 0
 		if rep.Checked > 0 || rep.Waiting > 0 || !hasFiles {
 			printCheck(rep)
@@ -315,21 +375,21 @@ func markdownCheck(rep checkReport) string {
 		fmt.Fprintf(&b, "**Woolly** checked %s against this change. Nothing went stale.\n", plural(rep.Checked, "project fact", "project facts"))
 	default:
 		fmt.Fprintf(&b, "**Woolly** checked %s against this change. **%s stale.**\n\n", plural(rep.Checked, "project fact", "project facts"), plural(len(stale), "fact went", "facts went"))
-		b.WriteString("Agents won't be told these anymore until someone reviews them.\n\n")
+		b.WriteString("Agents won't be told these anymore until someone reviews them. Woolly doesn't check whether the code itself is right, only whether these facts still match it.\n\n")
 		b.WriteString("| Fact | What changed |\n| --- | --- |\n")
 		for _, res := range stale {
 			why := res.Reason
 			if res.Commit != "" {
 				why += " in " + res.Commit
 			}
-			fmt.Fprintf(&b, "| %s | %s |\n", cell(res.Content), cell(why))
+			fmt.Fprintf(&b, "| %s | %s |\n", cell(quoted(res.Content)), cell(inert(why)))
 		}
 		b.WriteString("\nAfter this merges, run `woolly review` to confirm, fix or retire each one. Nothing is deleted.\n")
 	}
 	if len(moved) > 0 {
 		fmt.Fprintf(&b, "\n<details><summary>%s moved but still hold</summary>\n\n", plural(len(moved), "fact's code", "facts' code"))
 		for _, res := range moved {
-			fmt.Fprintf(&b, "- %s (%s)\n", cell(res.Content), cell(res.Reason))
+			fmt.Fprintf(&b, "- %s (%s)\n", quoted(clip(res.Content, 100)), inert(res.Reason))
 		}
 		b.WriteString("\n</details>\n")
 	}

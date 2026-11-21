@@ -282,7 +282,7 @@ func TestCheckMarkdownFromRepoFileOnly(t *testing.T) {
 		t.Fatalf("after the change: %+v %v", rep, err)
 	}
 	md := markdownCheck(rep)
-	for _, want := range []string{"**2 facts went stale.**", "| The IMU chip select is GPIO 5 |", "5 is no longer there", "woolly review"} {
+	for _, want := range []string{"**2 facts went stale.**", "| `The IMU chip select is GPIO 5` |", "5 is no longer there", "woolly review"} {
 		if !strings.Contains(md, want) {
 			t.Fatalf("report is missing %q:\n%s", want, md)
 		}

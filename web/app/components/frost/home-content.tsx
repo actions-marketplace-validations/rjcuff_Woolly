@@ -3,8 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { DitherMammoth } from '@/components/frost/dither-mammoth';
 import { WRAP } from '@/components/frost/nav';
-import { integrations } from '@/lib/integrations';
-import { blueskyUrl, githubUrl, linkedinUrl } from '@/lib/shared';
+import { githubUrl, linkedinUrl, teamUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
 /* Everything below the nav is one blue on ice white. Panels marked "solid"
@@ -137,26 +136,19 @@ function Install({ onBlue }: { onBlue?: boolean }) {
 
 /* ----------------------------------------------------------------- hero */
 
-const APPS = [
-  { name: 'Claude Code', path: integrations.find((i) => i.name === 'Claude')?.path },
-  { name: 'Codex' },
-  ...integrations.filter((i) => ['Cursor', 'Gemini CLI', 'Windsurf', 'opencode'].includes(i.name)),
-];
-
 export function HeroContent() {
   return (
     <div className="flex flex-col gap-8 px-5 py-10 text-[var(--blue)] sm:px-10 sm:py-14 lg:px-12 lg:py-[clamp(32px,6vh,72px)]">
       <div>
         <Link to="/docs/memory-files" className="group inline-flex items-center gap-3 text-[14px] outline-none">
           <span className="shrink-0 whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">New</span>
-          <span className="link-soft">woolly check reads your CLAUDE.md, AGENTS.md and Claude memory</span>
+          <span className="link-soft">woolly check reads CLAUDE.md and AGENTS.md</span>
         </Link>
         <h1 className="mt-8 max-w-[620px] text-balance text-[44px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px] lg:text-[clamp(48px,6.4vh,76px)]">
           Memory that knows when it’s wrong.
         </h1>
         <p className="mt-6 max-w-[500px] text-[17px] leading-[1.55] sm:text-[18px]">
-          Your agents read CLAUDE.md, AGENTS.md and their own memory as true. Woolly checks every line against the code and flags the ones a commit made wrong, before your
-          agent acts on them. No setup, no model, nothing leaves your machine.
+          Woolly checks CLAUDE.md, AGENTS.md and agent memory against your code and flags every line a commit made inaccurate. Free, open source and local.
         </p>
       </div>
 
@@ -168,27 +160,6 @@ export function HeroContent() {
           </Pill>
           <Pill href="/docs">Read the docs</Pill>
         </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 border-t border-[var(--blue)]/25 pt-5">
-        <span className="text-[13px] opacity-70">Works with</span>
-        <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px]">
-          {APPS.map((app) => (
-            <li key={app.name} className="flex items-center gap-1.5">
-              {app.path ? (
-                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[14px] fill-current">
-                  <path d={app.path} />
-                </svg>
-              ) : null}
-              {app.name}
-            </li>
-          ))}
-          <li>
-            <Link to="/docs/connect" className="link-soft outline-none">
-              and more
-            </Link>
-          </li>
-        </ul>
       </div>
     </div>
   );
@@ -226,75 +197,49 @@ function Rows({ items, onBlue }: { items: [string, string][]; onBlue?: boolean }
   );
 }
 
-const PANELS: { step: string; title: string; body: string; more: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
+const PANELS: { step: string; title: string; body: string; onBlue?: boolean; show: (onBlue?: boolean) => ReactNode }[] = [
   {
-    step: 'What it is',
-    title: 'A fact-checker for your agents’ notes',
-    body: 'Woolly reads every note your coding agents load, from CLAUDE.md to Claude Code’s own memory, and checks each line against your code and its git history. It also keeps one shared memory for all your agents, so a fact one of them saves is there for the next.',
-    more: 'There’s nothing to set up and nothing to move. Run woolly check in any repo and you get an answer in about a second.',
+    step: 'Overview',
+    title: 'Verify every note your agents read',
+    body: 'Woolly reads CLAUDE.md, AGENTS.md, Cursor rules and agent memory, then checks each line against your code and its history.',
     show: (onBlue) => (
       <Rows
         onBlue={onBlue}
         items={[
-          ['CLAUDE.md, AGENTS.md', 'Including the ones in subfolders'],
-          ['Cursor, Copilot', 'Rules and instructions files'],
-          ['Claude Code memory', 'The notes it saves on its own'],
-          ['Codex, claude-mem', 'Memories and sessions about this repo'],
+          ['Agent files', 'CLAUDE.md, AGENTS.md, Cursor and Copilot rules'],
+          ['Agent memory', 'Claude Code, Codex and claude-mem'],
+          ['Speed', 'Results in under a second'],
         ]}
       />
     ),
   },
   {
-    step: 'Real repos',
-    title: 'We checked 20 open source repos',
-    body: 'TanStack Router, LangChain.js, the Anthropic and OpenAI SDKs, Cline, Codex, Vite and more. Woolly flagged 11 lines that name code a commit took away, in 4 of the 20. All 11 were right.',
-    more: 'These maintainers keep their agent files up to date by hand. This is what TanStack Router’s agents read today:',
+    step: 'Results',
+    title: 'Proven on real repositories',
+    body: 'Across 20 open source projects, Woolly flagged 11 lines that reference removed code. All 11 were confirmed correct.',
     onBlue: true,
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
         lines={[
           '$ woolly check',
-          'Checked 84 lines in AGENTS.md (14 files) against ce46b21.',
           '  packages/AGENTS.md:8',
-          '    React’s useValueStable uses deepEqual with ignoreUndefined: false.',
-          '    useValueStable was removed from',
-          '    packages/react-router/src/link.tsx in d740d8bf2d (2026-09-13)',
-          '3 lines name code that’s gone. Your agents still read them as true.',
+          '    useValueStable was removed in d740d8bf2d',
+          '3 lines name code that’s gone.',
         ]}
       />
     ),
   },
   {
-    step: 'Why it matters',
-    title: 'A stale note is worse than none',
-    body: 'Every new session starts from zero, so teams write notes for their agents. The notes help until the code changes. Then your agent follows a note that stopped being true, and it sounds just as sure.',
-    more: 'With no note, an agent goes and looks. With a wrong one, it doesn’t. Nothing in Claude Code, Codex or Cursor tells you when a note goes out of date.',
-    show: (onBlue) => (
-      <Rows
-        onBlue={onBlue}
-        items={[
-          ['Without notes', 'You repeat yourself in every session and every tool'],
-          ['With notes', 'They drift from the code, and nothing tells you'],
-          ['With a memory tool', 'It remembers what was said, not whether it’s still true'],
-          ['With Woolly', 'Every line is checked against the code after every commit'],
-        ]}
-      />
-    ),
-  },
-  {
-    step: 'How it works',
-    title: 'Git knows what changed',
-    body: 'A line is flagged only when it names something that was in the code and isn’t anymore, and git can say which commit took it out. A name the code never had is never flagged.',
-    more: 'No model and no network. Woolly’s own facts go further: each one points at the file or function it’s about, and a git hook checks them after every commit.',
-    onBlue: true,
+    step: 'Method',
+    title: 'Precise, evidence-based detection',
+    body: 'A line is flagged only when git identifies the commit that removed its code. No model and no guesswork.',
     show: (onBlue) => (
       <ol className={cn('flex flex-col border-t', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
         {[
-          ['Read', 'Every note your agents load, from every tool.'],
-          ['Look', 'The functions, files, scripts and make targets each line names.'],
-          ['Flag', 'The ones the code no longer has, with the commit that changed them.'],
-          ['Fix', 'woolly check --fix rewrites renamed names and moved paths for you.'],
+          ['Read', 'Every note your agents load'],
+          ['Verify', 'Each name, path and command against git history'],
+          ['Fix', 'woolly check --fix updates renamed code automatically'],
         ].map(([k, v], i) => (
           <li key={k} className={cn('grid grid-cols-[32px_minmax(0,1fr)] gap-4 border-b py-4', onBlue ? 'border-[var(--paper)]/30' : 'border-[var(--blue)]/25')}>
             <span className={cn('flex size-7 items-center justify-center rounded-full border text-[12px]', onBlue ? 'border-[var(--paper)]' : 'border-[var(--blue)]')}>{i + 1}</span>
@@ -308,24 +253,18 @@ const PANELS: { step: string; title: string; body: string; more: string; onBlue?
     ),
   },
   {
-    step: 'Where it runs',
-    title: 'On your machine, in plain text',
-    body: 'No account, no cloud and no telemetry. A repo’s own memory is a Markdown file you can read, edit and commit, so your teammates’ agents start from the same facts.',
-    more: 'Passwords and API keys are refused, and an agent can’t plant instructions in your memory. Ollama is optional. With it, Woolly also searches by meaning and tidies up memory while you’re away.',
+    step: 'Privacy',
+    title: 'Local and private by default',
+    body: 'No account, no cloud and no telemetry. Project memory is a Markdown file your team can read, review and commit.',
+    onBlue: true,
     show: (onBlue) => (
       <Code
         onBlue={onBlue}
         lines={[
           '# .woolly/woolly.md',
           ' ',
-          '## Conventions',
           '- Use pnpm, not npm',
-          ' ',
-          '## Gotchas',
-          '- API tests need Postgres running on 5433',
-          ' ',
-          '## Decisions',
-          '- Keep auth in middleware, not in each route',
+          '- API tests need Postgres on 5433',
         ]}
       />
     ),
@@ -349,7 +288,6 @@ export function Panels() {
           <div>
             <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">{p.title}</h2>
             <p className="mt-6 max-w-[540px] text-[17px] leading-[1.6] opacity-90 sm:text-[18px]">{p.body}</p>
-            <p className="mt-4 max-w-[540px] text-[16px] leading-[1.6] opacity-75 sm:text-[17px]">{p.more}</p>
           </div>
           <div className="max-w-[600px]">{p.show(p.onBlue)}</div>
         </section>
@@ -371,13 +309,13 @@ export function Numbers() {
   return (
     <div className="text-[var(--blue)]">
       <div className="flex flex-wrap items-end justify-between gap-6">
-        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repos</h2>
+        <h2 className="max-w-[560px] text-[34px] font-light leading-[1.05] tracking-[-0.03em] sm:text-[48px]">Measured on real repositories</h2>
         <a href={`${githubUrl}/blob/main/bench/RESULTS.md`} className="link-soft text-[15px] outline-none">
           How we measure
         </a>
       </div>
       <p className="mt-4 max-w-[560px] text-[16.5px] leading-[1.6] opacity-90">
-        The agent files of 20 well-known open source repos, checked with git and nothing else. Every flag is published with why it’s right. Woolly’s own facts catch 93% of 30 breaking changes to a drone firmware repo, with no false alarms.
+        We ran Woolly against the agent files of 20 open source projects using git alone. Every result is published with its evidence.
       </p>
       <dl className="mt-12 grid grid-cols-2 border-t border-[var(--blue)]/25 lg:grid-cols-4">
         {NUMBERS.map((n, i) => (
@@ -396,18 +334,18 @@ export function Numbers() {
 
 const WHO: { title: string; body: string; link: { label: string; href: string } }[] = [
   {
-    title: 'For the agents you use',
-    body: 'woolly connect sets up Claude Code, Cursor, Codex, Gemini CLI and the rest. They all read and write the same memory over MCP.',
+    title: 'Every coding agent',
+    body: 'One command connects Claude Code, Cursor, Codex and more to a single shared memory.',
     link: { label: 'Connect your apps', href: '/docs/connect' },
   },
   {
-    title: 'For your team',
-    body: 'Project memory is plain Markdown in .woolly/woolly.md, shared through git. Teammates’ agents start from the same facts, and you can read every line.',
+    title: 'Your whole team',
+    body: 'Project memory lives in git, so every teammate’s agent starts from the same verified facts.',
     link: { label: 'Project memory', href: '/docs/project-memory' },
   },
   {
-    title: 'For agents you build',
-    body: 'The same memory is a local HTTP API with TypeScript and Python clients. It also speaks mem0’s routes, so code written for mem0 can point at your machine.',
+    title: 'Agents you build',
+    body: 'A local HTTP API with TypeScript and Python clients gives your own agents memory that stays accurate.',
     link: { label: 'Memory API', href: '/docs/memory-api' },
   },
 ];
@@ -429,14 +367,66 @@ export function Audiences() {
   );
 }
 
+/* ------------------------------------------------------------------ teams */
+
+const TEAM_ROWS: [string, string][] = [
+  ['acme/api', '3 to review'],
+  ['acme/web', '2 to review'],
+  ['acme/worker', 'all reviewed'],
+];
+
+/** Woolly Team: the view across a team's repos, for when one repo's pull request comments aren't enough. */
+export function TeamCallout() {
+  return (
+    <div className="grid items-center gap-12 text-[var(--blue)] lg:grid-cols-2">
+      <div className="flex min-w-0 flex-col gap-6">
+        <span className="self-start whitespace-nowrap rounded-full border border-[var(--blue)] px-2.5 py-0.5 text-[12px] leading-[1.6]">Woolly Team</span>
+        <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Visibility across every repository</h2>
+        <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">Woolly Team brings stale-context findings from every repository into one dashboard with a shared review queue. It never reads your code.</p>
+        <p className="text-[15px]">
+          <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> per month per organization. Free during the pilot.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Pill href={teamUrl} solid>
+            Explore Woolly Team
+          </Pill>
+          <Pill href={`${teamUrl}/#pricing`}>View pricing</Pill>
+        </div>
+      </div>
+      <div aria-hidden="true" className="rounded-[22px] border border-[var(--blue)] bg-[var(--blue)] p-5 text-[var(--paper)] sm:p-6">
+        <div className="grid grid-cols-3 gap-2.5">
+          {[
+            ['Needs review', '5'],
+            ['Coverage', '83%'],
+            ['Repos', '12'],
+          ].map(([k, v]) => (
+            <div key={k} className="flex flex-col gap-1 rounded-[12px] bg-[var(--paper)]/10 p-3">
+              <span className="text-[12px] opacity-80">{k}</span>
+              <span className="text-[30px] font-light leading-none tracking-[-0.03em]">{v}</span>
+            </div>
+          ))}
+        </div>
+        <ul className="mt-3">
+          {TEAM_ROWS.map(([repo, state]) => (
+            <li key={repo} className="flex justify-between gap-3 border-t border-[var(--paper)]/25 px-0.5 py-2.5 text-[15px]">
+              <span>{repo}</span>
+              <span className="opacity-80">{state}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------- end */
 
 export function Closing() {
   return (
     <div className="relative grid items-end gap-12 text-[var(--paper)] lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
       <div className="flex min-w-0 flex-col gap-8">
-        <h2 className="max-w-[620px] text-balance text-[40px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px]">Try it on the repo you’re in.</h2>
-        <p className="max-w-[480px] text-[17px] leading-[1.6] opacity-90">Install it, run woolly init --hooks, and keep working. When a commit breaks a fact, you’ll see which one and why.</p>
+        <h2 className="max-w-[620px] text-balance text-[40px] font-light leading-[1.02] tracking-[-0.035em] sm:text-[60px]">Start with the repository you’re in.</h2>
+        <p className="max-w-[480px] text-[17px] leading-[1.6] opacity-90">Install Woolly in under a minute. It flags the next commit that makes a note inaccurate.</p>
         <Install onBlue />
         <div className="flex flex-wrap gap-3">
           <Pill href="/docs/quickstart" solid onBlue>
@@ -459,7 +449,6 @@ const FOOT: { label: string; href: string }[] = [
   { label: 'Download', href: '/download' },
   { label: 'Changelog', href: `${githubUrl}/blob/main/CHANGELOG.md` },
   { label: 'GitHub', href: githubUrl },
-  { label: 'Bluesky', href: blueskyUrl },
   { label: 'LinkedIn', href: linkedinUrl },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },

@@ -1,10 +1,15 @@
 import type { Route } from './+types/home';
-import { Audiences, Closing, Foot, HeroContent, Numbers, Panels } from '@/components/frost/home-content';
-import { Band, Split } from '@/components/frost/layout';
-import { FrostNav } from '@/components/frost/nav';
 import { getStars } from '@/lib/github';
 import { seo } from '@/lib/seo';
-import { appName, blueskyUrl, githubUrl, linkedinUrl, siteDescription, tagline } from '@/lib/shared';
+import { SkyFoot, SkyNav } from '@/components/sky/chrome';
+import { Closing } from '@/components/sky/closing';
+import { SkyHero } from '@/components/sky/hero';
+import { Button, CopyInstall } from '@/components/sky/parts';
+import { Benchmarks } from '@/components/sky/benchmarks';
+import { BuiltFor } from '@/components/sky/built-for';
+import { Faq } from '@/components/sky/faq';
+import { WorksWith } from '@/components/sky/works-with';
+import { appName, githubUrl, linkedinUrl, siteDescription, tagline } from '@/lib/shared';
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -12,7 +17,7 @@ export function meta(_: Route.MetaArgs) {
       title: `${appName} | ${tagline}`,
       description: siteDescription,
       path: '/',
-      image: '/og/docs/image.png',
+      image: '/og/home.png',
     }),
     {
       'script:ld+json': {
@@ -24,7 +29,7 @@ export function meta(_: Route.MetaArgs) {
         operatingSystem: 'macOS, Linux, Windows',
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
         license: 'https://opensource.org/licenses/MIT',
-        sameAs: [githubUrl, blueskyUrl, linkedinUrl],
+        sameAs: [githubUrl, linkedinUrl],
       },
     },
   ];
@@ -34,25 +39,28 @@ export async function loader() {
   return { stars: await getStars() };
 }
 
-// The homepage: a split intro (the hero stays while the steps scroll past),
-// then full-width sections.
+// The homepage, top to bottom.
 export default function Home({ loaderData }: Route.ComponentProps) {
   return (
-    <div className="home-frost flex min-h-svh flex-col bg-[var(--snow)] text-[var(--deep)]">
-      <FrostNav stars={loaderData?.stars} />
-      <main className="flex-1">
-        <Split left={<HeroContent />} right={<Panels />} />
-        <Band label="Measured on real repos">
-          <Numbers />
-        </Band>
-        <Band label="Who it’s for">
-          <Audiences />
-        </Band>
-        <Band label="Get started" className="bg-[var(--blue)]">
-          <Closing />
-        </Band>
-      </main>
-      <Foot />
+    <div className="home-sky relative min-h-svh bg-white">
+      {/* The nav floats over the top of the hero sky. */}
+      <SkyNav stars={loaderData.stars} className="absolute inset-x-0 top-0" />
+      <SkyHero
+        title="Memory that knows when it’s wrong"
+        lead="Woolly checks your agent’s notes against your code and flags every line a commit made inaccurate."
+        actions={
+          <>
+            <Button href="/docs">Get started</Button>
+            <CopyInstall className="max-sm:hidden" />
+          </>
+        }
+      />
+      <WorksWith />
+      <BuiltFor />
+      <Benchmarks />
+      <Faq />
+      <Closing />
+      <SkyFoot />
     </div>
   );
 }

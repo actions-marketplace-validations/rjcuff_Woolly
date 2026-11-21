@@ -30,6 +30,11 @@ export const links: Route.LinksFunction = () => [
     rel: 'stylesheet',
     href: 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&display=swap',
   },
+  // The homepage pairs a soft serif for headings with a friendly grotesque for text.
+  {
+    rel: 'stylesheet',
+    href: 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..600&family=Bricolage+Grotesque:opsz,wght@12..96,400..700&display=swap',
+  },
   { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
   { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
   { rel: 'manifest', href: '/site.webmanifest' },
@@ -41,7 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#eef4fb" />
+        <meta name="theme-color" content="#9bb3fb" />
         <Meta />
         <Links />
       </head>

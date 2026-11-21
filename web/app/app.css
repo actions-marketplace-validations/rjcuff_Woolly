@@ -28,37 +28,40 @@ html > body[data-scroll-locked] {
 }
 
 @theme {
-  --font-sans: 'Inter Tight', 'Helvetica Neue', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Bricolage Grotesque', 'Inter Tight', 'Helvetica Neue', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   /* EASE_OUT from lib/ease.ts, as a Tailwind class: ease-ui. */
   --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
   /* EASE_DRAWER from lib/ease.ts: ease-drawer. */
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
-  /* Woolly blue, on ice white. The site is one color. */
-  --color-brand: #1a3fd1;
-  --color-brand-light: #4a68e0;
-  --color-brand-foreground: #eef4fb;
-  --color-fd-primary: #1a3fd1;
-  --color-fd-primary-foreground: #eef4fb;
+  /* Night blue for actions and the current page, sky blue for links,
+     navy ink for reading. The same colors as the homepage. */
+  --color-brand: #1e2766;
+  --color-brand-light: #2d47d9;
+  --color-brand-foreground: #ffffff;
+  --color-link: #2d47d9;
+  --color-fd-primary: #1e2766;
+  --color-fd-primary-foreground: #ffffff;
+  --font-serif: 'Fraunces', Georgia, serif;
 }
 
-/* The site is light only. Every page, docs included, shares these colors:
-   ice white paper, deep blue ink for long reading, and Woolly blue for
-   everything you can click. */
+/* The site is light only. Every page, docs included, shares the homepage's
+   colors: a misty white page, navy ink, light blue tints and one night blue
+   for everything you act on. */
 :root {
-  --color-fd-background: #eef4fb;
-  --color-fd-foreground: #10225f;
-  --color-fd-muted: #e2eaf6;
-  --color-fd-muted-foreground: #4b5c8f;
-  --color-fd-card: #f6f9fd;
-  --color-fd-popover: #f7faff;
-  --color-fd-popover-foreground: #10225f;
-  --color-fd-secondary: #e2eaf6;
-  --color-fd-secondary-foreground: #10225f;
-  --color-fd-accent: #dfe8f7;
-  --color-fd-accent-foreground: #1a3fd1;
-  --color-fd-border: #cad8ee;
-  --color-fd-ring: #1a3fd1;
+  --color-fd-background: #f5f8fe;
+  --color-fd-foreground: #1b2350;
+  --color-fd-muted: #e7ebff;
+  --color-fd-muted-foreground: #5d6690;
+  --color-fd-card: #ffffff;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #1b2350;
+  --color-fd-secondary: #e7ebff;
+  --color-fd-secondary-foreground: #1b2350;
+  --color-fd-accent: #e7ebff;
+  --color-fd-accent-foreground: #1e2766;
+  --color-fd-border: #dfe4f5;
+  --color-fd-ring: #2d47d9;
 }
 
 /* easeUI's token names, mapped onto the site's own so its blocks drop in. */
@@ -169,11 +172,12 @@ button:has(> svg.lucide-check) svg {
 }
 .legal h2 {
   margin-top: 2.5rem;
-  font-size: 26px;
-  font-weight: 300;
-  letter-spacing: -0.025em;
+  font-family: var(--font-serif);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   line-height: 1.15;
-  color: var(--color-brand);
+  color: var(--color-fd-foreground);
 }
 .legal strong {
   font-weight: 500;
@@ -186,7 +190,8 @@ button:has(> svg.lucide-check) svg {
   list-style: disc;
 }
 .legal a {
-  color: var(--color-brand);
+  color: var(--color-link);
+  font-weight: 500;
   text-decoration: none;
 }
 .legal code {
@@ -216,7 +221,7 @@ button:has(> svg.lucide-check) svg {
     transform: none;
   }
 }
-/* Links never underline. On hover they ease to a lighter blue. */
+/* Links never underline. On hover they ease to the navy ink. */
 a {
   text-decoration: none;
 }
@@ -231,7 +236,7 @@ a {
 .group:focus-visible .link-soft,
 .legal a:hover,
 #nd-page .prose :where(a):not(:where([class~='not-prose'] *)):hover {
-  color: color-mix(in oklch, var(--color-brand) 60%, white);
+  color: var(--color-fd-foreground);
 }
 @media (prefers-reduced-motion: reduce) {
   .link-soft,
@@ -241,8 +246,8 @@ a {
   }
 }
 
-/* The docs, in the homepage's style: ice white, Inter Tight, Woolly blue
-   for headings, links and the current page, rounded code blocks. */
+/* The docs, in the homepage's style: misty white, a soft serif for headings,
+   sky blue links, night blue for the current page, rounded code blocks. */
 #nd-notebook-layout,
 #nd-notebook-layout ~ div,
 [role='dialog']:has([cmdk-input], input[type='search']) {
@@ -250,11 +255,11 @@ a {
 }
 #nd-notebook-layout header,
 #nd-notebook-layout #nd-subnav > div {
-  background: rgb(238 244 251 / 0.92);
+  background: rgb(245 248 254 / 0.92);
 }
 #nd-notebook-layout header,
 #nd-notebook-layout #nd-subnav {
-  border-color: rgb(26 63 209 / 0.2);
+  border-color: var(--color-fd-border);
 }
 /* The sidebar: the current page is a blue pill, like the homepage's labels. */
 /* Every link is the same pill shape, so changing pages only changes which
@@ -269,7 +274,7 @@ a {
   transition: none;
 }
 #nd-sidebar a:hover {
-  background: color-mix(in srgb, var(--color-brand) 8%, transparent);
+  background: var(--color-fd-muted);
   color: var(--color-brand);
 }
 #nd-sidebar a[data-active='true'],
@@ -280,8 +285,8 @@ a {
 #nd-sidebar p,
 #nd-sidebar [data-section] {
   font-size: 13px;
-  font-weight: 400;
-  color: var(--color-brand);
+  font-weight: 600;
+  color: var(--color-fd-muted-foreground);
 }
 #nd-notebook-layout a[data-active='true'] {
   color: var(--color-brand);
@@ -297,11 +302,12 @@ a {
   padding-bottom: 6rem;
 }
 #nd-page h1 {
-  font-size: 44px;
-  font-weight: 300;
+  font-family: var(--font-serif);
+  font-size: 46px;
+  font-weight: 500;
   line-height: 1.05;
-  letter-spacing: -0.035em;
-  color: var(--color-brand);
+  letter-spacing: -0.03em;
+  color: var(--color-fd-foreground);
 }
 #nd-page h1 + p {
   font-size: 18px;
@@ -325,25 +331,27 @@ a {
 #nd-page .prose :where(h2) {
   margin-top: 2.6em;
   margin-bottom: 0.8em;
+  font-family: var(--font-serif);
   font-size: 30px;
-  font-weight: 300;
+  font-weight: 500;
   line-height: 1.12;
-  letter-spacing: -0.03em;
-  color: var(--color-brand);
+  letter-spacing: -0.02em;
+  color: var(--color-fd-foreground);
 }
 #nd-page .prose :where(h3) {
   margin-top: 2em;
-  font-size: 20px;
-  font-weight: 400;
-  letter-spacing: -0.015em;
-  color: var(--color-brand);
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-fd-foreground);
 }
 #nd-page .prose :where(strong) {
   font-weight: 500;
 }
 #nd-page .prose :where(a):not(:where([class~='not-prose'] *)) {
-  color: var(--color-brand);
-  font-weight: 400;
+  color: var(--color-link);
+  font-weight: 500;
   text-decoration: none;
 }
 /* Headings link to themselves; they shouldn't look like links. */
@@ -372,8 +380,8 @@ a {
   border-color: var(--color-fd-border);
 }
 #nd-page th {
-  font-weight: 500;
-  color: var(--color-brand);
+  font-weight: 600;
+  color: var(--color-fd-foreground);
 }
 #nd-page table,
 #nd-page div:has(> table) {
@@ -381,15 +389,74 @@ a {
 }
 #nd-page button[class*='rounded-md'] {
   border-radius: 999px;
-  border-color: var(--color-brand);
-  color: var(--color-brand);
+  border-color: var(--color-fd-border);
+  color: var(--color-fd-foreground);
   background: transparent;
 }
 #nd-toc a {
   font-size: 14px;
 }
 
-/* The site frame for the homepage and the plain pages: ice white and one blue. */
+/* The homepage: an ice age sky. Navy ink, Woolly blue for links and the
+   italic line, deep night blue for the one main action, and soft tinted cards. */
+.home-sky {
+  --ink: #1b2350;
+  --body: #46507a;
+  --muted: #5d6690;
+  --accent: #2d47d9;
+  --action: #1e2766;
+  --action-hover: #2b3685;
+  --mist: #f5f8fe;
+  --tint-aqua: #e2f1f7;
+  --tint-blue: #e7ebff;
+  --tint-sand: #fbefe3;
+  --night: #121a3f;
+  --line: rgb(27 35 80 / 0.1);
+  --lift: 0 1px 2px rgb(27 35 80 / 0.04), 0 16px 40px -20px rgb(27 35 80 / 0.16);
+  --sky: linear-gradient(to bottom, #c3cdfc 0%, #c6d6f8 45%, #cde5f3 75%, #e2f3f2 100%);
+  font-family: 'Bricolage Grotesque', var(--font-sans);
+  color: var(--ink);
+  background: #ffffff;
+}
+:root:has(.home-sky),
+:root:has(.home-sky) body {
+  background-color: #ffffff;
+}
+.home-sky ::selection {
+  background: var(--accent);
+  color: #ffffff;
+}
+.home-sky .serif {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 500;
+  font-variation-settings: 'SOFT' 100, 'WONK' 0;
+  letter-spacing: -0.025em;
+}
+/* Paper grain over the sky and the night band, like a printed picture book. */
+.home-sky .grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* Arrow links: the arrow steps right on hover. */
+.home-sky .nudge {
+  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.home-sky a:hover .nudge,
+.home-sky a:focus-visible .nudge {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-sky .nudge {
+    transition: none;
+  }
+}
+
+/* The site frame for the plain pages: ice white and one blue. */
 .home-frost {
   --snow: #eef4fb;
   --ice-1: #e7f0f5;
@@ -447,3 +514,51 @@ a {
   }
 }
 
+
+/* The phone menu drawer: slides in from the right over a dimmed page. */
+.sky-drawer {
+  margin: 0 0 0 auto;
+  height: 100dvh;
+  max-height: none;
+  width: min(340px, 86vw);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: var(--mist);
+  box-shadow: -12px 0 40px -12px rgb(18 26 63 / 0.35);
+}
+.sky-drawer::backdrop {
+  background: rgb(18 26 63 / 0.35);
+}
+.sky-drawer[open] {
+  animation: sky-drawer-in 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.sky-drawer[open]::backdrop {
+  animation: sky-fade-in 280ms ease-out;
+}
+.sky-drawer.closing {
+  animation: sky-drawer-out 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+.sky-drawer.closing::backdrop {
+  animation: sky-fade-out 220ms ease-in forwards;
+}
+@keyframes sky-drawer-in {
+  from { transform: translateX(100%); }
+}
+@keyframes sky-drawer-out {
+  to { transform: translateX(100%); }
+}
+@keyframes sky-fade-in {
+  from { opacity: 0; }
+}
+@keyframes sky-fade-out {
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sky-drawer[open],
+  .sky-drawer[open]::backdrop,
+  .sky-drawer.closing,
+  .sky-drawer.closing::backdrop {
+    animation: none;
+  }
+}

@@ -3,7 +3,7 @@ import { createGetUrl } from 'fumadocs-core/source';
 export const appName = 'Woolly';
 export const tagline = 'Project memory your coding agents can trust';
 export const siteDescription =
-  'Local project memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones a commit made stale. Free and open source.';
+  'Woolly flags lines in CLAUDE.md, AGENTS.md and agent memory that a commit made wrong, with the commit that did it. Local, no model, free and open source.';
 // The public URL of the site. Update this once the domain is live.
 export const siteUrl = 'https://usewoolly.com';
 export const docsRoute = '/docs';
@@ -16,7 +16,11 @@ export const gitConfig = {
   branch: 'main',
 };
 export const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
-export const blueskyUrl = 'https://bsky.app/profile/usewoolly.com';
+// Woolly Team, the paid service for teams with many repos.
+export const teamUrl = 'https://team.usewoolly.com';
+// Where a team installs the GitHub App, and where members sign in.
+export const teamInstallUrl = 'https://github.com/apps/woolly-team/installations/new';
+export const teamLoginUrl = `${teamUrl}/login`;
 export const linkedinUrl = 'https://www.linkedin.com/company/usewoolly';
 export const productHuntUrl =
   'https://www.producthunt.com/products/woolly?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-woolly';

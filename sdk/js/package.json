@@ -1,7 +1,7 @@
 {
   "name": "woolly-ai",
-  "version": "0.3.0",
-  "description": "JavaScript and TypeScript client for Woolly, the local memory for your AI tools.",
+  "version": "0.3.2",
+  "description": "JavaScript and TypeScript client for the local memory API of Woolly, project memory for coding agents.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

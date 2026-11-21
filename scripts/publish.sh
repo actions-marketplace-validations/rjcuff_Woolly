@@ -22,12 +22,15 @@ if ! git rev-parse "$tag" >/dev/null 2>&1; then
 fi
 git push origin main "$tag"
 
+# APP_VERSION names the version of the desktop apps in dist/ when they're
+# carried over from an earlier release instead of rebuilt.
 body=$(python3 -c '
 import json, sys
-v = sys.argv[1]
+v, apps = sys.argv[1], sys.argv[2]
 dl = f"https://github.com/rjcuff/woolly/releases/download/v{v}"
+carried = f"The desktop apps are unchanged from {apps}. The command line is {v}.\n" if apps and apps != v else ""
 notes = (
-    f"Woolly {v}\n\n**Desktop apps**\n"
+    f"Woolly {v}\n\n**Desktop apps**\n" + carried +
     f"- [Download for Mac]({dl}/Woolly-mac.dmg) (Apple Silicon and Intel, macOS 11 or later)\n"
     f"- [Download for Windows]({dl}/Woolly-windows.exe) (Windows 10 or later)\n\n"
     "**Command line**\n\n```sh\ncurl -fsSL https://usewoolly.com/install.sh | sh\n```\n\n"
@@ -35,7 +38,7 @@ notes = (
     "Changes: https://github.com/rjcuff/woolly/blob/main/CHANGELOG.md\n\nDocs: https://usewoolly.com/docs"
 )
 print(json.dumps({"tag_name": "v" + v, "name": "v" + v, "body": notes, "draft": False, "prerelease": False, "make_latest": "true"}))
-' "$version")
+' "$version" "${APP_VERSION:-}")
 
 id=$(curl -fsS -X POST \
   -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" \

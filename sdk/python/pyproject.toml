@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "woolly-ai"
-version = "0.5.0"
-description = "Python client for Woolly, the local memory for your AI tools"
+version = "0.5.1"
+description = "Python client for the local memory API of Woolly, project memory for coding agents"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"

@@ -1,0 +1,127 @@
+name: CI
+
+# Go tests, plus the Woolly Action run for real against a small repo with
+# known stale lines. make check is still the full test run before a release.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Formatting
+        run: |
+          unformatted=$(gofmt -l cmd internal scripts)
+          if [ -n "$unformatted" ]; then
+            echo "Run gofmt on:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - run: go vet ./...
+      - run: go test ./...
+
+  action:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: woolly-src
+      # The Go that builds releases. Recent macOS refuses binaries from older
+      # Go linkers, so go.mod's minimum version would crash here.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: woolly-src/go.mod
+      - name: Build this commit's woolly
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          (cd woolly-src && go build -o "$RUNNER_TEMP/bin/woolly" ./cmd/woolly)
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # The Action checks the folder it runs in, so the test repo is the workspace itself.
+      - name: Make a repo with stale lines
+        id: fixture
+        run: echo "base=$(sh woolly-src/scripts/action-fixture.sh "$GITHUB_WORKSPACE")" >> "$GITHUB_OUTPUT"
+
+      - name: Run the Action
+        id: woolly
+        uses: ./woolly-src
+        with:
+          version: preinstalled
+          base: ${{ steps.fixture.outputs.base }}
+          comment: "false"
+      - name: Check its outputs and report
+        env:
+          STALE: ${{ steps.woolly.outputs.stale }}
+          NEW: ${{ steps.woolly.outputs.new-stale }}
+          BEFORE: ${{ steps.woolly.outputs.already-stale }}
+          CHECKED: ${{ steps.woolly.outputs.checked }}
+          LINES: ${{ steps.woolly.outputs.lines-checked }}
+          STATUS_FILE: ${{ steps.woolly.outputs.status-file }}
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          [ "$STALE" = 2 ] || fail "stale is $STALE, want 2"
+          [ "$NEW" = 2 ] || fail "new-stale is $NEW, want 2"
+          [ "$BEFORE" = 1 ] || fail "already-stale is $BEFORE, want 1"
+          [ "$CHECKED" = 0 ] || fail "checked is $CHECKED, want 0"
+          [ "$LINES" = 3 ] || fail "lines-checked is $LINES, want 3"
+          report="$RUNNER_TEMP/woolly-report.md"
+          head -n 1 "$report" | grep -qx '<!-- woolly-check -->' || fail "report doesn't start with the comment marker"
+          grep -qF '| `CLAUDE.md:3` | `- Ask @octocat about requireUser <img src=https://example.com/x.png>` |' "$report" \
+            || fail "the line with a mention and an image isn't quoted as code"
+          grep -qF '1 line was already out of date before this change' "$report" || fail "already stale line is missing"
+          [ -s "$STATUS_FILE" ] || fail "status-file output is empty"
+          grep -q '"schema": "woolly.check.status/v1"' "$STATUS_FILE" || fail "status JSON has no schema"
+          if grep -qE 'requireUser|octocat|oldHelper' "$STATUS_FILE"; then fail "status JSON has text in it"; fi
+
+      - name: Run the Action with fail-on-stale
+        id: failing
+        continue-on-error: true
+        uses: ./woolly-src
+        with:
+          version: preinstalled
+          base: ${{ steps.fixture.outputs.base }}
+          comment: "false"
+          fail-on-stale: "true"
+      - name: Check that it failed
+        if: steps.failing.outcome != 'failure'
+        run: |
+          echo "::error::fail-on-stale didn't fail the job"
+          exit 1
+
+  install:
+    # Downloads a published release and checks its checksum, the way users run the Action.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: woolly-src
+      - name: Make a repo with stale lines
+        id: fixture
+        run: echo "base=$(sh woolly-src/scripts/action-fixture.sh "$GITHUB_WORKSPACE")" >> "$GITHUB_OUTPUT"
+      - name: Run the Action with a pinned release
+        id: woolly
+        uses: ./woolly-src
+        with:
+          version: "0.17.0"
+          base: ${{ steps.fixture.outputs.base }}
+          comment: "false"
+      - name: Check it found the stale lines
+        env:
+          STALE: ${{ steps.woolly.outputs.stale }}
+        run: |
+          woolly version | grep -q '0.17.0' || { echo "::error::wrong Woolly installed"; exit 1; }
+          [ "$STALE" = 2 ] || { echo "::error::stale is $STALE, want 2"; exit 1; }

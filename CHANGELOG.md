@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+A new look for usewoolly.com, and a page for Woolly Team.
+
+- The website is an ice age picture book now, with a sky hero full of woolly mammoths, a soft serif for headings, light blue cards and one night blue for every action. The homepage has the apps Woolly works with, who it's for, the benchmark numbers, questions and a closing call to action. Download, Privacy, Terms, the docs and the not found page match it.
+- Phones get a menu button that opens the links in a drawer.
+- Woolly Team has its own page at usewoolly.com/team, with how it works, pricing and questions. team.usewoolly.com sends people who aren't signed in there.
+- The favicon, app icons, link previews and brand images are night blue.
+- The Product Hunt banner and the Bluesky links are gone.
+
+## 0.18.0
+
+Pull request checks you can pin, trust with outside text, and read from other tools.
+
+- The pull request comment quotes each stale line and fact as code, so a line in CLAUDE.md can't mention people, load images, add links or render HTML in Woolly's comment. Lines that look like they hold an API key, token or password aren't quoted at all. File names in the comment can't trigger mentions either, like a path under `packages/@acme`.
+- The comment says plainly that each finding is a line for a person to review, and that Woolly doesn't check whether the code itself is right.
+- `woolly check --json` has a `summary` with facts, files and lines checked, how many went stale in this change and how many already were, and each agent file finding has a `state` of `new` or `before`. Existing fields are unchanged.
+- `woolly check --status-json` prints the check as counts and file:line pointers with the commit that changed the code, and no text from agent files, facts or code. It leaves out Claude Code, Codex and claude-mem memory and files git doesn't track, like an ignored CLAUDE.local.md. `--status-file <path>` writes it next to `--markdown`.
+- The GitHub Action has a `version` input to pin the Woolly release it runs. It downloads straight from GitHub releases and checks the published checksum, instead of running the install script from the website. `preinstalled` uses a woolly already on the runner.
+- The Action has a `base` input, and new outputs: `new-stale`, `already-stale`, `lines-checked` and `status-file`. `lines-checked` fixes `checked` being the only count, which was 0 for repos with agent files but no project facts. The counts come from the status file instead of being read out of the Markdown report.
+- The docs pin the Action, list the permissions it needs and why, say where the report goes, and warn against `pull_request_target`.
+- CI on GitHub Actions runs the Go tests and runs the Action itself on Linux and macOS against a repo with known stale lines.
+
 ## 0.17.0
 
 Woolly checks the memory your agents already have. No setup, no moving your notes.

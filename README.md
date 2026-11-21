@@ -4,7 +4,7 @@
 
 **Memory that knows when it's wrong.**
 
-One local memory for Claude Code, Cursor and Codex. Every fact points at its code, and Woolly flags the ones that go stale.
+Woolly flags lines in CLAUDE.md, AGENTS.md, Cursor rules and agent memory that a commit made wrong, with the commit that did it. Local, no model, free and open source.
 
 [![Release](https://img.shields.io/github/v/release/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
@@ -118,6 +118,6 @@ If Woolly saved you from re-explaining your stack one more time, a star helps ot
 
 - [Docs](https://usewoolly.com/docs) and [all commands](https://usewoolly.com/docs/cli)
 - [Security](SECURITY.md)
-- [Bluesky](https://bsky.app/profile/usewoolly.com) · [LinkedIn](https://www.linkedin.com/company/usewoolly)
+- [LinkedIn](https://www.linkedin.com/company/usewoolly)
 
 MIT license.

@@ -48,3 +48,30 @@ func TestChangesSinceCommit(t *testing.T) {
 		t.Fatal("not a repo")
 	}
 }
+
+func TestTrackedAndShortCommit(t *testing.T) {
+	dir := t.TempDir()
+	run(t, dir, "init", "-q")
+	for name, text := range map[string]string{".gitignore": "CLAUDE.local.md\n", "CLAUDE.md": "x\n", "CLAUDE.local.md": "mine\n", "notes é.md": "y\n"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run(t, dir, "add", ".gitignore", "CLAUDE.md", "notes é.md")
+	run(t, dir, "commit", "-q", "-m", "one")
+	got := map[string]bool{}
+	for _, f := range Tracked(dir) {
+		got[f] = true
+	}
+	if !got["CLAUDE.md"] || !got["notes é.md"] || got["CLAUDE.local.md"] {
+		t.Errorf("Tracked = %v", got)
+	}
+	if h := ShortCommit(dir, "HEAD"); len(h) != 12 {
+		t.Errorf("ShortCommit(HEAD) = %q", h)
+	}
+	for _, bad := range []string{"", "nope", "-c", "--output=/tmp/x"} {
+		if h := ShortCommit(dir, bad); h != "" {
+			t.Errorf("ShortCommit(%q) = %q, want empty", bad, h)
+		}
+	}
+}

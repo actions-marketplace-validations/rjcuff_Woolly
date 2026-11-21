@@ -1,9 +1,12 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { Renderer } from '@takumi-rs/core';
 import { ImageResponse } from 'takumi-js/response';
 import { BRAND, ditherSvg } from '@/lib/mammoth';
 
-// Link previews: the dithered mammoth on Woolly blue. They have no text, so
-// the renderer needs no fonts. Images are rendered at build time.
+// Profile pictures: the dithered mammoth on night blue. They have no text, so
+// the renderer needs no fonts. Link previews use the homepage picture in
+// public/og/home.png. Images are rendered at build time.
 
 let renderer: Renderer | undefined;
 
@@ -15,14 +18,10 @@ function getRenderer(): Renderer {
 const dataUri = (svg: string) => `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 const MAMMOTH = dataUri(ditherSvg(BRAND.paper));
 
-/** A 1200 by 630 link preview: the dithered mammoth in ice white on Woolly blue, and nothing else. */
+/** The 1200 by 630 link preview for docs pages: the same picture as the homepage. */
 export async function ogImage(): Promise<Response> {
-  return new ImageResponse(
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', backgroundColor: BRAND.blue }}>
-      <img src={MAMMOTH} width={546} height={416} />
-    </div>,
-    { width: 1200, height: 630, format: 'png', renderer: getRenderer() },
-  );
+  const png = await readFile(join(process.cwd(), 'public/og/home.png'));
+  return new Response(new Uint8Array(png), { headers: { 'Content-Type': 'image/png' } });
 }
 
 /** A square version for profile pictures and the home screen icon, sized to stay inside a circle crop. */
