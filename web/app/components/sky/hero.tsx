@@ -33,7 +33,7 @@ export function SkyHero({ title, lead, actions, note }: { title: ReactNode; lead
       <div className={cn(WRAP, 'relative z-10 flex h-full flex-col items-start pt-36 sm:pt-40 md:justify-center md:pt-24')}>
         <h1 className="serif max-w-[640px] text-balance text-[40px]/[1.06] tracking-[-0.03em] text-[var(--ink)] sm:text-[48px]/[1.05] lg:text-[54px]/[1.04]">{title}</h1>
         <p className="mt-4 max-w-[460px] text-[16px] leading-[1.55] text-pretty text-[var(--body)] sm:mt-5 sm:text-[18px]">{lead}</p>
-        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 sm:mt-8">{actions}</div>
+        <div className="mt-6 flex flex-row items-center gap-3 sm:mt-8">{actions}</div>
         {note ? <p className="mt-3 text-[13.5px] text-[var(--body)]">{note}</p> : null}
       </div>
     </section>

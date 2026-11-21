@@ -104,8 +104,14 @@ test('the Teams link opens the Woolly Team page', async ({ page, isMobile }) => 
   await expect(page).toHaveTitle('Woolly Team | Accurate agent context across every repository');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Accurate agent context across every repository');
   const install = 'https://github.com/apps/woolly-team/installations/new';
-  await expect(page.getByRole('region', { name: 'Hero' }).getByRole('link', { name: 'Get started' })).toHaveAttribute('href', install);
-  await expect(page.getByRole('region', { name: 'Hero' }).getByRole('link', { name: 'Sign in to your dashboard' })).toHaveAttribute('href', 'https://team.usewoolly.com/login');
+  const hero = page.getByRole('region', { name: 'Hero' });
+  const start = hero.getByRole('link', { name: 'Get started' });
+  const signIn = hero.getByRole('link', { name: 'Sign in' });
+  await expect(start).toHaveAttribute('href', install);
+  await expect(signIn).toHaveAttribute('href', 'https://team.usewoolly.com/login');
+  // Both hero actions sit on one row, phones included.
+  const [a, b] = [await start.boundingBox(), await signIn.boundingBox()];
+  expect(Math.abs(a!.y + a!.height / 2 - (b!.y + b!.height / 2))).toBeLessThan(2);
   const pricing = page.getByRole('region', { name: 'Pricing' });
   await expect(pricing).toContainText('$299');
   await expect(pricing.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', install);

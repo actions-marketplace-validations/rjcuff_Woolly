@@ -81,7 +81,7 @@ export default function Team({ loaderData }: Route.ComponentProps) {
           <>
             <Button href={teamInstallUrl}>Get started</Button>
             <Button href={teamLoginUrl} tone="white">
-              Sign in to your dashboard
+              Sign in
             </Button>
           </>
         }
