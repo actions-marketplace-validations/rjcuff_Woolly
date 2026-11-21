@@ -9,8 +9,9 @@ type SeoInput = {
   imageAlt?: string;
 };
 
-// Every page shares one preview image: the dithered mammoth on Woolly blue.
-const IMAGE_ALT = 'Woolly, a pixel mammoth in white on night blue';
+// Every page shares one preview image, the herd of mammoths from the homepage,
+// except Woolly Team, which has its own.
+const IMAGE_ALT = 'A herd of woolly mammoths carrying notes across a snowy field under a blue sky';
 
 // Tags for search engines and link previews. Titles never use colons or dashes.
 export function seo({ title, description, path, image, type = 'website', imageAlt = IMAGE_ALT }: SeoInput) {

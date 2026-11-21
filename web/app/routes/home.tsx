@@ -17,7 +17,7 @@ export function meta(_: Route.MetaArgs) {
       title: `${appName} | ${tagline}`,
       description: siteDescription,
       path: '/',
-      image: '/og/docs/image.png',
+      image: '/og/home.png',
     }),
     {
       'script:ld+json': {

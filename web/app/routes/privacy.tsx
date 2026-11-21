@@ -8,7 +8,7 @@ export function meta(_: Route.MetaArgs) {
     title: 'Privacy | Woolly',
     description: 'Woolly keeps your memories on your computer. Here is exactly what the app and this website do with data.',
     path: '/privacy',
-    image: '/og/docs/image.png',
+    image: '/og/home.png',
   });
 }
 

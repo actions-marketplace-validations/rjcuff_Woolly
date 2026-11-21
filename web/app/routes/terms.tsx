@@ -8,7 +8,7 @@ export function meta(_: Route.MetaArgs) {
     title: 'Terms | Woolly',
     description: 'The terms for using the Woolly app and website.',
     path: '/terms',
-    image: '/og/docs/image.png',
+    image: '/og/home.png',
   });
 }
 

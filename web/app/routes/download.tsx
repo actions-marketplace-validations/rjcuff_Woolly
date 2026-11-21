@@ -14,7 +14,7 @@ export function meta(_: Route.MetaArgs) {
     title: 'Download Woolly',
     description: 'Download Woolly for Mac, Windows and Linux. Memory that knows when it is wrong, for Claude Code, Cursor and Codex.',
     path: '/download',
-    image: '/og/docs/image.png',
+    image: '/og/home.png',
   });
 }
 

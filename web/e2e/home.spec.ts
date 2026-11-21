@@ -64,14 +64,16 @@ test('the phone menu opens and closes', async ({ page, isMobile }) => {
   await expect(menu).toBeHidden();
 });
 
-test('link previews point at the Woolly image', async ({ page, request }) => {
+test('link previews point at the homepage picture', async ({ page, request }) => {
   await page.goto('/');
   const image = await page.locator('meta[property="og:image"]').getAttribute('content');
-  expect(image).toBe('https://usewoolly.com/og/docs/image.png');
+  expect(image).toBe('https://usewoolly.com/og/home.png');
 
-  const res = await request.get('/og/docs/image.png');
-  expect(res.status()).toBe(200);
-  expect(res.headers()['content-type']).toContain('image/png');
+  for (const path of ['/og/home.png', '/og/docs/image.png']) {
+    const res = await request.get(path);
+    expect(res.status()).toBe(200);
+    expect(res.headers()['content-type']).toContain('image/png');
+  }
 });
 
 test('sitemap, robots and install script are served', async ({ request }) => {
