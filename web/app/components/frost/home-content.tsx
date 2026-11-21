@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { DitherMammoth } from '@/components/frost/dither-mammoth';
 import { WRAP } from '@/components/frost/nav';
-import { blueskyUrl, githubUrl, linkedinUrl, teamUrl } from '@/lib/shared';
+import { githubUrl, linkedinUrl, teamUrl } from '@/lib/shared';
 import { cn } from '@/lib/utils';
 
 /* Everything below the nav is one blue on ice white. Panels marked "solid"
@@ -449,7 +449,6 @@ const FOOT: { label: string; href: string }[] = [
   { label: 'Download', href: '/download' },
   { label: 'Changelog', href: `${githubUrl}/blob/main/CHANGELOG.md` },
   { label: 'GitHub', href: githubUrl },
-  { label: 'Bluesky', href: blueskyUrl },
   { label: 'LinkedIn', href: linkedinUrl },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },

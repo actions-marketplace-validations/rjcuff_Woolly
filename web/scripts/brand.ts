@@ -61,7 +61,6 @@ const jobs: { file: URL; w: number; h: number; html: string; transparent?: boole
   { file: new URL('og-1200x630.png', OUT), w: 1200, h: 630, html: page(1200, 630, BRAND.blue, center(img(dither.paper, 546))) },
   { file: new URL('github-social-1280x640.png', OUT), w: 1280, h: 640, html: banner(1280, 640, 0.9) },
   { file: new URL('x-header-1500x500.png', OUT), w: 1500, h: 500, html: banner(1500, 500, 1) },
-  { file: new URL('bluesky-banner-3000x1000.png', OUT), w: 3000, h: 1000, html: banner(3000, 1000, 1) },
   { file: new URL('linkedin-banner-1584x396.png', OUT), w: 1584, h: 396, html: banner(1584, 396, 1) },
 
   // Logos on transparent backgrounds, for light and dark places.

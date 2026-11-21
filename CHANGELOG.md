@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+A new look for usewoolly.com, and a page for Woolly Team.
+
+- The website is an ice age picture book now, with a sky hero full of woolly mammoths, a soft serif for headings, light blue cards and one night blue for every action. The homepage has the apps Woolly works with, who it's for, the benchmark numbers, questions and a closing call to action. Download, Privacy, Terms, the docs and the not found page match it.
+- Phones get a menu button that opens the links in a drawer.
+- Woolly Team has its own page at usewoolly.com/team, with how it works, pricing and questions. team.usewoolly.com sends people who aren't signed in there.
+- The favicon, app icons, link previews and brand images are night blue.
+- The Product Hunt banner and the Bluesky links are gone.
+
 ## 0.18.0
 
 Pull request checks you can pin, trust with outside text, and read from other tools.

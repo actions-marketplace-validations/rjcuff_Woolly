@@ -166,4 +166,4 @@ export function ditherSvg(ink: string): string {
 }
 
 /** Woolly's two colors. */
-export const BRAND = { blue: '#1a3fd1', paper: '#eef4fb' } as const;
+export const BRAND = { blue: '#1e2766', paper: '#ffffff' } as const;

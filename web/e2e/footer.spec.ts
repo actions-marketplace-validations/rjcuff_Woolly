@@ -10,7 +10,6 @@ test('footer shows the trademark and links', async ({ page }) => {
 
   const links = footer.getByRole('navigation', { name: 'Footer' });
   await expect(links.getByRole('link', { name: 'GitHub' })).toHaveAttribute('href', 'https://github.com/rjcuff/woolly');
-  await expect(links.getByRole('link', { name: 'Bluesky' })).toHaveAttribute('href', 'https://bsky.app/profile/usewoolly.com');
   await expect(links.getByRole('link', { name: 'LinkedIn' })).toHaveAttribute('href', 'https://www.linkedin.com/company/usewoolly');
 
   await links.getByRole('link', { name: 'Privacy' }).click();

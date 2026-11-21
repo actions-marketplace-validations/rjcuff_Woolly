@@ -8,7 +8,7 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <span className="flex items-center gap-2.5 text-[var(--color-brand)]">
           <DitherMammoth small className="h-[24px] w-auto" />
-          <span className="text-[20px] font-medium tracking-[-0.03em]">woolly</span>
+          <span className="font-[family-name:var(--font-serif)] text-[22px] font-medium tracking-[-0.025em] text-[var(--color-fd-foreground)]">woolly</span>
         </span>
       ),
     },
