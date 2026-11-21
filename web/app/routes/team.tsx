@@ -80,9 +80,9 @@ export default function Team({ loaderData }: Route.ComponentProps) {
         actions={
           <>
             <Button href={teamInstallUrl}>Get started</Button>
-            <ArrowLink href="#how" className="text-[var(--ink)] hover:text-[var(--accent)] max-sm:hidden">
-              See how it works
-            </ArrowLink>
+            <Button href={teamLoginUrl} tone="white">
+              Sign in to your dashboard
+            </Button>
           </>
         }
       />

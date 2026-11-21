@@ -103,6 +103,7 @@ test('the Teams link opens the Woolly Team page', async ({ page, isMobile }) => 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Accurate agent context across every repository');
   const install = 'https://github.com/apps/woolly-team/installations/new';
   await expect(page.getByRole('region', { name: 'Hero' }).getByRole('link', { name: 'Get started' })).toHaveAttribute('href', install);
+  await expect(page.getByRole('region', { name: 'Hero' }).getByRole('link', { name: 'Sign in to your dashboard' })).toHaveAttribute('href', 'https://team.usewoolly.com/login');
   const pricing = page.getByRole('region', { name: 'Pricing' });
   await expect(pricing).toContainText('$299');
   await expect(pricing.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', install);
