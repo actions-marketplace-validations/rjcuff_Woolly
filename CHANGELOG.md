@@ -13,6 +13,8 @@ A new look for usewoolly.com, and a page for Woolly Team.
 Safer, steadier memory for the agents you build.
 
 - Memories can be a `preference`, a `procedure` or an `episode`, as well as the project kinds. The MCP `remember` tool takes them for personal memory too, and `recall` takes `type` to get only some kinds. In the memory API, add messages with `memory_type` and search with `filters.type`; results include `type`. The Python and JavaScript SDKs take `type` in `recall` and `search` and `memory_type`/`memoryType` in `add`.
+- Woolly learns which memories help. Each recall and session brief counts as a use, and AI apps can rate a memory with the new MCP `rate_memory` tool or `POST /v1/memories/{id}/feedback` (`feedback` in the SDKs). Helpful memories rank a little higher, unhelpful ones a little lower; nothing is hidden or deleted. Counts stay in `usage.json` on your device. Older `usage.json` files still load.
+- Search ranks what you said above what an AI guessed, using each memory's confidence, skips near copies of a better result so the top few say different things, and drops weak meaning-only matches. `woolly recall --explain` shows how each result was scored, and API results include `score_parts`.
 - `make eval` runs a fast recall quality check and a table of memory lifecycle cases, with no Ollama needed.
 
 - AI apps can't skip the check for planted instructions by saying a memory came from you. The `remember` tool, `/api/remember` from scripts and the SDKs, and edits through `PUT /v1/memories/{id}` and `PATCH /api/memories/{id}` now refuse text that reads like instructions to an AI, whatever source they give. What you type on the command line or the review page is saved as before.

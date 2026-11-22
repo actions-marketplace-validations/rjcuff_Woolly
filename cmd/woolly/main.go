@@ -430,6 +430,7 @@ func cmdRecall(args []string) error {
 	all := fs.Bool("all", false, "include superseded and conflicting memories")
 	asJSON := fs.Bool("json", false, "print JSON")
 	project := fs.String("project", "", "search your memories plus this project's, leaving other projects out")
+	explain := fs.Bool("explain", false, "show how each result was scored")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -451,6 +452,11 @@ func cmdRecall(args []string) error {
 	}
 	for _, r := range results {
 		fmt.Printf("%.2f  %s\n", r.Score, mcp.Line(r.Memory))
+		if *explain && r.Parts != nil {
+			p := r.Parts
+			fmt.Printf("      keyword %.2f, meaning %.2f, x fresh %.2f, x confidence %.2f, x use %.2f, x status %.1f\n",
+				p.Keyword, p.Semantic, p.Fresh, p.Confidence, p.Use, p.Status)
+		}
 	}
 	if mode == recall.ModeKeyword && os.Getenv("WOOLLY_NO_EMBED") == "" {
 		fmt.Fprintln(os.Stderr, "(keyword search; run 'woolly doctor' to enable semantic search)")

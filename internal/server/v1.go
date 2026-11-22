@@ -227,6 +227,30 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 		writeJSON(w, http.StatusOK, map[string]any{"message": "Memory deleted successfully", "id": m.ID})
 	})
 
+	mux.HandleFunc("POST /v1/memories/{id}/feedback", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Helpful *bool `json:"helpful"`
+		}
+		if !readJSON(w, r, &req) {
+			return
+		}
+		if req.Helpful == nil {
+			writeError(w, http.StatusBadRequest, "helpful is required")
+			return
+		}
+		in, ok := getInScope(w, r, store)
+		if !ok {
+			return
+		}
+		m, err := store.Feedback(in.ID, *req.Helpful)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		record(r, "rate", []string{m.ID}, "", 0)
+		writeJSON(w, http.StatusOK, map[string]any{"id": m.ID, "helpful": *req.Helpful})
+	})
+
 	mux.HandleFunc("GET /v1/memories/{id}/history", func(w http.ResponseWriter, r *http.Request) {
 		in, ok := getInScope(w, r, store)
 		if !ok {
@@ -323,6 +347,7 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 			ids = append(ids, res.Memory.ID)
 		}
 		record(r, "recall", ids, req.Query, len(out))
+		store.Touch(ids...)
 		writeJSON(w, http.StatusOK, map[string]any{"results": out})
 	})
 }

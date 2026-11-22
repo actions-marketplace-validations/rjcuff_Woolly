@@ -32,6 +32,10 @@ This covers AI apps over MCP and apps using the API as documented. It isn't a wa
 
 Apps you build on the [memory API](/docs/memory-api) save memories for their own users, agents and sessions. Those stay out of your personal AI apps and your profile, they are never written to a repo's shared `.woolly/woolly.md`, and a request scoped to one user can't read, change or delete another user's memory by its ID.
 
+## Usage stays on your device
+
+Woolly counts how often each memory is recalled, and keeps any helpful or unhelpful votes from AI apps, in `~/.woolly/usage.json`. It only nudges search ranking. It's never synced, sent anywhere or written into your memory files, and a vote never hides or deletes a memory.
+
 ## Nothing is deleted by accident
 
 Forgetting a memory moves it to the trash. If an AI deletes something it shouldn't, bring it back:

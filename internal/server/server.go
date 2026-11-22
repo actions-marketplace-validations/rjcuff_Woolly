@@ -156,6 +156,7 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 			ids[i] = res.Memory.ID
 		}
 		record(r, "recall", ids, req.Query, len(results))
+		store.Touch(ids...)
 		writeJSON(w, http.StatusOK, map[string]any{"mode": mode, "results": results})
 	})
 

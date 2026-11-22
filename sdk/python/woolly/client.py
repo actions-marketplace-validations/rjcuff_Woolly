@@ -402,6 +402,22 @@ class Woolly:
         """Every version of a memory, oldest first."""
         return self._request("GET", "/v1/memories/" + urllib.parse.quote(memory_id) + "/history")
 
+    def feedback(
+        self,
+        memory_id: str,
+        helpful: bool,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Say whether a memory helped. Helpful memories rank a little higher
+        next time, unhelpful ones a little lower. Nothing is ever deleted."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/memories/" + urllib.parse.quote(memory_id) + "/feedback"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {"helpful": helpful})
+
     def delete_all(
         self, user_id: Optional[str] = None, agent_id: Optional[str] = None, run_id: Optional[str] = None
     ) -> Dict[str, Any]:

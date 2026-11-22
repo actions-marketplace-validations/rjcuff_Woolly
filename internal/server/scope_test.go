@@ -54,3 +54,20 @@ func TestV1TypeOnAddAndSearch(t *testing.T) {
 		t.Fatalf("search: %v", got)
 	}
 }
+
+func TestV1Feedback(t *testing.T) {
+	h, token := setup(t)
+	add := v1(t, h, token, "POST", "/v1/memories", `{"messages":[{"role":"user","content":"Deploys to Fly"}],"user_id":"alice","infer":false}`)
+	id := results(add)[0]["id"].(string)
+	v1(t, h, token, "POST", "/v1/memories/"+id+"/feedback?user_id=alice", `{"helpful":true}`)
+	auth := map[string]string{"Authorization": "Token " + token}
+	if rec := do(h, "POST", "/v1/memories/"+id+"/feedback?user_id=bob", `{"helpful":true}`, auth); rec.Code != http.StatusNotFound {
+		t.Fatalf("other user: %d", rec.Code)
+	}
+	if rec := do(h, "POST", "/v1/memories/nope/feedback", `{"helpful":true}`, auth); rec.Code != http.StatusNotFound {
+		t.Fatalf("missing: %d", rec.Code)
+	}
+	if rec := do(h, "POST", "/v1/memories/"+id+"/feedback", `{}`, auth); rec.Code != http.StatusBadRequest {
+		t.Fatalf("no helpful: %d", rec.Code)
+	}
+}

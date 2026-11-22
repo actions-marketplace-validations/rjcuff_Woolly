@@ -87,6 +87,17 @@ curl -X POST localhost:11435/v1/search \
 
 The type is in the memory's Markdown header, so you can change it by hand.
 
+## Feedback
+
+Tell Woolly whether a memory helped, and it ranks helpful memories a little higher next time and unhelpful ones a little lower. Nothing is hidden or deleted because of feedback.
+
+```sh
+curl -X POST "localhost:11435/v1/memories/$ID/feedback?user_id=alice" \
+  -H "Authorization: Bearer $TOKEN" -d '{"helpful": false}'
+```
+
+Woolly also counts each time a memory is recalled or put in a session brief. Counts and feedback live in `~/.woolly/usage.json` on this device. They are never synced or written into the Markdown files.
+
 ## Memories over time
 
 Nothing is overwritten. When a fact changes, the old version stays on disk with `status: superseded` and an `invalid_at` time, and an expired fact gets `status: expired`. Ask for the whole story of a memory:
@@ -115,6 +126,7 @@ curl localhost:11435/v1/memories/ID/history -H "Authorization: Bearer $TOKEN"
 | `DELETE` | `/v1/memories/{id}` | Move a memory to the trash |
 | `DELETE` | `/v1/memories` | Move every memory in a scope to the trash. Needs a `user_id`, `agent_id` or `run_id` |
 | `GET` | `/v1/memories/{id}/history` | Every version, oldest first |
+| `POST` | `/v1/memories/{id}/feedback` | `helpful`: true or false. Nudges ranking |
 | `POST` | `/v1/search` | Search: `query`, `filters` (scope and `type`), `top_k`, `threshold`, `show_expired` |
 | `POST` | `/v1/dream` | Tidy a scope and learn lessons: `dry_run`, `learn`. See [Dreaming](/docs/dreaming) |
 

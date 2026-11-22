@@ -91,6 +91,7 @@ func cmdContext(args []string) error {
 		app = cli
 	}
 	a.log.Add(activity.Entry{App: app, Action: "context", IDs: ids, Count: len(mems)})
+	a.store.Touch(ids...)
 	fmt.Print(text)
 	return nil
 }

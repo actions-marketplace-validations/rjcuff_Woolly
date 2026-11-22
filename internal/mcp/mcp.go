@@ -291,6 +291,15 @@ var tools = []map[string]any{
 		"inputSchema": obj(map[string]any{"id": map[string]any{"type": "string"}}, "id"),
 	},
 	{
+		"name":        "rate_memory",
+		"title":       "Rate a memory",
+		"description": "Say whether a memory you recalled helped. Woolly ranks helpful memories a little higher next time and unhelpful ones a little lower. It never deletes anything. Use it when a memory was clearly right or clearly wrong for the task.",
+		"inputSchema": obj(map[string]any{
+			"id":      map[string]any{"type": "string", "description": "The memory's ID, from recall."},
+			"helpful": map[string]any{"type": "boolean", "description": "true if it helped, false if it was wrong or off topic."},
+		}, "id", "helpful"),
+	},
+	{
 		"name":        "resolve_conflict",
 		"title":       "Resolve conflict",
 		"description": "Make one memory the current fact for its key, replacing the others. Only do this when the user confirms which is right.",
@@ -397,6 +406,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			ids[i] = r.Memory.ID
 		}
 		s.log("recall", ids, a.Query, len(results))
+		s.Store.Touch(ids...)
 		if len(results) == 0 {
 			return "No matching memories.", nil
 		}
@@ -503,6 +513,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			ids = append(ids, m.Memory.ID)
 		}
 		s.log("why", ids, a.Target, len(ids))
+		s.Store.Touch(ids...)
 		return why.Text(ans), nil
 
 	case "check_memory_files":
@@ -580,6 +591,22 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			s.shareRepo(m.Project)
 		}
 		return "Moved to trash (the user can restore it): " + m.Content, nil
+
+	case "rate_memory":
+		var a struct {
+			ID      string `json:"id"`
+			Helpful *bool  `json:"helpful"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		if a.Helpful == nil {
+			return "", errors.New("helpful is required")
+		}
+		m, err := s.Store.Feedback(a.ID, *a.Helpful)
+		if err != nil {
+			return "", err
+		}
+		s.log("rate", []string{m.ID}, "", 0)
+		return "Thanks. Noted for next time.", nil
 
 	case "resolve_conflict":
 		var a struct {

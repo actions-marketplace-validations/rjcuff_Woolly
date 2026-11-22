@@ -38,6 +38,18 @@ type Embedder interface {
 type Result struct {
 	Memory memory.Memory `json:"memory"`
 	Score  float64       `json:"score"`
+	// Parts says how the score was made, for woolly recall --explain.
+	Parts *ScoreParts `json:"score_parts,omitempty"`
+}
+
+// ScoreParts are the pieces of a result's score.
+type ScoreParts struct {
+	Keyword    float64 `json:"keyword"`
+	Semantic   float64 `json:"semantic,omitempty"`
+	Fresh      float64 `json:"fresh"`      // multiplier for how recently it changed
+	Confidence float64 `json:"confidence"` // multiplier for how sure Woolly is
+	Use        float64 `json:"use"`        // multiplier from use and feedback
+	Status     float64 `json:"status"`     // 0.5 when not current, else 1
 }
 
 // Engine runs recall queries against a store.
@@ -122,11 +134,16 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 	}
 
 	now := time.Now()
+	usage := e.store.Usage()
 	var out []Result
+	var outIdx []int
 	for i, m := range mems {
+		parts := &ScoreParts{Keyword: round(kw[i]), Status: 1}
 		score := kw[i]
 		if mode == ModeHybrid {
-			if kw[i] == 0 && sem[i] < 0.5 {
+			parts.Semantic = round(sem[i])
+			// A weak meaning match needs a real keyword match to count.
+			if sem[i] < 0.5 && kw[i] < 0.3 {
 				continue
 			}
 			score = 0.65*math.Max(sem[i], 0) + 0.35*kw[i]
@@ -134,17 +151,69 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 			continue
 		}
 		ageDays := now.Sub(m.UpdatedAt).Hours() / 24
-		score *= 1 + 0.05*math.Exp(-ageDays/30) // slight preference for fresh memories
+		parts.Fresh = round(1 + 0.05*math.Exp(-ageDays/30)) // slight preference for fresh memories
+		parts.Confidence = round(0.8 + 0.2*m.Confidence())  // what you said beats a guess
+		parts.Use = round(1 + usage[m.ID].Prior())          // what helped before ranks a little higher
 		if m.Status != memory.StatusActive {
-			score *= 0.5
+			parts.Status = 0.5
 		}
-		out = append(out, Result{Memory: m, Score: math.Round(score*1000) / 1000})
+		score *= parts.Fresh * parts.Confidence * parts.Use * parts.Status
+		out = append(out, Result{Memory: m, Score: round(score), Parts: parts})
+		outIdx = append(outIdx, i)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Score > out[j].Score })
-	if len(out) > limit {
-		out = out[:limit]
+	order := make([]int, len(out))
+	for i := range order {
+		order[i] = i
 	}
-	return out, mode, nil
+	sort.SliceStable(order, func(a, b int) bool { return out[order[a]].Score > out[order[b]].Score })
+
+	// Skip near copies of a better result, so the top few say different things.
+	var picked []Result
+	var pickedIdx []int
+	for _, k := range order {
+		i := outIdx[k]
+		dup := false
+		for _, j := range pickedIdx {
+			if similar(toks[i], toks[j]) {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			continue
+		}
+		picked = append(picked, out[k])
+		pickedIdx = append(pickedIdx, i)
+		if len(picked) == limit {
+			break
+		}
+	}
+	return picked, mode, nil
+}
+
+func round(x float64) float64 { return math.Round(x*1000) / 1000 }
+
+// similar reports whether two token lists are near copies: they share at
+// least 90% of their distinct words.
+func similar(a, b []string) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return false
+	}
+	sa, sb := map[string]bool{}, map[string]bool{}
+	for _, t := range a {
+		sa[t] = true
+	}
+	for _, t := range b {
+		sb[t] = true
+	}
+	inter := 0
+	for t := range sa {
+		if sb[t] {
+			inter++
+		}
+	}
+	union := len(sa) + len(sb) - inter
+	return float64(inter)/float64(union) >= 0.9
 }
 
 func docText(m memory.Memory) string {

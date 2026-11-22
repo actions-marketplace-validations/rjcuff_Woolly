@@ -404,6 +404,14 @@ export class Woolly {
     return (await this.request<{ results: HistoryEntry[] }>('GET', `/v1/memories/${encodeURIComponent(id)}/history`)).results;
   }
 
+  /**
+   * Say whether a memory helped. Helpful memories rank a little higher next
+   * time, unhelpful ones a little lower. Nothing is ever deleted.
+   */
+  async feedback(id: string, helpful: boolean, scope: Scope = {}): Promise<void> {
+    await this.request('POST', `/v1/memories/${encodeURIComponent(id)}/feedback${scopeQuery(scope)}`, { helpful });
+  }
+
   /** Move every memory of a user, agent or run to the trash. */
   async deleteAll(scope: Scope): Promise<number> {
     if (!scope.userId && !scope.agentId && !scope.runId) throw new WoollyError('deleteAll needs a userId, agentId or runId');

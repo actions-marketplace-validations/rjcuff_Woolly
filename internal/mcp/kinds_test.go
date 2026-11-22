@@ -45,3 +45,24 @@ func TestKindRoundTrips(t *testing.T) {
 		t.Fatalf("type = %q", got.Type)
 	}
 }
+
+func TestRateMemoryAndRecallTouches(t *testing.T) {
+	s, store := trustServer(t)
+	res, _ := store.Remember(memory.RememberInput{Content: "Deploys to Fly"})
+	ctx := context.Background()
+	if _, err := s.callTool(ctx, "recall", json.RawMessage(`{"query":"deploys"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if store.Usage()[res.Memory.ID].Uses != 1 {
+		t.Fatal("recall should record use")
+	}
+	if _, err := s.callTool(ctx, "rate_memory", json.RawMessage(`{"id":"`+res.Memory.ID+`","helpful":false}`)); err != nil {
+		t.Fatal(err)
+	}
+	if store.Usage()[res.Memory.ID].Down != 1 {
+		t.Fatal("rating not saved")
+	}
+	if _, err := s.callTool(ctx, "rate_memory", json.RawMessage(`{"id":"`+res.Memory.ID+`"}`)); err == nil {
+		t.Fatal("helpful is required")
+	}
+}
