@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.19.0
 
 A new look for usewoolly.com, and a page for Woolly Team.
 
@@ -23,6 +23,8 @@ Safer, steadier memory for the agents you build.
 - `woolly dream` rolls each week of episodes an AI saved, once they're two weeks old, into one summary, keeping the originals as history. Episodes you saved keep your words. This needs a local chat model.
 - `GET /v1/conflicts` lists the conflicts in a scope, each with the memory it disagrees with, and `POST /v1/conflicts/{id}/resolve` keeps one. An app can only keep a version at least as trusted as the ones it replaces; it gets 403 otherwise, and you settle those on the review page. The SDKs have `scoped_conflicts`/`scopedConflicts` and `resolve_scoped`/`resolveScoped`.
 - `make eval` runs a fast recall quality check and a table of memory lifecycle cases, with no Ollama needed.
+- The JavaScript package (`woolly-ai` 0.4.0 on npm) and the Python package (`woolly-ai` 0.6.0 on PyPI) have all of the above: `type`, `memory_type`/`memoryType`, `feedback`, `link`, `scoped_conflicts`/`scopedConflicts` and `resolve_scoped`/`resolveScoped`. Their `resolve` methods can now raise an error, as described below.
+- Both packages have a new description on npm and PyPI that says Woolly is project memory for coding agents.
 
 - AI apps can't skip the check for planted instructions by saying a memory came from you. The `remember` tool, `/api/remember` from scripts and the SDKs, and edits through `PUT /v1/memories/{id}` and `PATCH /api/memories/{id}` now refuse text that reads like instructions to an AI, whatever source they give. What you type on the command line or the review page is saved as before.
 - When an AI app or a script says a fact came from you, it's saved with source `import` and the tag `user-stated`. It still beats an AI's guess, but it can't replace a fact you saved yourself; it waits as a conflict. Before, an AI app could replace any fact you saved this way.
