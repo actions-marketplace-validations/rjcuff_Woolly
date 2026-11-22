@@ -1,13 +1,17 @@
 VERSION ?= 0.1.0-dev
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: build test install ui web-test ui-test py-test js-test check release publish demo pypi npm app
+.PHONY: build test eval install ui web-test ui-test py-test js-test check release publish demo pypi npm app
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o bin/woolly ./cmd/woolly
 
 test:
 	go vet ./... && go test ./...
+
+# Recall quality and memory lifecycle checks. Fast, no Ollama needed.
+eval:
+	go test ./internal/recall -run Eval -v && go test ./internal/memory -run Lifecycle
 
 install:
 	go install -ldflags "$(LDFLAGS)" ./cmd/woolly

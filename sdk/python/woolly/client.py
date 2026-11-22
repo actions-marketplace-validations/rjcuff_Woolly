@@ -214,16 +214,24 @@ class Woolly:
         )
 
     def recall(
-        self, query: str, limit: int = 5, include_history: bool = False, project: Optional[str] = None
+        self,
+        query: str,
+        limit: int = 5,
+        include_history: bool = False,
+        project: Optional[str] = None,
+        type: Optional[List[str]] = None,
     ) -> List[Memory]:
         """Find the memories most relevant to ``query``, best first.
 
         With ``project``, search the user's memories plus that project's, and
-        leave other projects out.
+        leave other projects out. ``type`` keeps only memories of those types,
+        like ``["preference"]`` or ``["procedure"]``.
         """
         body: Dict[str, Any] = {"query": query, "limit": limit, "include_all": include_history}
         if project:
             body["project"] = project
+        if type:
+            body["type"] = type
         r = self._request("POST", "/api/recall", body)
         return [Memory.from_json(x["memory"], score=x.get("score")) for x in r.get("results") or []]
 
@@ -324,6 +332,7 @@ class Woolly:
         project: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         infer: bool = True,
+        memory_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Add a conversation to memory, the way mem0's ``add`` does.
 
@@ -339,6 +348,8 @@ class Woolly:
         body: Dict[str, Any] = {"messages": messages, "infer": infer, **self._scope(user_id, agent_id, run_id, project)}
         if metadata:
             body["metadata"] = metadata
+        if memory_type:
+            body["memory_type"] = memory_type
         old, self.timeout = self.timeout, max(self.timeout, 120.0)
         try:
             return self._request("POST", "/v1/memories", body)
@@ -355,11 +366,18 @@ class Woolly:
         top_k: int = 5,
         threshold: float = 0.0,
         show_expired: bool = False,
+        type: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Search one user's, agent's or run's memories, best first. Each result has a ``score``."""
+        """Search one user's, agent's or run's memories, best first. Each result has a ``score``.
+
+        ``type`` keeps only memories of those types, like ``["procedure"]``.
+        """
+        filters: Dict[str, Any] = dict(self._scope(user_id, agent_id, run_id, project))
+        if type:
+            filters["type"] = type
         body = {
             "query": query,
-            "filters": self._scope(user_id, agent_id, run_id, project),
+            "filters": filters,
             "top_k": top_k,
             "threshold": threshold,
             "show_expired": show_expired,

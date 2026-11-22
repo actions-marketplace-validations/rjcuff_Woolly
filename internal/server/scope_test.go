@@ -44,3 +44,13 @@ func TestAPIProfileAndRecallLeaveOutAppUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestV1TypeOnAddAndSearch(t *testing.T) {
+	h, token := setup(t)
+	v1(t, h, token, "POST", "/v1/memories", `{"messages":[{"role":"user","content":"Reset a password by emailing a link"}],"user_id":"alice","infer":false,"memory_type":"procedure"}`)
+	v1(t, h, token, "POST", "/v1/memories", `{"messages":[{"role":"user","content":"Prefers password managers"}],"user_id":"alice","infer":false,"memory_type":"preference"}`)
+	got := results(v1(t, h, token, "POST", "/v1/search", `{"query":"password","filters":{"user_id":"alice","type":["procedure"]}}`))
+	if len(got) != 1 || got[0]["type"] != "procedure" || !strings.Contains(got[0]["memory"].(string), "Reset") {
+		t.Fatalf("search: %v", got)
+	}
+}

@@ -67,6 +67,26 @@ curl -X POST localhost:11435/v1/search \
 
 Results are scored by meaning, keywords and how recent they are. `threshold` drops weak matches, and `show_expired` includes memories that are no longer true, for questions about the past. The scope fields also work at the top level, as older mem0 clients send them.
 
+## Kinds of memory
+
+Give a memory a type so your agent can ask for just what it needs:
+
+- `preference`: how someone likes things, like "wants bullet-point summaries"
+- `procedure`: how to do something, like "to reset a password, send the link from the admin page"
+- `episode`: something that happened, like "the March 3 outage was a bad config push"
+
+Project facts can also be a `decision`, `convention`, `gotcha`, `bug` or `hardware`.
+
+Add `"memory_type": "procedure"` when you add messages, and `"type": ["procedure"]` in search `filters` to get only those. Each result has its `type`.
+
+```sh
+curl -X POST localhost:11435/v1/search \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"query": "reset a password", "filters": {"user_id": "alice", "type": ["procedure"]}}'
+```
+
+The type is in the memory's Markdown header, so you can change it by hand.
+
 ## Memories over time
 
 Nothing is overwritten. When a fact changes, the old version stays on disk with `status: superseded` and an `invalid_at` time, and an expired fact gets `status: expired`. Ask for the whole story of a memory:
@@ -88,14 +108,14 @@ curl localhost:11435/v1/memories/ID/history -H "Authorization: Bearer $TOKEN"
 
 | Method | Path | Does |
 |---|---|---|
-| `POST` | `/v1/memories` | Add a conversation: `messages`, scope, `metadata`, `infer` |
+| `POST` | `/v1/memories` | Add a conversation: `messages`, scope, `metadata`, `infer`, `memory_type` |
 | `GET` | `/v1/memories` | List memories in a scope: `user_id`, `agent_id`, `run_id`, `project`, `top_k`, `show_expired` |
 | `GET` | `/v1/memories/{id}` | One memory |
 | `PUT` | `/v1/memories/{id}` | Change `text` or `metadata`, keeping the old version as history |
 | `DELETE` | `/v1/memories/{id}` | Move a memory to the trash |
 | `DELETE` | `/v1/memories` | Move every memory in a scope to the trash. Needs a `user_id`, `agent_id` or `run_id` |
 | `GET` | `/v1/memories/{id}/history` | Every version, oldest first |
-| `POST` | `/v1/search` | Search: `query`, `filters`, `top_k`, `threshold`, `show_expired` |
+| `POST` | `/v1/search` | Search: `query`, `filters` (scope and `type`), `top_k`, `threshold`, `show_expired` |
 | `POST` | `/v1/dream` | Tidy a scope and learn lessons: `dry_run`, `learn`. See [Dreaming](/docs/dreaming) |
 
 Every memory is still a Markdown file in `~/.woolly/memories`, with its scope in the header, so you can read and fix what your agents learned.

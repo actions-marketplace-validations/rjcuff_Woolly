@@ -23,6 +23,8 @@ type AddOptions struct {
 	Via      string
 	Metadata map[string]any
 	Tags     []string
+	// Type is the memory type of what gets saved, like "procedure".
+	Type string
 	// Infer has the model pick out facts and decide what changes. Without
 	// it, each user message is saved as it is.
 	Infer bool
@@ -157,7 +159,7 @@ func (l *Learner) addRaw(msgs []Message, o AddOptions) ([]Event, error) {
 func (l *Learner) input(content, project string, o AddOptions) memory.RememberInput {
 	return memory.RememberInput{
 		Content: content, Project: project, Source: memory.SourceAgent, Via: o.Via, Metadata: o.Metadata, Tags: o.Tags,
-		User: o.Scope.User, Agent: o.Scope.Agent, Session: o.Scope.Session,
+		User: o.Scope.User, Agent: o.Scope.Agent, Session: o.Scope.Session, Type: o.Type,
 	}
 }
 

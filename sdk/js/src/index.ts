@@ -73,6 +73,8 @@ export interface ScopedMemory {
   agent_id?: string;
   run_id?: string;
   project?: string;
+  /** decision, convention, gotcha, bug, hardware, preference, procedure or episode. */
+  type?: string;
   metadata?: Record<string, unknown>;
   status: 'active' | 'superseded' | 'conflict' | 'expired' | 'stale';
   created_at: string;
@@ -269,12 +271,16 @@ export class Woolly {
   }
 
   /** The memories most relevant to query, best first. */
-  async recall(query: string, options: { limit?: number; project?: string; includeHistory?: boolean } = {}): Promise<Memory[]> {
+  async recall(
+    query: string,
+    options: { limit?: number; project?: string; includeHistory?: boolean; type?: string[] } = {},
+  ): Promise<Memory[]> {
     const r = await this.request<{ results: { memory: Memory; score: number }[] }>('POST', '/api/recall', {
       query,
       limit: options.limit ?? 5,
       project: options.project,
       include_all: options.includeHistory ?? false,
+      type: options.type,
     });
     return r.results.map((x) => ({ ...x.memory, score: x.score }));
   }
@@ -354,13 +360,19 @@ export class Woolly {
    */
   async add(
     messages: string | ChatMessage[],
-    options: Scope & { metadata?: Record<string, unknown>; infer?: boolean } = {},
+    options: Scope & { metadata?: Record<string, unknown>; infer?: boolean; memoryType?: string } = {},
   ): Promise<MemoryEvent[]> {
     const msgs = typeof messages === 'string' ? [{ role: 'user', content: messages }] : messages;
     const r = await this.request<{ results: MemoryEvent[] }>(
       'POST',
       '/v1/memories',
-      { messages: msgs, ...scopeBody(options), metadata: options.metadata, infer: options.infer ?? true },
+      {
+        messages: msgs,
+        ...scopeBody(options),
+        metadata: options.metadata,
+        infer: options.infer ?? true,
+        memory_type: options.memoryType,
+      },
       Math.max(this.timeout, 120_000),
     );
     return r.results;
@@ -369,11 +381,11 @@ export class Woolly {
   /** Search one user's, agent's or run's memories, best first. */
   async search(
     query: string,
-    options: Scope & { topK?: number; threshold?: number; showExpired?: boolean } = {},
+    options: Scope & { topK?: number; threshold?: number; showExpired?: boolean; type?: string[] } = {},
   ): Promise<ScopedMemory[]> {
     const r = await this.request<{ results: ScopedMemory[] }>('POST', '/v1/search', {
       query,
-      filters: scopeBody(options),
+      filters: { ...scopeBody(options), type: options.type },
       top_k: options.topK ?? 5,
       threshold: options.threshold ?? 0,
       show_expired: options.showExpired ?? false,

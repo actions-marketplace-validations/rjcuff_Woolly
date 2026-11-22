@@ -43,7 +43,7 @@ A week later, in Cursor, you ask for a weather script. Cursor calls `recall` wit
 
 | Tool | When the AI uses it |
 | --- | --- |
-| `recall` | To look up anything relevant to what you're working on, in your memory and the project's. `max_chars` caps how much text comes back |
+| `recall` | To look up anything relevant to what you're working on, in your memory and the project's. `max_chars` caps how much text comes back, and `type` keeps only some kinds, like `["procedure"]` |
 | `get_profile` | Once at the start of a conversation, for a summary of you |
 | `remember` | When you share a fact, preference or decision worth keeping. Its `scope` is `personal`, `project` or `auto`, so facts about the codebase go to [project memory](/docs/project-memory) and facts about you stay personal. Project facts can also have a `type` and `sources`, the code they're about, so Woolly can flag them when that code changes |
 | `list_memories` | When you ask what Woolly knows. Lists 50 memories, newest first, unless you pass `limit` |

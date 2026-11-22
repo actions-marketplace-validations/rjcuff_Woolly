@@ -12,6 +12,9 @@ A new look for usewoolly.com, and a page for Woolly Team.
 
 Safer, steadier memory for the agents you build.
 
+- Memories can be a `preference`, a `procedure` or an `episode`, as well as the project kinds. The MCP `remember` tool takes them for personal memory too, and `recall` takes `type` to get only some kinds. In the memory API, add messages with `memory_type` and search with `filters.type`; results include `type`. The Python and JavaScript SDKs take `type` in `recall` and `search` and `memory_type`/`memoryType` in `add`.
+- `make eval` runs a fast recall quality check and a table of memory lifecycle cases, with no Ollama needed.
+
 - AI apps can't skip the check for planted instructions by saying a memory came from you. The `remember` tool, `/api/remember` from scripts and the SDKs, and edits through `PUT /v1/memories/{id}` and `PATCH /api/memories/{id}` now refuse text that reads like instructions to an AI, whatever source they give. What you type on the command line or the review page is saved as before.
 - When an AI app or a script says a fact came from you, it's saved with source `import` and the tag `user-stated`. It still beats an AI's guess, but it can't replace a fact you saved yourself; it waits as a conflict. Before, an AI app could replace any fact you saved this way.
 - An AI app or a script can no longer resolve a conflict in favor of the less trusted memory, or bring back a version you replaced. `resolve_conflict` and `/api/resolve` return an error; the review page and `woolly resolve` still let you pick either. The Python and JavaScript `resolve` methods raise that error too.

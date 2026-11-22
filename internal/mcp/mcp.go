@@ -215,7 +215,7 @@ var tools = []map[string]any{
 			"source":     map[string]any{"type": "string", "enum": []string{"user", "agent"}, "description": `"user" if the user said it directly, "agent" if you inferred it. Default "agent".`},
 			"scope":      map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for facts about the codebase, "personal" for facts about the user. Default "auto": Woolly decides, and picks personal when unsure.`},
 			"section":    map[string]any{"type": "string", "enum": []string{"Overview", "Stack", "Conventions", "Decisions", "Gotchas", "Bugs", "Hardware", "Commands"}, "description": "For project memory, the heading it goes under. Woolly guesses if you leave it out."},
-			"type":       map[string]any{"type": "string", "enum": memory.Types, "description": "For project memory, what kind of fact it is. Sets the section too."},
+			"type":       map[string]any{"type": "string", "enum": memory.Types, "description": "What kind of memory it is. For project memory, decision, convention, gotcha, bug or hardware, which sets the section too. For anything, preference (how the user likes things), procedure (how to do something) or episode (something that happened)."},
 			"sources":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": `For project memory, the code the fact is about, relative to the repo root: "main/pins.h", "main/imu.c#imu_read_accel" (a function, type, macro or constant) or "main/pins.h:12-18" (lines). Woolly checks these against the code and flags the fact stale when they change.`},
 			"confidence": map[string]any{"type": "number", "minimum": 0, "maximum": 1, "description": "How sure you are, from 0 to 1. Leave it out if unsure."},
 			"project":    map[string]any{"type": "string", "description": "The project's name, if it isn't the current one."},
@@ -231,6 +231,7 @@ var tools = []map[string]any{
 			"scope":     map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for only the project's memory, "personal" for only the user's. Default "auto": both.`},
 			"project":   map[string]any{"type": "string", "description": "Search this project's memories plus the user's. Defaults to the current project when Woolly knows it."},
 			"max_chars": map[string]any{"type": "integer", "minimum": 200, "description": "Cap on the memories' text, to save context. Best matches are kept first."},
+			"type":      map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": memory.Types}, "description": `Only memories of these types, like ["preference"] or ["procedure"].`},
 		}, "query"),
 	},
 	{
@@ -318,7 +319,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
 		}
-		if a.Scope == "" && (a.Type != "" || len(a.Sources) > 0) && (a.Project != "" || s.Project != "") && !share.LooksPersonal(a.Content) {
+		if a.Scope == "" && (memory.ProjectType(a.Type) || len(a.Sources) > 0) && (a.Project != "" || s.Project != "") && !share.LooksPersonal(a.Content) {
 			a.Scope = "project" // only project facts have a type or point at code
 		}
 		project, err := s.scopeFor(a.Scope, a.Project, a.Key, a.Content)
@@ -337,9 +338,8 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			src = parsed
 		}
-		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true}
+		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true, Type: a.Type}
 		if project != "" {
-			in.Type = a.Type
 			in.Sources = s.sources(project, a.Sources)
 		}
 		res, err := s.Store.Remember(in)
@@ -355,11 +355,12 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 
 	case "recall":
 		var a struct {
-			Query    string `json:"query"`
-			Limit    int    `json:"limit"`
-			Project  string `json:"project"`
-			Scope    string `json:"scope"`
-			MaxChars int    `json:"max_chars"`
+			Query    string   `json:"query"`
+			Limit    int      `json:"limit"`
+			Project  string   `json:"project"`
+			Scope    string   `json:"scope"`
+			MaxChars int      `json:"max_chars"`
+			Type     []string `json:"type"`
 		}
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
@@ -373,7 +374,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if a.Scope == "project" || a.Scope == "personal" {
 			limit = 50 // filtered below
 		}
-		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, memory.Scope{Project: project, Personal: true})
+		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, memory.Scope{Project: project, Personal: true, Types: a.Type})
 		if err != nil {
 			return "", err
 		}

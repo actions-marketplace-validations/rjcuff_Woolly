@@ -133,16 +133,17 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 
 	mux.HandleFunc("POST /api/recall", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Query      string `json:"query"`
-			Limit      int    `json:"limit"`
-			IncludeAll bool   `json:"include_all"`
-			Project    string `json:"project"`
+			Query      string   `json:"query"`
+			Limit      int      `json:"limit"`
+			IncludeAll bool     `json:"include_all"`
+			Project    string   `json:"project"`
+			Type       []string `json:"type"`
 		}
 		if !readJSON(w, r, &req) {
 			return
 		}
 		// The user's own memory; apps' users are searched through /v1/search.
-		results, mode, err := engine.RecallScoped(r.Context(), req.Query, req.Limit, req.IncludeAll, memory.Scope{Project: req.Project, Personal: true})
+		results, mode, err := engine.RecallScoped(r.Context(), req.Query, req.Limit, req.IncludeAll, memory.Scope{Project: req.Project, Personal: true, Types: req.Type})
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return

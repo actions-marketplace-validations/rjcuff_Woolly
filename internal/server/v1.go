@@ -22,6 +22,7 @@ type v1Memory struct {
 	AgentID   string         `json:"agent_id,omitempty"`
 	RunID     string         `json:"run_id,omitempty"`
 	Project   string         `json:"project,omitempty"`
+	Type      string         `json:"type,omitempty"`
 	Metadata  map[string]any `json:"metadata,omitempty"`
 	Status    memory.Status  `json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -32,7 +33,7 @@ type v1Memory struct {
 
 func toV1(m memory.Memory) v1Memory {
 	return v1Memory{
-		ID: m.ID, Memory: m.Content, UserID: m.User, AgentID: m.Agent, RunID: m.Session, Project: m.Project,
+		ID: m.ID, Memory: m.Content, UserID: m.User, AgentID: m.Agent, RunID: m.Session, Project: m.Project, Type: memory.TypeOf(m),
 		Metadata: m.Metadata, Status: m.Status, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt, InvalidAt: m.InvalidAt,
 	}
 }
@@ -53,10 +54,12 @@ type scopeFields struct {
 	AgentID string `json:"agent_id"`
 	RunID   string `json:"run_id"`
 	Project string `json:"project"`
+	// Type filters search and list results by memory type.
+	Type []string `json:"type,omitempty"`
 }
 
 func (f scopeFields) scope() memory.Scope {
-	return memory.Scope{User: f.UserID, Agent: f.AgentID, Session: f.RunID, Project: f.Project}.Normalized()
+	return memory.Scope{User: f.UserID, Agent: f.AgentID, Session: f.RunID, Project: f.Project, Types: f.Type}.Normalized()
 }
 
 func queryScope(r *http.Request) memory.Scope {
@@ -96,6 +99,8 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 			Messages []learn.Message `json:"messages"`
 			Metadata map[string]any  `json:"metadata"`
 			Infer    *bool           `json:"infer"`
+			// MemType is the type of what gets saved, like "procedure".
+			MemType string `json:"memory_type"`
 		}
 		if !readJSON(w, r, &req) {
 			return
@@ -106,7 +111,7 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 		}
 		infer := req.Infer == nil || *req.Infer
 		events, err := learner.Add(r.Context(), req.Messages, learn.AddOptions{
-			Scope: req.scope(), Via: appOf(r), Metadata: req.Metadata, Infer: infer,
+			Scope: req.scope(), Via: appOf(r), Metadata: req.Metadata, Infer: infer, Type: req.MemType,
 		})
 		if err != nil {
 			status := http.StatusBadRequest
@@ -296,6 +301,9 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 		}
 		if f.Project == "" {
 			f.Project = req.Project
+		}
+		if len(f.Type) == 0 {
+			f.Type = req.Type
 		}
 		results, _, err := engine.RecallScoped(r.Context(), req.Query, req.TopK, req.ShowExpired, f.scope())
 		if err != nil {

@@ -141,6 +141,9 @@ type Scope struct {
 	// of their users, agents or sessions. The user's own AI apps set it, so
 	// what an app keeps about "alice" never shows up in their briefs.
 	Personal bool
+	// Types keeps only memories of these types, like "preference". Empty
+	// means any type.
+	Types []string
 }
 
 // Unscoped reports whether the memory belongs to the user themselves rather
@@ -175,6 +178,7 @@ func (sc Scope) Normalized() Scope {
 		Session:  CleanScopeID(sc.Session),
 		Project:  NormalizeProject(sc.Project),
 		Personal: sc.Personal,
+		Types:    NormalizeTypes(sc.Types),
 	}
 }
 
@@ -187,6 +191,15 @@ func (sc Scope) Empty() bool { return sc.User == "" && sc.Agent == "" && sc.Sess
 func (sc Scope) Matches(m *Memory) bool {
 	if sc.Personal && !m.Unscoped() {
 		return false
+	}
+	if len(sc.Types) > 0 {
+		t, ok := TypeOf(*m), false
+		for _, want := range sc.Types {
+			ok = ok || t == want
+		}
+		if !ok {
+			return false
+		}
 	}
 	return (sc.User == "" || m.User == sc.User) &&
 		(sc.Agent == "" || m.Agent == sc.Agent) &&
