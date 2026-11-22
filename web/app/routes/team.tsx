@@ -76,6 +76,7 @@ export default function Team({ loaderData }: Route.ComponentProps) {
       <SkyNav stars={loaderData.stars} className="absolute inset-x-0 top-0" />
       <SkyHero
         title="Accurate agent context across every repository"
+        titleClassName="text-[30px]/[1.1] min-[400px]:text-[33px]/[1.08]"
         lead="Woolly Team flags the lines in CLAUDE.md, AGENTS.md and project memory that each pull request makes stale, so your team fixes them before agents act on them."
         actions={
           <>
