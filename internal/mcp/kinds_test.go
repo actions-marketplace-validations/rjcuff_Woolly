@@ -66,3 +66,21 @@ func TestRateMemoryAndRecallTouches(t *testing.T) {
 		t.Fatal("helpful is required")
 	}
 }
+
+func TestParaphraseIsNotSavedTwice(t *testing.T) {
+	s, store := trustServer(t)
+	ctx := context.Background()
+	for _, text := range []string{"Prefers tabs over spaces.", "prefers tabs over spaces", "Prefers: tabs, over spaces!"} {
+		if _, err := s.callTool(ctx, "remember", json.RawMessage(`{"content":"`+text+`","scope":"personal","tags":["style"]}`)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mems, _ := store.List(false)
+	if len(mems) != 1 {
+		t.Fatalf("%d memories: %+v", len(mems), mems)
+	}
+	out, _ := s.callTool(ctx, "remember", json.RawMessage(`{"content":"Prefers spaces over tabs in YAML files","scope":"personal"}`))
+	if strings.Contains(out, "Already known") {
+		t.Fatalf("a different fact was treated as a copy: %s", out)
+	}
+}

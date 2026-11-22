@@ -193,11 +193,35 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 
 func round(x float64) float64 { return math.Round(x*1000) / 1000 }
 
+// NearCopy reports whether two texts say the same thing in nearly the same
+// words, in the same order: they share at least 85% of their distinct words
+// and of their word pairs, ignoring case, punctuation and filler words. Word
+// order matters, so "tabs over spaces" is not a copy of "spaces over tabs".
+func NearCopy(a, b string) bool {
+	ta, tb := tokenize(a), tokenize(b)
+	return overlap(ta, tb) >= 0.85 && overlap(pairs(ta), pairs(tb)) >= 0.85
+}
+
+// pairs lists each word joined with the next, as a cheap sign of word order.
+func pairs(toks []string) []string {
+	if len(toks) < 2 {
+		return toks
+	}
+	out := make([]string, 0, len(toks)-1)
+	for i := 1; i < len(toks); i++ {
+		out = append(out, toks[i-1]+" "+toks[i])
+	}
+	return out
+}
+
 // similar reports whether two token lists are near copies: they share at
 // least 90% of their distinct words.
-func similar(a, b []string) bool {
+func similar(a, b []string) bool { return overlap(a, b) >= 0.9 }
+
+// overlap is the share of distinct words two token lists have in common.
+func overlap(a, b []string) float64 {
 	if len(a) == 0 || len(b) == 0 {
-		return false
+		return 0
 	}
 	sa, sb := map[string]bool{}, map[string]bool{}
 	for _, t := range a {
@@ -213,7 +237,7 @@ func similar(a, b []string) bool {
 		}
 	}
 	union := len(sa) + len(sb) - inter
-	return float64(inter)/float64(union) >= 0.9
+	return float64(inter) / float64(union)
 }
 
 func docText(m memory.Memory) string {

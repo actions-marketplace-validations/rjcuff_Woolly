@@ -351,6 +351,13 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if project != "" {
 			in.Sources = s.sources(project, a.Sources)
 		}
+		// A paraphrase of something already known isn't saved again.
+		if in.Key == "" {
+			if dup := s.nearCopy(ctx, in); dup != nil {
+				s.log("remember", []string{dup.ID}, "", 0)
+				return "Already known: " + dup.Content, nil
+			}
+		}
 		res, err := s.Store.Remember(in)
 		if err != nil {
 			return "", err
@@ -621,6 +628,30 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		return fmt.Sprintf("Kept %q as the current fact; replaced %d other memories.", kept.Content, len(replaced)), nil
 	}
 	return "", fmt.Errorf("unknown tool %q", name)
+}
+
+// nearCopy finds a current memory in the same place that says what in says
+// in nearly the same words, and adds in's tags to it.
+func (s *Server) nearCopy(ctx context.Context, in memory.RememberInput) *memory.Memory {
+	results, _, err := s.Engine.RecallScoped(ctx, in.Content, 3, false, memory.Scope{Project: in.Project, Personal: true})
+	if err != nil {
+		return nil
+	}
+	project := memory.NormalizeProject(in.Project)
+	for _, r := range results {
+		m := r.Memory
+		if m.Project != project || m.Key != "" || !recall.NearCopy(m.Content, in.Content) {
+			continue
+		}
+		// Note that it was said again: new tags, and a source at least as
+		// trusted. A claim isn't more trusted than what's there.
+		if _, err := s.Store.Remember(memory.RememberInput{Content: m.Content, Tags: in.Tags, Source: m.Source,
+			Project: m.Project, Via: in.Via}); err != nil {
+			return nil
+		}
+		return &m
+	}
+	return nil
 }
 
 // profileProjectChars caps the project part of get_profile.

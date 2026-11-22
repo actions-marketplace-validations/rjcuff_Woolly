@@ -73,3 +73,18 @@ func TestDownVoteLowersRank(t *testing.T) {
 		t.Fatal("a down-vote must never delete a memory")
 	}
 }
+
+func TestNearCopy(t *testing.T) {
+	if !NearCopy("Prefers tabs over spaces.", "prefers: tabs, over spaces!") {
+		t.Fatal("punctuation and case shouldn't matter")
+	}
+	if NearCopy("Prefers tabs over spaces", "Prefers spaces over tabs in YAML files") {
+		t.Fatal("different facts")
+	}
+	if NearCopy("Prefers tabs over spaces", "Prefers spaces over tabs") {
+		t.Fatal("the opposite fact is not a copy")
+	}
+	if NearCopy("", "anything") {
+		t.Fatal("empty text is never a copy")
+	}
+}
