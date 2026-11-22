@@ -325,8 +325,9 @@ func (d *Dreamer) apply(rel, text string, a, b memory.Memory, o Options, rep *Re
 		rep.add(st)
 
 	case "contradiction":
+		// Whichever was stated or confirmed last is the newer fact.
 		older, newer := a, b
-		if a.CreatedAt.After(b.CreatedAt) {
+		if a.UpdatedAt.After(b.UpdatedAt) {
 			older, newer = b, a
 		}
 		done[a.ID], done[b.ID] = true, true

@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -51,6 +53,9 @@ type Store struct {
 	mu   sync.Mutex
 	mems map[string]*Memory
 	fp   string // fingerprint of the directory at last load
+	// problems lists files that couldn't be read at last load, so a typo in
+	// a hand edit shows up instead of the memory quietly going missing.
+	problems []string
 
 	usageMu sync.Mutex // guards usage.json
 }
@@ -79,8 +84,9 @@ func (s *Store) fingerprint() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var n int
-	var latest time.Time
+	// Every file's name, size and time, so a rename or a sync tool that
+	// keeps an older time still counts as a change. ReadDir sorts by name.
+	h := sha256.New()
 	for _, e := range entries {
 		if e.IsDir() || !isMemoryFile(e.Name()) {
 			continue
@@ -89,12 +95,18 @@ func (s *Store) fingerprint() (string, error) {
 		if err != nil {
 			continue
 		}
-		n++
-		if info.ModTime().After(latest) {
-			latest = info.ModTime()
-		}
+		fmt.Fprintf(h, "%s:%d:%d;", e.Name(), info.Size(), info.ModTime().UnixNano())
 	}
-	return fmt.Sprintf("%d:%d", n, latest.UnixNano()), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Problems lists memory files Woolly couldn't read fully, with why. Fix or
+// remove them by hand; nothing else touches them.
+func (s *Store) Problems() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_ = s.refresh()
+	return append([]string(nil), s.problems...)
 }
 
 func (s *Store) load() error {
@@ -107,6 +119,7 @@ func (s *Store) load() error {
 		return err
 	}
 	mems := make(map[string]*Memory, len(entries))
+	var problems []string
 	for _, e := range entries {
 		if e.IsDir() || !isMemoryFile(e.Name()) {
 			continue
@@ -114,17 +127,22 @@ func (s *Store) load() error {
 		path := filepath.Join(s.dir, e.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
+			problems = append(problems, e.Name()+": "+err.Error())
 			continue
 		}
 		m, err := decode(data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "woolly: skipping %s: %v\n", e.Name(), err)
+			problems = append(problems, e.Name()+": "+err.Error())
 			continue
+		}
+		if m.badStatus != "" {
+			problems = append(problems, fmt.Sprintf("%s: unknown status %q, read as active", e.Name(), m.badStatus))
 		}
 		m.file = path
 		mems[m.ID] = m
 	}
-	s.mems, s.fp = mems, fp
+	s.mems, s.fp, s.problems = mems, fp, problems
 	return nil
 }
 
@@ -515,6 +533,20 @@ func (s *Store) Forget(id string) (Memory, error) {
 		return Memory{}, err
 	}
 	delete(s.mems, m.ID)
+	// A conflict with a memory that's gone has nothing left to settle.
+	for _, ex := range s.mems {
+		if ex.ConflictsWith != m.ID {
+			continue
+		}
+		ex.ConflictsWith = ""
+		if ex.Status == StatusConflict {
+			ex.Status = StatusActive
+		}
+		ex.UpdatedAt = m.UpdatedAt
+		if err := s.write(ex); err != nil {
+			return Memory{}, err
+		}
+	}
 	return m.clone(), nil
 }
 
@@ -550,6 +582,9 @@ func (s *Store) Trash() ([]Memory, error) {
 func (s *Store) Restore(id string) (Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, err
+	}
 	trash := s.trashDir()
 	entries, err := os.ReadDir(trash)
 	if err != nil {
@@ -577,7 +612,22 @@ func (s *Store) Restore(id string) (Memory, error) {
 	if err != nil {
 		return Memory{}, err
 	}
+	if _, err := os.Stat(filepath.Join(s.dir, match)); err == nil || s.mems[m.ID] != nil {
+		return Memory{}, fmt.Errorf("memory %s already exists", m.ID)
+	}
 	m.UpdatedAt = time.Now().UTC()
+	// While it was in the trash, a newer fact may have taken its key. Then it
+	// comes back as a conflict for the user to settle, never as a second
+	// current fact.
+	if m.Status == StatusActive && m.Key != "" {
+		for _, ex := range s.mems {
+			if ex.Status == StatusActive && ex.Key == m.Key && sameSlot(ex, m) {
+				m.Status = StatusConflict
+				m.ConflictsWith = ex.ID
+				break
+			}
+		}
+	}
 	if err := writeFile(filepath.Join(s.dir, match), encode(m)); err != nil {
 		return Memory{}, err
 	}
@@ -894,6 +944,12 @@ func (s *Store) Supersede(old, by string) (Memory, error) {
 	if o.ID == b.ID {
 		return Memory{}, errors.New("a memory can't replace itself")
 	}
+	if !b.Live() {
+		return Memory{}, fmt.Errorf("memory %s is no longer current", b.ID)
+	}
+	if b.SupersededBy == o.ID {
+		return Memory{}, errors.New("these two memories would replace each other")
+	}
 	now := time.Now().UTC()
 	o.Status = StatusSuperseded
 	o.SupersededBy = b.ID
@@ -959,6 +1015,9 @@ func (s *Store) MarkConflict(id, with string) (Memory, error) {
 	w, err := s.find(with)
 	if err != nil {
 		return Memory{}, err
+	}
+	if m.ID == w.ID {
+		return Memory{}, errors.New("a memory can't conflict with itself")
 	}
 	m.Status = StatusConflict
 	m.ConflictsWith = w.ID

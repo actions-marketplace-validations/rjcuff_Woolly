@@ -155,6 +155,9 @@ func decode(data []byte) (*Memory, error) {
 	switch m.Status {
 	case StatusActive, StatusSuperseded, StatusConflict, StatusExpired, StatusStale:
 	default:
+		if m.Status != "" {
+			m.badStatus = string(m.Status)
+		}
 		m.Status = StatusActive
 	}
 	if m.UpdatedAt.IsZero() {

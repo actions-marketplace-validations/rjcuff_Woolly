@@ -51,10 +51,30 @@ func (s *Store) Touch(ids ...string) {
 	if err != nil {
 		return
 	}
-	tmp := s.usagePath() + ".tmp"
-	if os.WriteFile(tmp, b, 0o600) == nil {
-		_ = os.Rename(tmp, s.usagePath())
+	writeAtomic(s.usagePath(), b)
+}
+
+// writeAtomic writes data through a temp file of its own, so two processes
+// writing at once, like the MCP server and woolly serve, never mix their
+// writes in one file.
+func writeAtomic(path string, data []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+"-*.tmp")
+	if err != nil {
+		return err
 	}
+	_, werr := tmp.Write(data)
+	if cerr := tmp.Close(); werr != nil || cerr != nil {
+		os.Remove(tmp.Name())
+		if werr != nil {
+			return werr
+		}
+		return cerr
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return nil
 }
 
 // LastUsed returns when each memory was last used. Memories never used are

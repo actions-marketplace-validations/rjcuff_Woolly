@@ -989,6 +989,12 @@ func cmdDoctor(args []string) error {
 	if conflicts > 0 {
 		fmt.Println("  run 'woolly conflicts' to review disagreeing memories")
 	}
+	if problems := a.store.Problems(); len(problems) > 0 {
+		fmt.Printf("  %s Woolly couldn't read fully. Fix or remove by hand:\n", plural(len(problems), "file", "files"))
+		for _, p := range problems {
+			fmt.Println("    " + p)
+		}
+	}
 	if ok, err := a.ollama.HasModel(ctx, a.ollama.ChatModel); err == nil && ok {
 		fmt.Printf("  woolly learn: ready (%s)\n", a.ollama.ChatModel)
 	} else if err == nil {

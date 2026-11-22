@@ -272,6 +272,14 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		writeJSON(w, http.StatusOK, map[string]int{"deleted": n})
 	})
 
+	mux.HandleFunc("GET /api/problems", func(w http.ResponseWriter, r *http.Request) {
+		problems := store.Problems()
+		if problems == nil {
+			problems = []string{}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"problems": problems})
+	})
+
 	mux.HandleFunc("GET /api/conflicts", func(w http.ResponseWriter, r *http.Request) {
 		mems, err := store.Conflicts()
 		if err != nil {

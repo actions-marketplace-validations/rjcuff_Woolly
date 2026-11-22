@@ -20,6 +20,14 @@ Safer, steadier memory for the agents you build.
 - Memories an app saves for its users with `user_id`, `agent_id` or `run_id` stay out of your own AI apps and your profile: the session brief and its stale facts, the MCP `recall`, `get_profile`, `list_memories` and `why` tools, the proxy, `/api/recall` and `/api/profile`. They are never written to a repo's shared `.woolly/woolly.md`. Before, what an app kept about `alice` could show up in Claude Code or be committed with the team file.
 - `GET`, `PUT`, `DELETE /v1/memories/{id}` and `/history` return 404 for a memory outside the `user_id`, `agent_id` or `run_id` in the request.
 - Moving a fact's sources to a renamed file updates its time, so sync carries the change to your other devices.
+- Forgetting a memory settles any conflict with it, so the other memory is current again instead of waiting forever.
+- Restoring a memory from the trash never leaves two current facts for one key. If a newer fact took the key while it was in the trash, it comes back as a conflict.
+- Woolly notices every change to the memory folder, including a sync tool that swaps in a file with an older time.
+- `woolly doctor` and the new `GET /api/problems` list memory files Woolly couldn't read, and statuses it didn't recognize, instead of skipping them quietly.
+- The session brief keeps room for your profile when a project has many notes, and logs only the memories it actually showed.
+- The proxy adds at most 2000 characters of memories to a request. The MCP `recall` tool takes `max_chars`, and `list_memories` lists 50 memories unless you pass `limit`. `get_profile` caps its project section.
+- `woolly dream` decides which of two disagreeing facts is newer by when each was last stated or confirmed, not when it was first saved.
+- Usage and embedding cache files are written through temp files of their own, so the MCP server and `woolly serve` can save at the same time safely.
 
 ## 0.18.0
 

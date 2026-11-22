@@ -205,10 +205,29 @@ func (e *Engine) vectors(ctx context.Context, mems []memory.Memory, docs []strin
 		e.cache.Entries[mems[i].ID] = cacheEntry{Hash: hashText(docPrefix + docs[i]), Vec: got[j]}
 	}
 	if len(missIdx) > 0 {
+		e.prune()
 		_ = e.cache.save(e.cachePath)
 	}
 	e.lastErr = nil
 	return vecs, got[len(got)-1], nil
+}
+
+// prune drops cached vectors of memories that no longer exist, so the cache
+// doesn't grow forever. Caller holds e.mu.
+func (e *Engine) prune() {
+	all, err := e.store.List(true)
+	if err != nil {
+		return
+	}
+	keep := make(map[string]bool, len(all))
+	for _, m := range all {
+		keep[m.ID] = true
+	}
+	for id := range e.cache.Entries {
+		if !keep[id] {
+			delete(e.cache.Entries, id)
+		}
+	}
 }
 
 // taskPrefixes returns the text an embedding model expects before a stored
@@ -260,11 +279,25 @@ func (c *cacheFile) save(path string) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	// A temp file of its own, so two processes saving at once never mix
+	// their writes.
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".embeddings-*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	_, werr := tmp.Write(data)
+	if cerr := tmp.Close(); werr != nil || cerr != nil {
+		os.Remove(tmp.Name())
+		if werr != nil {
+			return werr
+		}
+		return cerr
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return nil
 }
 
 func hashText(s string) string {

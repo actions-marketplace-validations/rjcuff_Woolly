@@ -226,10 +226,11 @@ var tools = []map[string]any{
 		"title":       "Recall",
 		"description": "Search Woolly for anything relevant to a query: the user's personal memory plus the current project's memory, which may include notes from teammates. Returns current facts, best match first.",
 		"inputSchema": obj(map[string]any{
-			"query":   map[string]any{"type": "string", "description": "What you want to know, e.g. \"user's coding preferences\"."},
-			"limit":   map[string]any{"type": "integer", "minimum": 1, "maximum": 50, "description": "Max results (default 5)."},
-			"scope":   map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for only the project's memory, "personal" for only the user's. Default "auto": both.`},
-			"project": map[string]any{"type": "string", "description": "Search this project's memories plus the user's. Defaults to the current project when Woolly knows it."},
+			"query":     map[string]any{"type": "string", "description": "What you want to know, e.g. \"user's coding preferences\"."},
+			"limit":     map[string]any{"type": "integer", "minimum": 1, "maximum": 50, "description": "Max results (default 5)."},
+			"scope":     map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for only the project's memory, "personal" for only the user's. Default "auto": both.`},
+			"project":   map[string]any{"type": "string", "description": "Search this project's memories plus the user's. Defaults to the current project when Woolly knows it."},
+			"max_chars": map[string]any{"type": "integer", "minimum": 200, "description": "Cap on the memories' text, to save context. Best matches are kept first."},
 		}, "query"),
 	},
 	{
@@ -279,6 +280,7 @@ var tools = []map[string]any{
 		"description": "List the user's memories, newest first.",
 		"inputSchema": obj(map[string]any{
 			"include_superseded": map[string]any{"type": "boolean", "description": "Also show replaced and conflicting memories."},
+			"limit":              map[string]any{"type": "integer", "minimum": 1, "maximum": 500, "description": "Max memories (default 50)."},
 		}),
 	},
 	{
@@ -353,10 +355,11 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 
 	case "recall":
 		var a struct {
-			Query   string `json:"query"`
-			Limit   int    `json:"limit"`
-			Project string `json:"project"`
-			Scope   string `json:"scope"`
+			Query    string `json:"query"`
+			Limit    int    `json:"limit"`
+			Project  string `json:"project"`
+			Scope    string `json:"scope"`
+			MaxChars int    `json:"max_chars"`
 		}
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
@@ -387,6 +390,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			results = kept
 		}
+		results = recall.Fit(results, a.MaxChars)
 		ids := make([]string, len(results))
 		for i, r := range results {
 			ids[i] = r.Memory.ID
@@ -429,6 +433,14 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 					lines = append(lines, "- "+m.Content)
 				}
 			}
+			var shown []string
+			for _, i := range recall.FitLines(lines, profileProjectChars) {
+				shown = append(shown, lines[i])
+			}
+			if len(shown) < len(lines) {
+				shown = append(shown, fmt.Sprintf("- (%d more. Use recall to search them.)", len(lines)-len(shown)))
+			}
+			lines = shown
 			if len(lines) > 0 {
 				out += fmt.Sprintf("\n## This project (%s)\n\n%s\n", p, strings.Join(lines, "\n"))
 			}
@@ -518,6 +530,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	case "list_memories":
 		var a struct {
 			IncludeSuperseded bool `json:"include_superseded"`
+			Limit             int  `json:"limit"`
 		}
 		_ = json.Unmarshal(raw, &a)
 		all, err := s.Store.List(a.IncludeSuperseded)
@@ -530,6 +543,14 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 				mems = append(mems, all[i])
 			}
 		}
+		limit := a.Limit
+		if limit <= 0 {
+			limit = 50
+		}
+		total := len(mems)
+		if total > limit {
+			mems = mems[:limit]
+		}
 		s.log("list", nil, "", len(mems))
 		if len(mems) == 0 {
 			return "No memories yet.", nil
@@ -538,6 +559,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		b.WriteString(notesHeader)
 		for _, m := range mems {
 			b.WriteString(Line(m) + "\n")
+		}
+		if total > len(mems) {
+			fmt.Fprintf(&b, "(%d more. Use recall to search them, or a higher limit.)\n", total-len(mems))
 		}
 		return b.String(), nil
 
@@ -570,6 +594,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	}
 	return "", fmt.Errorf("unknown tool %q", name)
 }
+
+// profileProjectChars caps the project part of get_profile.
+const profileProjectChars = 4000
 
 func (s *Server) instructions() string {
 	if p := memory.NormalizeProject(s.Project); p != "" {

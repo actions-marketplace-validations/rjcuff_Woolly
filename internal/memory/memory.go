@@ -98,7 +98,8 @@ type Memory struct {
 	StaleCommit string     `json:"stale_commit,omitempty"`
 	StaleAt     *time.Time `json:"stale_at,omitempty"`
 
-	file string // path on disk; empty until saved
+	file      string // path on disk; empty until saved
+	badStatus string // a status in the file Woolly didn't know, if any
 }
 
 func (m *Memory) clone() Memory {
