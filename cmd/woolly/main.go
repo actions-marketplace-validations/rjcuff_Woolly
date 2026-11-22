@@ -932,13 +932,20 @@ Memories are added to each chat. Facts you state are saved%s.
 }
 
 func cmdMCP(args []string) error {
+	fs := newFlags("mcp")
+	user := fs.String("user", "", "read and write this user's memories, like the memory API's user_id")
+	agent := fs.String("agent", "", "read and write this agent's memories, like the memory API's agent_id")
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
 	a, err := open()
 	if err != nil {
 		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject(), Ground: groundRefs}
+	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject(), Ground: groundRefs,
+		User: memory.CleanScopeID(*user), Agent: memory.CleanScopeID(*agent)}
 	if cwd, err := os.Getwd(); err == nil {
 		if r := share.Find(cwd); r != nil {
 			s.Root = r.Dir
@@ -994,6 +1001,9 @@ func cmdDoctor(args []string) error {
 	}
 	if conflicts > 0 {
 		fmt.Println("  run 'woolly conflicts' to review disagreeing memories")
+	}
+	if old, err := a.store.ReviewQueue(time.Now()); err == nil && len(old) > 0 {
+		fmt.Printf("  %s an AI guessed and nothing has used in 90 days. Still true? woolly review --old\n", plural(len(old), "memory", "memories"))
 	}
 	if problems := a.store.Problems(); len(problems) > 0 {
 		fmt.Printf("  %s Woolly couldn't read fully. Fix or remove by hand:\n", plural(len(problems), "file", "files"))

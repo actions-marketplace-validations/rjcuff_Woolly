@@ -23,6 +23,7 @@ type v1Memory struct {
 	RunID     string         `json:"run_id,omitempty"`
 	Project   string         `json:"project,omitempty"`
 	Type      string         `json:"type,omitempty"`
+	Links     []string       `json:"links,omitempty"`
 	Metadata  map[string]any `json:"metadata,omitempty"`
 	Status    memory.Status  `json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
@@ -33,7 +34,7 @@ type v1Memory struct {
 
 func toV1(m memory.Memory) v1Memory {
 	return v1Memory{
-		ID: m.ID, Memory: m.Content, UserID: m.User, AgentID: m.Agent, RunID: m.Session, Project: m.Project, Type: memory.TypeOf(m),
+		ID: m.ID, Memory: m.Content, UserID: m.User, AgentID: m.Agent, RunID: m.Session, Project: m.Project, Type: memory.TypeOf(m), Links: m.Links,
 		Metadata: m.Metadata, Status: m.Status, CreatedAt: m.CreatedAt, UpdatedAt: m.UpdatedAt, InvalidAt: m.InvalidAt,
 	}
 }
@@ -225,6 +226,85 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 		}
 		record(r, "forget", []string{m.ID}, "", 0)
 		writeJSON(w, http.StatusOK, map[string]any{"message": "Memory deleted successfully", "id": m.ID})
+	})
+
+	// Conflicts in a scope: memories that disagree with a more trusted one and
+	// wait for someone to pick. Each comes with the memory it disagrees with.
+	mux.HandleFunc("GET /v1/conflicts", func(w http.ResponseWriter, r *http.Request) {
+		sc := queryScope(r)
+		all, err := store.Conflicts()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		out := []map[string]any{}
+		for i := range all {
+			m := all[i]
+			if !sc.Matches(&m) {
+				continue
+			}
+			item := map[string]any{"memory": toV1(m)}
+			if other, err := store.Get(m.ConflictsWith); err == nil {
+				item["conflicts_with"] = toV1(other)
+			}
+			out = append(out, item)
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"results": out})
+	})
+
+	// Keep one version. An app can only keep a version at least as trusted as
+	// the ones it replaces; the rest wait for the user on the review page.
+	mux.HandleFunc("POST /v1/conflicts/{id}/resolve", func(w http.ResponseWriter, r *http.Request) {
+		in, ok := getInScope(w, r, store)
+		if !ok {
+			return
+		}
+		kept, replaced, err := store.ResolveAs(in.ID, actor(r))
+		if err != nil {
+			status := http.StatusBadRequest
+			if errors.Is(err, memory.ErrOutranked) {
+				status = http.StatusForbidden
+			}
+			writeError(w, status, err.Error())
+			return
+		}
+		record(r, "resolve", []string{kept.ID}, "", len(replaced))
+		res := []v1Memory{}
+		for _, m := range replaced {
+			res = append(res, toV1(m))
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"kept": toV1(kept), "replaced": res})
+	})
+
+	mux.HandleFunc("POST /v1/memories/{id}/links", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			To string `json:"to"`
+		}
+		if !readJSON(w, r, &req) {
+			return
+		}
+		in, ok := getInScope(w, r, store)
+		if !ok {
+			return
+		}
+		// The other end must be in the same scope too.
+		other, err := store.Get(req.To)
+		if err == nil {
+			if sc := queryScope(r); !sc.Empty() && !sc.Matches(&other) {
+				err = memory.ErrNotFound
+			}
+		}
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		a, b, err := store.Link(in.ID, other.ID)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		record(r, "link", []string{a.ID, b.ID}, "", 0)
+		writeJSON(w, http.StatusOK, map[string]any{"id": a.ID, "links": a.Links})
 	})
 
 	mux.HandleFunc("POST /v1/memories/{id}/feedback", func(w http.ResponseWriter, r *http.Request) {

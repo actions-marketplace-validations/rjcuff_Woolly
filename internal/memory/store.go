@@ -533,14 +533,21 @@ func (s *Store) Forget(id string) (Memory, error) {
 		return Memory{}, err
 	}
 	delete(s.mems, m.ID)
-	// A conflict with a memory that's gone has nothing left to settle.
+	// A conflict with a memory that's gone has nothing left to settle, and
+	// a link to it leads nowhere.
 	for _, ex := range s.mems {
-		if ex.ConflictsWith != m.ID {
+		linked := hasID(ex.Links, m.ID)
+		if ex.ConflictsWith != m.ID && !linked {
 			continue
 		}
-		ex.ConflictsWith = ""
-		if ex.Status == StatusConflict {
-			ex.Status = StatusActive
+		if ex.ConflictsWith == m.ID {
+			ex.ConflictsWith = ""
+			if ex.Status == StatusConflict {
+				ex.Status = StatusActive
+			}
+		}
+		if linked {
+			ex.Links = removeID(ex.Links, m.ID)
 		}
 		ex.UpdatedAt = m.UpdatedAt
 		if err := s.write(ex); err != nil {
@@ -998,6 +1005,61 @@ func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
 		res.Superseded = append(res.Superseded, m)
 	}
 	return res, nil
+}
+
+// Link ties two memories together both ways, so recalling one brings the
+// other along. Linking twice changes nothing.
+func (s *Store) Link(a, b string) (Memory, Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, Memory{}, err
+	}
+	ma, err := s.find(a)
+	if err != nil {
+		return Memory{}, Memory{}, err
+	}
+	mb, err := s.find(b)
+	if err != nil {
+		return Memory{}, Memory{}, err
+	}
+	if ma.ID == mb.ID {
+		return Memory{}, Memory{}, errors.New("a memory can't link to itself")
+	}
+	if !sameSlot(&Memory{User: ma.User, Agent: ma.Agent, Session: ma.Session}, &Memory{User: mb.User, Agent: mb.Agent, Session: mb.Session}) {
+		return Memory{}, Memory{}, errors.New("only memories with the same user, agent and run can be linked")
+	}
+	now := time.Now().UTC()
+	for _, p := range [][2]*Memory{{ma, mb}, {mb, ma}} {
+		if hasID(p[0].Links, p[1].ID) {
+			continue
+		}
+		p[0].Links = append(p[0].Links, p[1].ID)
+		p[0].UpdatedAt = now
+		if err := s.write(p[0]); err != nil {
+			return Memory{}, Memory{}, err
+		}
+	}
+	return ma.clone(), mb.clone(), nil
+}
+
+func hasID(ids []string, id string) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+func removeID(ids []string, id string) []string {
+	var out []string
+	for _, x := range ids {
+		if x != id {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // MarkConflict flags the memory id as disagreeing with the memory with, so

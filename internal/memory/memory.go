@@ -97,6 +97,9 @@ type Memory struct {
 	StaleReason string     `json:"stale_reason,omitempty"`
 	StaleCommit string     `json:"stale_commit,omitempty"`
 	StaleAt     *time.Time `json:"stale_at,omitempty"`
+	// Links are IDs of related memories. Recalling one brings the others
+	// along, so an agent gets the whole picture.
+	Links []string `json:"links,omitempty"`
 
 	file      string // path on disk; empty until saved
 	badStatus string // a status in the file Woolly didn't know, if any
@@ -110,6 +113,7 @@ func (m *Memory) clone() Memory {
 		c.InvalidAt = &t
 	}
 	c.Sources = append([]Ref(nil), m.Sources...)
+	c.Links = append([]string(nil), m.Links...)
 	if m.StaleAt != nil {
 		t := *m.StaleAt
 		c.StaleAt = &t

@@ -61,6 +61,10 @@ type Server struct {
 	// Searches then cover the user's memories plus this project's, and
 	// leave other projects out.
 	Project string
+	// User and Agent, when set, make this server read and write one user's
+	// or agent's memories instead of the user's own, the way the memory
+	// API's user_id and agent_id do.
+	User, Agent string
 
 	app   string    // the connected app, from initialize
 	seen  time.Time // when woolly.md last changed, as of the last sync
@@ -291,6 +295,15 @@ var tools = []map[string]any{
 		"inputSchema": obj(map[string]any{"id": map[string]any{"type": "string"}}, "id"),
 	},
 	{
+		"name":        "link_memories",
+		"title":       "Link memories",
+		"description": "Tie two related memories together, like a decision and the bug that caused it, or a procedure and the preference behind it. Recalling one then brings the other along.",
+		"inputSchema": obj(map[string]any{
+			"id": map[string]any{"type": "string", "description": "One memory's ID, from recall."},
+			"to": map[string]any{"type": "string", "description": "The other memory's ID."},
+		}, "id", "to"),
+	},
+	{
 		"name":        "rate_memory",
 		"title":       "Rate a memory",
 		"description": "Say whether a memory you recalled helped. Woolly ranks helpful memories a little higher next time and unhelpful ones a little lower. It never deletes anything. Use it when a memory was clearly right or clearly wrong for the task.",
@@ -347,7 +360,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			src = parsed
 		}
-		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true, Type: a.Type}
+		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true, Type: a.Type, User: s.User, Agent: s.Agent}
 		if project != "" {
 			in.Sources = s.sources(project, a.Sources)
 		}
@@ -390,7 +403,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if a.Scope == "project" || a.Scope == "personal" {
 			limit = 50 // filtered below
 		}
-		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, memory.Scope{Project: project, Personal: true, Types: a.Type})
+		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, s.scope(project, a.Type))
 		if err != nil {
 			return "", err
 		}
@@ -435,7 +448,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if err != nil {
 			return "", err
 		}
-		mems := memory.Personal(all)
+		mems := s.mine(all)
 		s.log("profile", nil, "", len(mems))
 		out := notesHeader
 		if h := handoff.Latest(s.Store, s.Project); h != nil {
@@ -485,7 +498,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		res, err := s.Store.Remember(memory.RememberInput{
 			Content: decision.Format(a.Decision, a.Why, toStrings(a.Rejected)), Key: a.Key, Tags: []string{decision.Tag},
 			Source: memory.SourceAgent, Via: s.appName(), Project: project, Commit: s.commit(project),
-			Sources: s.sources(project, toStrings(a.Sources)),
+			Sources: s.sources(project, toStrings(a.Sources)), User: s.User, Agent: s.Agent,
 		})
 		if err != nil {
 			return "", err
@@ -514,7 +527,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if err != nil {
 			return "", err
 		}
-		ans := why.Find(memory.Personal(all), s.Project, s.Root, t)
+		ans := why.Find(s.mine(all), s.Project, s.Root, t)
 		var ids []string
 		for _, m := range ans.Matches {
 			ids = append(ids, m.Memory.ID)
@@ -558,7 +571,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		var mems []memory.Memory
 		for i := range all {
-			if all[i].Unscoped() && all[i].In(memory.NormalizeProject(s.Project)) {
+			if len(s.mine(all[i:i+1])) == 1 && all[i].In(memory.NormalizeProject(s.Project)) {
 				mems = append(mems, all[i])
 			}
 		}
@@ -599,6 +612,19 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		return "Moved to trash (the user can restore it): " + m.Content, nil
 
+	case "link_memories":
+		var a struct {
+			ID string `json:"id"`
+			To string `json:"to"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		ma, mb, err := s.Store.Link(a.ID, a.To)
+		if err != nil {
+			return "", err
+		}
+		s.log("link", []string{ma.ID, mb.ID}, "", 0)
+		return fmt.Sprintf("Linked %q and %q.", ma.Content, mb.Content), nil
+
 	case "rate_memory":
 		var a struct {
 			ID      string `json:"id"`
@@ -630,10 +656,28 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	return "", fmt.Errorf("unknown tool %q", name)
 }
 
+// scope is what this server reads: the user's own memory, or the user or
+// agent it was started for.
+func (s *Server) scope(project string, types []string) memory.Scope {
+	return memory.Scope{Project: project, User: s.User, Agent: s.Agent, Personal: s.User == "" && s.Agent == "", Types: types}.Normalized()
+}
+
+// mine keeps the memories this server may show.
+func (s *Server) mine(mems []memory.Memory) []memory.Memory {
+	sc := s.scope("", nil)
+	var out []memory.Memory
+	for i := range mems {
+		if sc.Matches(&mems[i]) {
+			out = append(out, mems[i])
+		}
+	}
+	return out
+}
+
 // nearCopy finds a current memory in the same place that says what in says
 // in nearly the same words, and adds in's tags to it.
 func (s *Server) nearCopy(ctx context.Context, in memory.RememberInput) *memory.Memory {
-	results, _, err := s.Engine.RecallScoped(ctx, in.Content, 3, false, memory.Scope{Project: in.Project, Personal: true})
+	results, _, err := s.Engine.RecallScoped(ctx, in.Content, 3, false, s.scope(in.Project, nil))
 	if err != nil {
 		return nil
 	}
@@ -646,7 +690,7 @@ func (s *Server) nearCopy(ctx context.Context, in memory.RememberInput) *memory.
 		// Note that it was said again: new tags, and a source at least as
 		// trusted. A claim isn't more trusted than what's there.
 		if _, err := s.Store.Remember(memory.RememberInput{Content: m.Content, Tags: in.Tags, Source: m.Source,
-			Project: m.Project, Via: in.Via}); err != nil {
+			Project: m.Project, Via: in.Via, User: m.User, Agent: m.Agent, Session: m.Session}); err != nil {
 			return nil
 		}
 		return &m

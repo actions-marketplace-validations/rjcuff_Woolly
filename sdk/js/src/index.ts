@@ -75,6 +75,8 @@ export interface ScopedMemory {
   project?: string;
   /** decision, convention, gotcha, bug, hardware, preference, procedure or episode. */
   type?: string;
+  /** IDs of linked memories. */
+  links?: string[];
   metadata?: Record<string, unknown>;
   status: 'active' | 'superseded' | 'conflict' | 'expired' | 'stale';
   created_at: string;
@@ -402,6 +404,25 @@ export class Woolly {
   /** Every version of a memory, oldest first. */
   async history(id: string): Promise<HistoryEntry[]> {
     return (await this.request<{ results: HistoryEntry[] }>('GET', `/v1/memories/${encodeURIComponent(id)}/history`)).results;
+  }
+
+  /** Conflicts in one user's, agent's or run's memories, each with the memory it disagrees with. */
+  async scopedConflicts(scope: Scope = {}): Promise<{ memory: ScopedMemory; conflicts_with?: ScopedMemory }[]> {
+    return (await this.request<{ results: { memory: ScopedMemory; conflicts_with?: ScopedMemory }[] }>('GET', `/v1/conflicts${scopeQuery(scope)}`)).results;
+  }
+
+  /**
+   * Keep one version of a conflict. Throws if it would replace something more
+   * trusted; the user settles those on the review page.
+   */
+  async resolveScoped(id: string, scope: Scope = {}): Promise<{ kept: ScopedMemory; replaced: ScopedMemory[] }> {
+    return this.request('POST', `/v1/conflicts/${encodeURIComponent(id)}/resolve${scopeQuery(scope)}`, {});
+  }
+
+  /** Tie two related memories together. Searching then brings one along with the other. */
+  async link(id: string, to: string, scope: Scope = {}): Promise<string[]> {
+    const r = await this.request<{ links?: string[] }>('POST', `/v1/memories/${encodeURIComponent(id)}/links${scopeQuery(scope)}`, { to });
+    return r.links ?? [];
   }
 
   /**

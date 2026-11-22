@@ -402,6 +402,44 @@ class Woolly:
         """Every version of a memory, oldest first."""
         return self._request("GET", "/v1/memories/" + urllib.parse.quote(memory_id) + "/history")
 
+    def scoped_conflicts(
+        self, user_id: Optional[str] = None, agent_id: Optional[str] = None, run_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Conflicts in one user's, agent's or run's memories, each with the memory it disagrees with."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/conflicts" + ("?" + urllib.parse.urlencode(q) if q else "")
+        return self._request("GET", path)["results"]
+
+    def resolve_scoped(
+        self,
+        memory_id: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Keep one version of a conflict. Raises if it would replace something
+        more trusted; the user settles those on the review page."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/conflicts/" + urllib.parse.quote(memory_id) + "/resolve"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {})
+
+    def link(
+        self,
+        memory_id: str,
+        to: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Tie two related memories together. Searching then brings one along with the other."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/memories/" + urllib.parse.quote(memory_id) + "/links"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {"to": to})
+
     def feedback(
         self,
         memory_id: str,

@@ -87,6 +87,21 @@ curl -X POST localhost:11435/v1/search \
 
 The type is in the memory's Markdown header, so you can change it by hand.
 
+## Links
+
+Tie two related memories together and searching for one brings the other along, at half its score:
+
+```sh
+curl -X POST "localhost:11435/v1/memories/$ID/links?user_id=alice" \
+  -H "Authorization: Bearer $TOKEN" -d '{"to": "'$OTHER'"}'
+```
+
+Both memories must have the same `user_id`, `agent_id` and `run_id`. Links are a `links:` line in the Markdown header.
+
+## Conflicts
+
+When an AI's version of a fact disagrees with a more trusted one, it waits as a conflict. `GET /v1/conflicts?user_id=alice` lists them, each with the memory it disagrees with. `POST /v1/conflicts/{id}/resolve` keeps one. Your app can only keep a version at least as trusted as the ones it replaces; otherwise it gets 403, and the user settles it on the [review page](/docs/review).
+
 ## Feedback
 
 Tell Woolly whether a memory helped, and it ranks helpful memories a little higher next time and unhelpful ones a little lower. Nothing is hidden or deleted because of feedback.
@@ -126,6 +141,9 @@ curl localhost:11435/v1/memories/ID/history -H "Authorization: Bearer $TOKEN"
 | `DELETE` | `/v1/memories/{id}` | Move a memory to the trash |
 | `DELETE` | `/v1/memories` | Move every memory in a scope to the trash. Needs a `user_id`, `agent_id` or `run_id` |
 | `GET` | `/v1/memories/{id}/history` | Every version, oldest first |
+| `POST` | `/v1/memories/{id}/links` | `to`: another memory's ID. Recalling one brings the other along |
+| `GET` | `/v1/conflicts` | Conflicts in a scope, each with what it disagrees with |
+| `POST` | `/v1/conflicts/{id}/resolve` | Keep this version. 403 if it would replace something more trusted |
 | `POST` | `/v1/memories/{id}/feedback` | `helpful`: true or false. Nudges ranking |
 | `POST` | `/v1/search` | Search: `query`, `filters` (scope and `type`), `top_k`, `threshold`, `show_expired` |
 | `POST` | `/v1/dream` | Tidy a scope and learn lessons: `dry_run`, `learn`. See [Dreaming](/docs/dreaming) |

@@ -216,3 +216,26 @@ func TestAgentCannotReviveAVersionTheUserReplaced(t *testing.T) {
 		t.Fatalf("user version status = %s", got.Status)
 	}
 }
+
+func TestLinksRoundTrip(t *testing.T) {
+	s := newStore(t)
+	a, _ := s.Remember(RememberInput{Content: "A"})
+	b, _ := s.Remember(RememberInput{Content: "B"})
+	if _, _, err := s.Link(a.Memory.ID, b.Memory.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := s.Link(a.Memory.ID, b.Memory.ID); err != nil {
+		t.Fatal("linking twice should be fine")
+	}
+	got, err := decode(encode(&Memory{ID: "x", Content: "c", Links: []string{a.Memory.ID, "../evil", b.Memory.ID}}))
+	if err != nil || len(got.Links) != 2 {
+		t.Fatalf("links = %v (%v)", got.Links, err)
+	}
+	ma, _ := s.Get(a.Memory.ID)
+	if len(ma.Links) != 1 || ma.Links[0] != b.Memory.ID {
+		t.Fatalf("a links = %v", ma.Links)
+	}
+	if _, _, err := s.Link(a.Memory.ID, a.Memory.ID); err == nil {
+		t.Fatal("self link")
+	}
+}

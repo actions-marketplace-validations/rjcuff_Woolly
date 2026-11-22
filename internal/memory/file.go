@@ -54,6 +54,7 @@ func encode(m *Memory) []byte {
 	if m.Conf > 0 {
 		w("confidence", strconv.FormatFloat(m.Conf, 'f', -1, 64))
 	}
+	w("links", strings.Join(m.Links, ", "))
 	w("stale_reason", m.StaleReason)
 	w("stale_commit", m.StaleCommit)
 	if m.StaleAt != nil {
@@ -108,6 +109,12 @@ func decode(data []byte) (*Memory, error) {
 			m.UpdatedAt, _ = time.Parse(time.RFC3339Nano, v)
 		case "superseded_by":
 			m.SupersededBy = v
+		case "links":
+			for _, id := range strings.Split(v, ",") {
+				if id = strings.TrimSpace(id); ValidID(id) {
+					m.Links = append(m.Links, id)
+				}
+			}
 		case "conflicts_with":
 			m.ConflictsWith = v
 		case "via":

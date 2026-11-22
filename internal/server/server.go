@@ -274,6 +274,15 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		writeJSON(w, http.StatusOK, map[string]int{"deleted": n})
 	})
 
+	mux.HandleFunc("GET /api/review-queue", func(w http.ResponseWriter, r *http.Request) {
+		mems, err := store.ReviewQueue(time.Now())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"memories": orEmpty(mems)})
+	})
+
 	mux.HandleFunc("GET /api/problems", func(w http.ResponseWriter, r *http.Request) {
 		problems := store.Problems()
 		if problems == nil {

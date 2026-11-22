@@ -16,7 +16,10 @@ woolly dream --project acme   # tidy acme, and write lessons from its sessions
 1. **Folds repeats together.** Memories with the same words in the same scope become one. This works without a model.
 2. **Merges duplicates.** Two facts that say the same thing in different words, like "Deploys from main" and "Ships to production from the main branch", become one fact that keeps every detail.
 3. **Settles contradictions.** When two facts can't both be true, like "Lives in Denver" and "Lives in Austin", the newer one stays current and the older one is kept as history.
-4. **Learns lessons.** For a project, the model reads its handoffs and decisions from the last two months and writes up to five lessons for the next session, like "Run make check before every commit". Every lesson has to point at the notes it came from, and is saved with the `learning` tag and those notes' IDs in `learned_from`. A lesson that's already known isn't written twice.
+4. **Summarizes old episodes.** Episodes an AI saved, like "the deploy failed on a missing env var", are rolled into one summary per week once they're two weeks old. The originals stay as history. Episodes you saved keep your words.
+5. **Learns lessons.** For a project, the model reads its handoffs and decisions from the last two months and writes up to five lessons for the next session, like "Run make check before every commit". Every lesson has to point at the notes it came from, and is saved with the `learning` tag and those notes' IDs in `learned_from`. A lesson that's already known isn't written twice.
+
+Merged facts keep the code each one pointed at, so Woolly can still flag them when that code changes.
 
 Nothing is deleted. A merged or replaced memory stays on disk with `status: superseded` and an `invalid_at` time, and the [memory API](/docs/memory-api#memories-over-time) shows its whole history.
 

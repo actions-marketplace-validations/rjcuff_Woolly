@@ -50,6 +50,9 @@ type ScoreParts struct {
 	Confidence float64 `json:"confidence"` // multiplier for how sure Woolly is
 	Use        float64 `json:"use"`        // multiplier from use and feedback
 	Status     float64 `json:"status"`     // 0.5 when not current, else 1
+	// LinkedFrom is set when the memory came in through a link from a
+	// better match, at half that match's score.
+	LinkedFrom string `json:"linked_from,omitempty"`
 }
 
 // Engine runs recall queries against a store.
@@ -161,6 +164,7 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 		out = append(out, Result{Memory: m, Score: round(score), Parts: parts})
 		outIdx = append(outIdx, i)
 	}
+	out, outIdx = followLinks(mems, out, outIdx)
 	order := make([]int, len(out))
 	for i := range order {
 		order[i] = i
@@ -192,6 +196,41 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 }
 
 func round(x float64) float64 { return math.Round(x*1000) / 1000 }
+
+// followLinks brings in memories linked from each match, one hop, at half
+// the match's score. A linked memory that already matched keeps the better
+// score. Only memories in the searched scope come in.
+func followLinks(mems []memory.Memory, out []Result, outIdx []int) ([]Result, []int) {
+	at := make(map[string]int, len(mems))
+	for i, m := range mems {
+		at[m.ID] = i
+	}
+	inOut := make(map[string]int, len(out))
+	for k, r := range out {
+		inOut[r.Memory.ID] = k
+	}
+	n := len(out)
+	for k := 0; k < n; k++ {
+		for _, id := range out[k].Memory.Links {
+			i, ok := at[id]
+			if !ok {
+				continue
+			}
+			score := round(out[k].Score * 0.5)
+			if j, ok := inOut[id]; ok {
+				if out[j].Score < score {
+					out[j].Score = score
+					out[j].Parts.LinkedFrom = out[k].Memory.ID
+				}
+				continue
+			}
+			inOut[id] = len(out)
+			out = append(out, Result{Memory: mems[i], Score: score, Parts: &ScoreParts{Status: 1, LinkedFrom: out[k].Memory.ID}})
+			outIdx = append(outIdx, i)
+		}
+	}
+	return out, outIdx
+}
 
 // NearCopy reports whether two texts say the same thing in nearly the same
 // words, in the same order: they share at least 85% of their distinct words

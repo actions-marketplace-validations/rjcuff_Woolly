@@ -64,6 +64,7 @@ curl -X POST localhost:11435/api/recall \
 | `DELETE` | `/api/trash` | Empties the trash for good |
 | `GET` | `/api/profile` | Add `?format=markdown` for Markdown |
 | `GET` | `/api/conflicts` | |
+| `GET` | `/api/review-queue` | Guesses an AI made that nothing has used in 90 days, for a "still true?" check |
 | `GET` | `/api/problems` | Memory files Woolly couldn't read, with why. Fix or remove them by hand |
 | `POST` | `/api/resolve` | `keep_id`. Returns 400 if that would let a less trusted memory replace a more trusted one, or bring back a version you replaced; settle those on the review page |
 | `POST` | `/api/learn` | `text`, plus optional `project`, `dry_run`. Needs Ollama. See [Smart memory](/docs/learn) |

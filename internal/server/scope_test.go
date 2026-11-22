@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -69,5 +70,32 @@ func TestV1Feedback(t *testing.T) {
 	}
 	if rec := do(h, "POST", "/v1/memories/"+id+"/feedback", `{}`, auth); rec.Code != http.StatusBadRequest {
 		t.Fatalf("no helpful: %d", rec.Code)
+	}
+}
+
+func TestV1ConflictInbox(t *testing.T) {
+	h, token := setup(t)
+	auth := map[string]string{"Authorization": "Token " + token}
+	cookie := map[string]string{"Cookie": tokenCookie + "=" + token}
+	// Alice said it herself (through the review page); an agent guesses otherwise.
+	do(h, "POST", "/api/remember", `{"content":"Alice lives in Austin","key":"loc","source":"user"}`, cookie)
+	rec := do(h, "POST", "/api/remember", `{"content":"Alice lives in Denver","key":"loc","source":"agent"}`, auth)
+	var saved struct {
+		Memory struct{ ID string } `json:"memory"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &saved)
+	out := v1(t, h, token, "GET", "/v1/conflicts", "")
+	list := out["results"].([]any)
+	if len(list) != 1 || list[0].(map[string]any)["conflicts_with"] == nil {
+		t.Fatalf("conflicts: %v", out)
+	}
+	if rec := do(h, "POST", "/v1/conflicts/"+saved.Memory.ID+"/resolve", `{}`, auth); rec.Code != http.StatusForbidden {
+		t.Fatalf("app resolve: %d %s", rec.Code, rec.Body.String())
+	}
+	if rec := do(h, "POST", "/v1/conflicts/"+saved.Memory.ID+"/resolve", `{}`, cookie); rec.Code != http.StatusOK {
+		t.Fatalf("review page resolve: %d %s", rec.Code, rec.Body.String())
+	}
+	if got := v1(t, h, token, "GET", "/v1/conflicts?user_id=bob", "")["results"].([]any); len(got) != 0 {
+		t.Fatalf("bob sees %v", got)
 	}
 }

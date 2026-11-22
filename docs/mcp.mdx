@@ -46,6 +46,7 @@ A week later, in Cursor, you ask for a weather script. Cursor calls `recall` wit
 | `recall` | To look up anything relevant to what you're working on, in your memory and the project's. `max_chars` caps how much text comes back, and `type` keeps only some kinds, like `["procedure"]` |
 | `get_profile` | Once at the start of a conversation, for a summary of you |
 | `remember` | When you share a fact, preference or decision worth keeping. Its `scope` is `personal`, `project` or `auto`, so facts about the codebase go to [project memory](/docs/project-memory) and facts about you stay personal. Project facts can also have a `type` and `sources`, the code they're about, so Woolly can flag them when that code changes |
+| `link_memories` | To tie two related memories together, like a decision and the bug behind it |
 | `rate_memory` | When a recalled memory was clearly right or clearly wrong for the task, so it ranks higher or lower next time |
 | `list_memories` | When you ask what Woolly knows. Lists 50 memories, newest first, unless you pass `limit` |
 | `forget` | Only when you ask it to delete something. The memory goes to the trash, so you can restore it |
@@ -59,7 +60,17 @@ A week later, in Cursor, you ask for a weather script. Cursor calls `recall` wit
 
 Every memory records where it came from. Woolly also refuses text from an AI that reads like instructions to an AI, so a malicious web page can't plant commands in your memory. See [Security](/docs/security).
 
- The AI marks a fact as `user` only when you said it directly, and as `agent` when it inferred it. If an AI's guess disagrees with something you said, your version stays current and the guess is saved as a conflict. Review those with `woolly conflicts` or on the [review page](/docs/review).
+ The AI marks a fact as `user` only when you said it directly, and as `agent` when it inferred it. Woolly can't check the AI's word, so a fact the AI says came from you is saved as `import` with the tag `user-stated`: above the AI's own guesses, below what you typed yourself. If an AI's version disagrees with something you saved, yours stays current and the AI's is saved as a conflict. Review those with `woolly conflicts` or on the [review page](/docs/review).
+
+## An agent's own memory
+
+To give an agent you build its own memory instead of yours, start the server with a user or agent:
+
+```json
+{ "command": "woolly", "args": ["mcp", "--agent", "support-bot", "--user", "alice"] }
+```
+
+It then saves to and searches only that user's or agent's memories, the same ones the [memory API](/docs/memory-api) reaches with `user_id` and `agent_id`, and never sees yours.
 
 ## Projects
 
