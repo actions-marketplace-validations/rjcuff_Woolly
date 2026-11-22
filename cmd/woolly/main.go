@@ -454,8 +454,12 @@ func cmdRecall(args []string) error {
 		fmt.Printf("%.2f  %s\n", r.Score, mcp.Line(r.Memory))
 		if *explain && r.Parts != nil {
 			p := r.Parts
-			fmt.Printf("      keyword %.2f, meaning %.2f, x fresh %.2f, x confidence %.2f, x use %.2f, x status %.1f\n",
-				p.Keyword, p.Semantic, p.Fresh, p.Confidence, p.Use, p.Status)
+			if p.LinkedFrom != "" {
+				fmt.Printf("      linked from %s, at half its score\n", p.LinkedFrom)
+			} else {
+				fmt.Printf("      keyword %.2f, meaning %.2f, x fresh %.2f, x confidence %.2f, x use %.2f, x status %.1f\n",
+					p.Keyword, p.Semantic, p.Fresh, p.Confidence, p.Use, p.Status)
+			}
 		}
 	}
 	if mode == recall.ModeKeyword && os.Getenv("WOOLLY_NO_EMBED") == "" {
@@ -937,6 +941,11 @@ func cmdMCP(args []string) error {
 	agent := fs.String("agent", "", "read and write this agent's memories, like the memory API's agent_id")
 	if _, err := parse(fs, args); err != nil {
 		return err
+	}
+	for name, v := range map[string]string{"--user": *user, "--agent": *agent} {
+		if v != "" && memory.CleanScopeID(v) == "" {
+			return fmt.Errorf("%s is blank", name)
+		}
 	}
 	a, err := open()
 	if err != nil {

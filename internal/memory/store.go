@@ -544,6 +544,14 @@ func (s *Store) Forget(id string) (Memory, error) {
 			ex.ConflictsWith = ""
 			if ex.Status == StatusConflict {
 				ex.Status = StatusActive
+				// Another current fact for the same key: wait on it instead.
+				for _, other := range s.mems {
+					if other.ID != ex.ID && ex.Key != "" && other.Key == ex.Key && sameSlot(other, ex) &&
+						(other.Status == StatusActive || other.Status == StatusStale) {
+						ex.Status, ex.ConflictsWith = StatusConflict, other.ID
+						break
+					}
+				}
 			}
 		}
 		if linked {
@@ -599,10 +607,21 @@ func (s *Store) Restore(id string) (Memory, error) {
 	}
 	var match string
 	for _, e := range entries {
+		if strings.TrimSuffix(e.Name(), ".md") == id {
+			match = e.Name() // an exact ID wins over longer names
+		}
+	}
+	for _, e := range entries {
+		if match != "" {
+			break
+		}
 		name := strings.TrimSuffix(e.Name(), ".md")
-		if name == id || (id != "" && strings.HasPrefix(name, id)) {
-			if match != "" && name != id {
-				return Memory{}, fmt.Errorf("id prefix %q matches more than one memory", id)
+		if id != "" && strings.HasPrefix(name, id) {
+			for _, f := range entries {
+				g := strings.TrimSuffix(f.Name(), ".md")
+				if g != name && strings.HasPrefix(g, id) {
+					return Memory{}, fmt.Errorf("id prefix %q matches more than one memory", id)
+				}
 			}
 			match = e.Name()
 		}
@@ -626,15 +645,36 @@ func (s *Store) Restore(id string) (Memory, error) {
 	// While it was in the trash, a newer fact may have taken its key. Then it
 	// comes back as a conflict for the user to settle, never as a second
 	// current fact.
-	if m.Status == StatusActive && m.Key != "" {
+	if (m.Status == StatusActive || m.Status == StatusStale) && m.Key != "" {
 		for _, ex := range s.mems {
-			if ex.Status == StatusActive && ex.Key == m.Key && sameSlot(ex, m) {
+			if (ex.Status == StatusActive || ex.Status == StatusStale) && ex.Key == m.Key && sameSlot(ex, m) {
 				m.Status = StatusConflict
 				m.ConflictsWith = ex.ID
 				break
 			}
 		}
 	}
+	// A conflict partner forgotten meanwhile leaves nothing to settle.
+	if m.Status == StatusConflict && s.mems[m.ConflictsWith] == nil {
+		m.Status, m.ConflictsWith = StatusActive, ""
+	}
+	// Links: drop ones to memories that are gone, and put back the other
+	// side of the rest, which Forget removed.
+	var links []string
+	for _, id := range m.Links {
+		other, ok := s.mems[id]
+		if !ok {
+			continue
+		}
+		links = append(links, id)
+		if !hasID(other.Links, m.ID) {
+			other.Links = append(other.Links, m.ID)
+			if err := s.write(other); err != nil {
+				return Memory{}, err
+			}
+		}
+	}
+	m.Links = links
 	if err := writeFile(filepath.Join(s.dir, match), encode(m)); err != nil {
 		return Memory{}, err
 	}
@@ -677,7 +717,7 @@ func (s *Store) EmptyTrash() (int, error) {
 
 // ErrOutranked is returned when an AI tries to make a memory win over one
 // that a more trusted source saved.
-var ErrOutranked = errors.New("not resolved: the other memory comes from a more trusted source, so only the user can choose this one")
+var ErrOutranked = errors.New("not resolved: the other memory comes from a more trusted source, or this version was replaced or retired, so only the user can choose it")
 
 // Resolve makes the given memory the current fact for its key and marks every
 // other live memory with that key as superseded by it. It is for the user,
@@ -699,7 +739,8 @@ func (s *Store) ResolveAs(id string, actor Source) (Memory, []Memory, error) {
 		return Memory{}, nil, err
 	}
 	if actor != SourceUser {
-		if next, ok := s.mems[keep.SupersededBy]; ok && !keep.Live() && next.Source.Rank() > keep.Source.Rank() {
+		// Only the user brings back a version that was replaced or retired.
+		if !keep.Live() {
 			return Memory{}, nil, ErrOutranked
 		}
 		for _, ex := range s.mems {
@@ -864,7 +905,46 @@ func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 		return nil, err
 	}
 	res.Superseded = append(res.Superseded, ex.clone())
+	if err := s.relinkLocked(prev.ID, res.Memory.ID); err != nil {
+		return nil, err
+	}
+	if m, ok := s.mems[res.Memory.ID]; ok {
+		res.Memory = m.clone()
+	}
 	return res, nil
+}
+
+// relinkLocked moves every link from the memory old to its new version:
+// the new version takes old's links, and memories that pointed at old point
+// at the new version. Caller holds s.mu.
+func (s *Store) relinkLocked(old, now string) error {
+	o, n := s.mems[old], s.mems[now]
+	if o == nil || n == nil {
+		return nil
+	}
+	for _, id := range o.Links {
+		if id != now && !hasID(n.Links, id) {
+			n.Links = append(n.Links, id)
+		}
+	}
+	if len(o.Links) > 0 {
+		if err := s.write(n); err != nil {
+			return err
+		}
+	}
+	for _, ex := range s.mems {
+		if ex.ID == now || !hasID(ex.Links, old) {
+			continue
+		}
+		ex.Links = removeID(ex.Links, old)
+		if ex.ID != old && !hasID(ex.Links, now) {
+			ex.Links = append(ex.Links, now)
+		}
+		if err := s.write(ex); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Expire marks a memory as no longer true, with nothing to replace it. It
@@ -1003,6 +1083,15 @@ func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
 			return nil, err
 		}
 		res.Superseded = append(res.Superseded, m)
+		s.mu.Lock()
+		err = s.relinkLocked(m.ID, res.Memory.ID)
+		if cur, ok := s.mems[res.Memory.ID]; ok {
+			res.Memory = cur.clone()
+		}
+		s.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }

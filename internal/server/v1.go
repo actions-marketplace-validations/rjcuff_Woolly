@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -255,6 +256,9 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 	// Keep one version. An app can only keep a version at least as trusted as
 	// the ones it replaces; the rest wait for the user on the review page.
 	mux.HandleFunc("POST /v1/conflicts/{id}/resolve", func(w http.ResponseWriter, r *http.Request) {
+		// Read the body even though it's unused, so an error reply isn't cut
+		// off by a connection reset on Windows.
+		_, _ = io.Copy(io.Discard, io.LimitReader(r.Body, 1<<16))
 		in, ok := getInScope(w, r, store)
 		if !ok {
 			return

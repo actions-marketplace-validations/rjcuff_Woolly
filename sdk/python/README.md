@@ -68,7 +68,7 @@ woolly.add(
 memories = woolly.search("where does she live?", user_id="alice")["results"]
 ```
 
-Scope with `user_id`, `agent_id`, `run_id` or `project`. Also `get_all`, `history` (every version of a memory), `delete_all` and `dream`, which merges duplicates and settles facts that changed. Pass `infer=False` to `add` to save messages as they are, without a model. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
+Scope with `user_id`, `agent_id`, `run_id` or `project`. Also `get_all`, `history` (every version of a memory), `delete_all`, `link` (recall one memory, get a related one too), `feedback` (say whether a memory helped), `scoped_conflicts` and `resolve_scoped`, and `dream`, which merges duplicates and settles facts that changed. Pass `infer=False` to `add` to save messages as they are, without a model, and `memory_type="procedure"` (or `preference`, `episode`) to say what kind they are; `search` and `recall` take `type=[...]`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
 
 ## More
 

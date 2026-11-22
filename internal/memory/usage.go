@@ -47,8 +47,12 @@ func (s *Store) readUsage() map[string]Usage {
 		return out
 	}
 	if json.Unmarshal(b, &out) == nil {
+		if out == nil { // the file said null
+			out = map[string]Usage{}
+		}
 		return out
 	}
+	out = map[string]Usage{}
 	old := map[string]time.Time{}
 	if json.Unmarshal(b, &old) == nil {
 		for id, t := range old {

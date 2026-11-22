@@ -125,6 +125,7 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 		toks[i] = tokenize(docs[i])
 	}
 	kw := bm25(expand(tokenize(query)), toks)
+	qwords := tokenize(query)
 
 	mode := ModeKeyword
 	var sem []float64
@@ -143,14 +144,18 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 	for i, m := range mems {
 		parts := &ScoreParts{Keyword: round(kw[i]), Status: 1}
 		score := kw[i]
+		// Keyword scores are relative to the best match, so the best one
+		// always scores 1. An absolute floor: a longer question has to share
+		// at least a quarter of its words with the memory.
+		thin := coverage(qwords, toks[i]) < 0.25
 		if mode == ModeHybrid {
 			parts.Semantic = round(sem[i])
 			// A weak meaning match needs a real keyword match to count.
-			if sem[i] < 0.5 && kw[i] < 0.3 {
+			if sem[i] < 0.5 && (kw[i] < 0.3 || thin) {
 				continue
 			}
 			score = 0.65*math.Max(sem[i], 0) + 0.35*kw[i]
-		} else if kw[i] == 0 {
+		} else if kw[i] == 0 || thin {
 			continue
 		}
 		ageDays := now.Sub(m.UpdatedAt).Hours() / 24
@@ -178,7 +183,7 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 		i := outIdx[k]
 		dup := false
 		for _, j := range pickedIdx {
-			if similar(toks[i], toks[j]) {
+			if similar(toks[i], toks[j]) && negated(docs[i]) == negated(docs[j]) {
 				dup = true
 				break
 			}
@@ -225,7 +230,8 @@ func followLinks(mems []memory.Memory, out []Result, outIdx []int) ([]Result, []
 				continue
 			}
 			inOut[id] = len(out)
-			out = append(out, Result{Memory: mems[i], Score: score, Parts: &ScoreParts{Status: 1, LinkedFrom: out[k].Memory.ID}})
+			out = append(out, Result{Memory: mems[i], Score: score,
+				Parts: &ScoreParts{Fresh: 1, Confidence: 1, Use: 1, Status: 1, LinkedFrom: out[k].Memory.ID}})
 			outIdx = append(outIdx, i)
 		}
 	}
@@ -237,8 +243,61 @@ func followLinks(mems []memory.Memory, out []Result, outIdx []int) ([]Result, []
 // and of their word pairs, ignoring case, punctuation and filler words. Word
 // order matters, so "tabs over spaces" is not a copy of "spaces over tabs".
 func NearCopy(a, b string) bool {
+	if negated(a) != negated(b) {
+		return false // "uses X" and "doesn't use X" are opposites
+	}
 	ta, tb := tokenize(a), tokenize(b)
 	return overlap(ta, tb) >= 0.85 && overlap(pairs(ta), pairs(tb)) >= 0.85
+}
+
+// negated reports whether text says "not": not, no, never, without, nor,
+// none, or a word ending in n't. Search ignores these words, but they flip a
+// fact's meaning, so near-copy checks look at them.
+func negated(text string) bool {
+	n := 0
+	for _, w := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && r != '\'' && r != '’'
+	}) {
+		w = strings.ReplaceAll(w, "’", "'")
+		switch {
+		case w == "not" || w == "no" || w == "never" || w == "without" || w == "nor" || w == "none" || w == "cannot",
+			strings.HasSuffix(w, "n't"),
+			w == "dont" || w == "doesnt" || w == "didnt" || w == "isnt" || w == "arent" || w == "wasnt" || w == "cant" || w == "wont":
+			n++
+		}
+	}
+	return n%2 == 1
+}
+
+// coverage is the share of the query's distinct words, or their synonyms,
+// that a memory has. Queries of one or two words always count as covered
+// when anything matched, so short searches work as before.
+func coverage(query, doc []string) float64 {
+	q := map[string]bool{}
+	for _, t := range query {
+		q[t] = true
+	}
+	if len(q) <= 2 {
+		return 1
+	}
+	have := map[string]bool{}
+	for _, t := range doc {
+		have[t] = true
+	}
+	hit := 0
+	for t := range q {
+		if have[t] {
+			hit++
+			continue
+		}
+		for _, s := range synonyms[t] {
+			if have[stem(s)] {
+				hit++
+				break
+			}
+		}
+	}
+	return float64(hit) / float64(len(q))
 }
 
 // pairs lists each word joined with the next, as a cheap sign of word order.
@@ -254,8 +313,8 @@ func pairs(toks []string) []string {
 }
 
 // similar reports whether two token lists are near copies: they share at
-// least 90% of their distinct words.
-func similar(a, b []string) bool { return overlap(a, b) >= 0.9 }
+// least 90% of their distinct words and word pairs, so word order counts.
+func similar(a, b []string) bool { return overlap(a, b) >= 0.9 && overlap(pairs(a), pairs(b)) >= 0.9 }
 
 // overlap is the share of distinct words two token lists have in common.
 func overlap(a, b []string) float64 {

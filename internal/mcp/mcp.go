@@ -450,8 +450,13 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		mems := s.mine(all)
 		s.log("profile", nil, "", len(mems))
+		shown := make([]string, len(mems))
+		for i, m := range mems {
+			shown[i] = m.ID
+		}
+		s.Store.Touch(shown...)
 		out := notesHeader
-		if h := handoff.Latest(s.Store, s.Project); h != nil {
+		if h := handoff.Latest(s.Store, s.Project); h != nil && !s.scoped() {
 			out += "# Where you left off\n\n" + h.Content + "\n\n"
 		}
 		decided, _ := decision.Section(mems, memory.NormalizeProject(s.Project))
@@ -552,6 +557,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if strings.TrimSpace(a.Note) == "" {
 			return "", errors.New("note is empty")
 		}
+		if s.scoped() {
+			return "", errors.New("handoffs are for the user's own sessions; this server keeps one user's or agent's memory")
+		}
 		m, err := handoff.Save(s.Store, s.Project, s.appName(), strings.TrimSpace(a.Note))
 		if err != nil {
 			return "", err
@@ -602,6 +610,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			ID string `json:"id"`
 		}
 		_ = json.Unmarshal(raw, &a)
+		if _, err := s.own(a.ID); err != nil {
+			return "", err
+		}
 		m, err := s.Store.Forget(a.ID)
 		if err != nil {
 			return "", err
@@ -618,6 +629,11 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			To string `json:"to"`
 		}
 		_ = json.Unmarshal(raw, &a)
+		for _, id := range []string{a.ID, a.To} {
+			if _, err := s.own(id); err != nil {
+				return "", err
+			}
+		}
 		ma, mb, err := s.Store.Link(a.ID, a.To)
 		if err != nil {
 			return "", err
@@ -634,6 +650,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if a.Helpful == nil {
 			return "", errors.New("helpful is required")
 		}
+		if _, err := s.own(a.ID); err != nil {
+			return "", err
+		}
 		m, err := s.Store.Feedback(a.ID, *a.Helpful)
 		if err != nil {
 			return "", err
@@ -646,6 +665,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			KeepID string `json:"keep_id"`
 		}
 		_ = json.Unmarshal(raw, &a)
+		if _, err := s.own(a.KeepID); err != nil {
+			return "", err
+		}
 		kept, replaced, err := s.Store.ResolveAs(a.KeepID, memory.SourceAgent)
 		if err != nil {
 			return "", err
@@ -660,6 +682,23 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 // agent it was started for.
 func (s *Server) scope(project string, types []string) memory.Scope {
 	return memory.Scope{Project: project, User: s.User, Agent: s.Agent, Personal: s.User == "" && s.Agent == "", Types: types}.Normalized()
+}
+
+// scoped reports whether this server keeps one user's or agent's memory
+// rather than the user's own.
+func (s *Server) scoped() bool { return s.User != "" || s.Agent != "" }
+
+// own looks up a memory this server may act on. Anything outside its scope
+// is reported as not found, so an ID can't reach someone else's memory.
+func (s *Server) own(id string) (memory.Memory, error) {
+	m, err := s.Store.Get(id)
+	if err != nil {
+		return memory.Memory{}, err
+	}
+	if len(s.mine([]memory.Memory{m})) == 0 {
+		return memory.Memory{}, memory.ErrNotFound
+	}
+	return m, nil
 }
 
 // mine keeps the memories this server may show.
@@ -690,7 +729,8 @@ func (s *Server) nearCopy(ctx context.Context, in memory.RememberInput) *memory.
 		// Note that it was said again: new tags, and a source at least as
 		// trusted. A claim isn't more trusted than what's there.
 		if _, err := s.Store.Remember(memory.RememberInput{Content: m.Content, Tags: in.Tags, Source: m.Source,
-			Project: m.Project, Via: in.Via, User: m.User, Agent: m.Agent, Session: m.Session}); err != nil {
+			Project: m.Project, Via: in.Via, User: m.User, Agent: m.Agent, Session: m.Session,
+			Type: in.Type, Sources: in.Sources, Confidence: in.Confidence, Commit: in.Commit}); err != nil {
 			return nil
 		}
 		return &m

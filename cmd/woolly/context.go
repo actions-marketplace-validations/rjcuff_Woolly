@@ -92,6 +92,13 @@ func cmdContext(args []string) error {
 	}
 	a.log.Add(activity.Entry{App: app, Action: "context", IDs: ids, Count: len(mems)})
 	a.store.Touch(ids...)
+	var profileIDs []string
+	for _, m := range mems {
+		if m.Project == "" && m.Key != handoff.Key && strings.Contains(text, strings.TrimSpace(m.Content)) {
+			profileIDs = append(profileIDs, m.ID)
+		}
+	}
+	a.store.Touch(profileIDs...)
 	fmt.Print(text)
 	return nil
 }
@@ -169,8 +176,33 @@ func buildContext(mems []memory.Memory, project, repoDir, staleLine, away string
 			cut = contextLimit
 		}
 		out = out[:cut] + "\n\n(More in Woolly. Use the recall tool to search it.)\n"
+		ids = shownIDs(ids, mems, out)
 	}
 	return out, ids
+}
+
+// shownIDs keeps the IDs whose memory's text is still in the brief after it
+// was cut, so only what the agent actually saw counts as used.
+func shownIDs(ids []string, mems []memory.Memory, out string) []string {
+	byID := make(map[string]string, len(mems))
+	for _, m := range mems {
+		line := strings.TrimSpace(m.Content)
+		if i := strings.IndexByte(line, '\n'); i >= 0 {
+			line = line[:i]
+		}
+		if r := []rune(line); len(r) > 40 {
+			line = string(r[:40])
+		}
+		byID[m.ID] = line
+	}
+	var kept []string
+	for _, id := range ids {
+		if snip, ok := byID[id]; ok && snip != "" && !strings.Contains(out, snip) {
+			continue
+		}
+		kept = append(kept, id)
+	}
+	return kept
 }
 
 func mentions(m memory.Memory, project string) bool {

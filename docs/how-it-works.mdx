@@ -43,7 +43,8 @@ The IMU's chip select is GPIO 5
 
 | Field | Meaning |
 | --- | --- |
-| `type` | One of `decision`, `convention`, `gotcha`, `bug` or `hardware` |
+| `type` | For project facts, `decision`, `convention`, `gotcha`, `bug` or `hardware`. For anything, `preference`, `procedure` or `episode` |
+| `links` | IDs of related memories. Recalling one brings the others along |
 | `sources` | The code the fact is about. It can be a file (`main/imu.c`), a function, type, macro or constant in it (`main/imu.c#imu_init`) or a range of lines (`main/pins.h:12-18`). The part after `@` is a fingerprint of that code when the fact was saved. |
 | `commit` | The commit the fact was saved at |
 | `run_id` | The session it came from, when an app sets one |
@@ -52,7 +53,7 @@ The IMU's chip select is GPIO 5
 
 When the code a fact points at is removed or changes in a way that contradicts it, Woolly marks the fact `stale` with a reason and the commit that did it, keeps it out of search and session briefs, and asks you to review it. Nothing is deleted.
 
-When each memory was last used is kept in `~/.woolly/usage.json`, not in the memory files, so searching never rewrites them.
+How often each memory is used, when it was last used, and any helpful or unhelpful votes from AI apps are kept in `~/.woolly/usage.json`, not in the memory files, so searching never rewrites them. It stays on this device.
 
 Files from older versions load as they are. They just have no type or sources until you add them.
 

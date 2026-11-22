@@ -150,6 +150,20 @@ type Scope struct {
 	Types []string
 }
 
+// filterTypes normalizes the types a scope asks for. An unknown type is kept
+// as given, so it matches nothing instead of turning the filter off.
+func filterTypes(ts []string) []string {
+	var out []string
+	for _, t := range ts {
+		if k, ok := NormalizeType(t); ok {
+			out = append(out, k)
+		} else if t = strings.TrimSpace(t); t != "" {
+			out = append(out, "unknown:"+t)
+		}
+	}
+	return out
+}
+
 // Unscoped reports whether the memory belongs to the user themselves rather
 // than to a user, agent or session of an app built on Woolly.
 func (m *Memory) Unscoped() bool { return m.User == "" && m.Agent == "" && m.Session == "" }
@@ -182,7 +196,7 @@ func (sc Scope) Normalized() Scope {
 		Session:  CleanScopeID(sc.Session),
 		Project:  NormalizeProject(sc.Project),
 		Personal: sc.Personal,
-		Types:    NormalizeTypes(sc.Types),
+		Types:    filterTypes(sc.Types),
 	}
 }
 

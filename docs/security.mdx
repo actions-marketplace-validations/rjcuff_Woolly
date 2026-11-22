@@ -28,6 +28,10 @@ AI apps and scripts also can't settle a conflict in favor of the less trusted ve
 
 This covers AI apps over MCP and apps using the API as documented. It isn't a wall against a program that runs as you and reads your token: see [What Woolly can't protect against](#what-woolly-cant-protect-against).
 
+## Agents you build get their own memory
+
+`woolly mcp --user alice` or `--agent support-bot` keeps that server inside one user's or agent's memory. It can't search, list, change, rate, link or forget your own memories, even by ID, and it can't read or write your session handoffs. Settling a conflict through `/v1/conflicts/{id}/resolve` returns 403 when an app would replace something more trusted.
+
 ## Apps' users stay apart from you
 
 Apps you build on the [memory API](/docs/memory-api) save memories for their own users, agents and sessions. Those stay out of your personal AI apps and your profile, they are never written to a repo's shared `.woolly/woolly.md`, and a request scoped to one user can't read, change or delete another user's memory by its ID.
