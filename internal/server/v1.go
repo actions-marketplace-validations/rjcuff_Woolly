@@ -64,6 +64,23 @@ func queryScope(r *http.Request) memory.Scope {
 	return memory.Scope{User: q.Get("user_id"), Agent: q.Get("agent_id"), Session: q.Get("run_id"), Project: q.Get("project")}.Normalized()
 }
 
+// getInScope loads the memory named in the path. When the request names a
+// user, agent or session, a memory outside it is reported as not found, so an
+// app serving several users can't reach one user's memories from another's.
+func getInScope(w http.ResponseWriter, r *http.Request, store *memory.Store) (memory.Memory, bool) {
+	m, err := store.Get(r.PathValue("id"))
+	if err == nil {
+		if sc := queryScope(r); !sc.Empty() && !sc.Matches(&m) {
+			err = memory.ErrNotFound
+		}
+	}
+	if err != nil {
+		writeStoreError(w, err)
+		return memory.Memory{}, false
+	}
+	return m, true
+}
+
 // registerV1 adds the memory layer API for apps and agents: mem0's routes
 // and field names, on top of Woolly's store.
 func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, opts Options, record func(*http.Request, string, []string, string, int)) {
@@ -154,9 +171,8 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 	})
 
 	mux.HandleFunc("GET /v1/memories/{id}", func(w http.ResponseWriter, r *http.Request) {
-		m, err := store.Get(r.PathValue("id"))
-		if err != nil {
-			writeStoreError(w, err)
+		m, ok := getInScope(w, r, store)
+		if !ok {
 			return
 		}
 		writeJSON(w, http.StatusOK, toV1(m))
@@ -170,9 +186,8 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 		if !readJSON(w, r, &req) {
 			return
 		}
-		old, err := store.Get(r.PathValue("id"))
-		if err != nil {
-			writeStoreError(w, err)
+		old, ok := getInScope(w, r, store)
+		if !ok {
 			return
 		}
 		text := old.Content
@@ -184,7 +199,7 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 			meta = req.Metadata
 		}
 		// A new version, with the old one kept as history.
-		res, err := store.Replace(old.ID, memory.RememberInput{Content: text, Source: old.Source, Via: appOf(r), Metadata: meta})
+		res, err := store.Replace(old.ID, memory.RememberInput{Content: text, Source: old.Source, Via: appOf(r), Metadata: meta, Untrusted: true})
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -194,7 +209,11 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 	})
 
 	mux.HandleFunc("DELETE /v1/memories/{id}", func(w http.ResponseWriter, r *http.Request) {
-		m, err := store.Forget(r.PathValue("id"))
+		in, ok := getInScope(w, r, store)
+		if !ok {
+			return
+		}
+		m, err := store.Forget(in.ID)
 		if err != nil {
 			writeStoreError(w, err)
 			return
@@ -204,7 +223,11 @@ func registerV1(mux *http.ServeMux, store *memory.Store, engine *recall.Engine, 
 	})
 
 	mux.HandleFunc("GET /v1/memories/{id}/history", func(w http.ResponseWriter, r *http.Request) {
-		versions, err := store.History(r.PathValue("id"))
+		in, ok := getInScope(w, r, store)
+		if !ok {
+			return
+		}
+		versions, err := store.History(in.ID)
 		if err != nil {
 			writeStoreError(w, err)
 			return

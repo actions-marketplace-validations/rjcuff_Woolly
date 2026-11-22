@@ -87,8 +87,13 @@ class WoollyTest(unittest.TestCase):
         r = self.w.remember("Prefers spaces", key="code.indent_py", source="agent")
         self.assertTrue(r.saved_as_conflict)
         self.assertIn(r.memory.id, [m.id for m in self.w.conflicts()])
-        self.w.resolve(r.memory.id)
-        self.assertEqual([m.content for m in self.w.list() if m.key == "code.indent_py"], ["Prefers spaces"])
+        # A script can't make the AI's guess win; only the user can.
+        with self.assertRaises(WoollyError):
+            self.w.resolve(r.memory.id)
+        tabs = [m for m in self.w.list() if m.key == "code.indent_py"][0]
+        self.w.resolve(tabs.id)
+        self.assertEqual([m.content for m in self.w.list() if m.key == "code.indent_py"], ["Prefers tabs"])
+        self.assertNotIn(r.memory.id, [m.id for m in self.w.conflicts()])
 
     def test_secrets_and_injection_are_refused(self):
         with self.assertRaises(WoollyError) as e:

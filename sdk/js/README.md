@@ -66,7 +66,7 @@ await w.learn([
 
 ## Everything else
 
-`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. Pass `project` to `remember`, `recall` and `context` to keep notes about one codebase separate.
+`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. `resolve` throws if it would let a less trusted memory replace one you saved; settle those on the review page. Pass `project` to `remember`, `recall` and `context` to keep notes about one codebase separate.
 
 `new Woolly()` finds the server at `WOOLLY_HOST` (default `127.0.0.1:11435`) and reads the token from `WOOLLY_HOME` (default `~/.woolly`). The `app` you pass is shown on memories your app saves and in `woolly log`.
 

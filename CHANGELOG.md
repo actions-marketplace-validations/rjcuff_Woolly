@@ -10,6 +10,17 @@ A new look for usewoolly.com, and a page for Woolly Team.
 - The favicon, app icons, link previews and brand images are night blue.
 - The Product Hunt banner and the Bluesky links are gone.
 
+Safer, steadier memory for the agents you build.
+
+- AI apps can't skip the check for planted instructions by saying a memory came from you. The `remember` tool, `/api/remember` from scripts and the SDKs, and edits through `PUT /v1/memories/{id}` and `PATCH /api/memories/{id}` now refuse text that reads like instructions to an AI, whatever source they give. What you type on the command line or the review page is saved as before.
+- When an AI app or a script says a fact came from you, it's saved with source `import` and the tag `user-stated`. It still beats an AI's guess, but it can't replace a fact you saved yourself; it waits as a conflict. Before, an AI app could replace any fact you saved this way.
+- An AI app or a script can no longer resolve a conflict in favor of the less trusted memory, or bring back a version you replaced. `resolve_conflict` and `/api/resolve` return an error; the review page and `woolly resolve` still let you pick either. The Python and JavaScript `resolve` methods raise that error too.
+- A fact you saved that went stale still wins over a newer guess from an AI with the same key. The guess waits as a conflict for you to review.
+- Editing a fact keeps the code it points at, its type, tags, commit and confidence, unless the edit sets them. Merging facts, including when `woolly dream` merges two, keeps the code and tags of every fact merged, and the type, commit and confidence of the first. Before, the new version lost its sources, so Woolly could no longer flag it when the code changed.
+- Memories an app saves for its users with `user_id`, `agent_id` or `run_id` stay out of your own AI apps and your profile: the session brief and its stale facts, the MCP `recall`, `get_profile`, `list_memories` and `why` tools, the proxy, `/api/recall` and `/api/profile`. They are never written to a repo's shared `.woolly/woolly.md`. Before, what an app kept about `alice` could show up in Claude Code or be committed with the team file.
+- `GET`, `PUT`, `DELETE /v1/memories/{id}` and `/history` return 404 for a memory outside the `user_id`, `agent_id` or `run_id` in the request.
+- Moving a fact's sources to a renamed file updates its time, so sync carries the change to your other devices.
+
 ## 0.18.0
 
 Pull request checks you can pin, trust with outside text, and read from other tools.

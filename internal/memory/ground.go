@@ -340,6 +340,8 @@ func (s *Store) SetSources(id string, refs []Ref, commit string) (Memory, error)
 	if m.Commit == "" {
 		m.Commit = commit
 	}
+	// A newer time lets sync carry the new sources to other devices.
+	m.UpdatedAt = time.Now().UTC()
 	if err := s.write(m); err != nil {
 		return Memory{}, err
 	}

@@ -53,18 +53,18 @@ curl -X POST localhost:11435/api/recall \
 
 | Method | Path | Body |
 | --- | --- | --- |
-| `POST` | `/api/remember` | `content`, plus optional `key`, `tags`, `source`, `project`, and for project facts `type`, `sources` and `confidence` |
+| `POST` | `/api/remember` | `content`, plus optional `key`, `tags`, `source`, `project`, and for project facts `type`, `sources` and `confidence`. Text that reads like instructions to an AI returns 400. `source: "user"` from a script is saved as `import` with the tag `user-stated`, so it can't replace a fact you saved |
 | `POST` | `/api/recall` | `query`, plus optional `limit`, `include_all`, `project` |
 | `GET` | `/api/memories` | Add `?all=1` for everything, `?project=acme` for one project |
 | `GET` | `/api/memories/{id}` | |
-| `PATCH` | `/api/memories/{id}` | Any of `content`, `key`, `tags`, `project`, `type`, `sources`, `confidence` |
+| `PATCH` | `/api/memories/{id}` | Any of `content`, `key`, `tags`, `project`, `type`, `sources`, `confidence`. Text that reads like instructions to an AI returns 400 |
 | `DELETE` | `/api/memories/{id}` | Moves the memory to the trash |
 | `GET` | `/api/trash` | |
 | `POST` | `/api/restore` | `id` |
 | `DELETE` | `/api/trash` | Empties the trash for good |
 | `GET` | `/api/profile` | Add `?format=markdown` for Markdown |
 | `GET` | `/api/conflicts` | |
-| `POST` | `/api/resolve` | `keep_id` |
+| `POST` | `/api/resolve` | `keep_id`. Returns 400 if that would let a less trusted memory replace a more trusted one, or bring back a version you replaced; settle those on the review page |
 | `POST` | `/api/learn` | `text`, plus optional `project`, `dry_run`. Needs Ollama. See [Smart memory](/docs/learn) |
 | `GET` | `/api/activity` | Add `?app=cursor` for one app, `?limit=50` for fewer |
 | `GET` | `/api/apps` | Every app Woolly supports, and whether it's connected |

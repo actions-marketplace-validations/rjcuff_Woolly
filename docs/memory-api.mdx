@@ -55,6 +55,8 @@ Send `"infer": false` to save each user message as it is, without a model. Add `
 
 `user_id`, `agent_id` and `run_id` keep memories apart, the same way mem0 uses them. A memory saved for `alice` is never shown to, or changed by, `bob`. Add `project` to keep a fact to one codebase. Leave them all out to use your own personal memory.
 
+Memories saved with a `user_id`, `agent_id` or `run_id` belong to your app, not to you, so they never show up in your own AI apps: not in the brief Claude Code gets at the start of a session, not in the MCP `recall`, `get_profile` or `list_memories` tools, and not in the notes the proxy adds. Add the same scope to `GET`, `PUT` or `DELETE /v1/memories/{id}` and `/history` and a memory outside it returns 404, so one of your users can't reach another's memories by ID.
+
 ## Search
 
 ```sh

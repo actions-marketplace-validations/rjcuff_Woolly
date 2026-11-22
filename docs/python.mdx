@@ -122,7 +122,7 @@ w.forget(memory_id)            # moves it to the trash
 w.restore(memory_id)
 w.trash()
 w.conflicts()
-w.resolve(memory_id)
+w.resolve(memory_id)           # raises if it would replace a fact you saved
 w.profile().markdown           # a summary of everything known
 ```
 

@@ -81,7 +81,7 @@ const steps = await w.learn([
 
 ## Everything else
 
-`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. Pass `project` to keep notes about one codebase separate, see [Projects](/docs/projects).
+`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. `resolve` throws if it would let a less trusted memory replace one you saved; settle those on the review page. Pass `project` to keep notes about one codebase separate, see [Projects](/docs/projects).
 
 Errors are `WoollyError`, with `status` set to the HTTP status. When nothing answers at Woolly's address you get `WoollyNotRunning`.
 

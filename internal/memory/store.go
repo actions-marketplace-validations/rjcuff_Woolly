@@ -219,6 +219,23 @@ type RememberInput struct {
 	Sources []Ref
 	// Confidence is from 0 to 1. Zero means the default for the source.
 	Confidence float64
+	// Untrusted marks text that came through an AI or an app, whatever
+	// source it claims. It is always checked for instructions to an AI.
+	Untrusted bool
+}
+
+// UserStatedTag marks a fact an AI app or a script said came from the user.
+const UserStatedTag = "user-stated"
+
+// claimed is the source Woolly saves for what a caller claims. Woolly can't
+// check that untrusted text really came from the user, so a claim of "user"
+// is saved one step down, as import, tagged so it's clear who said what. It
+// still beats an AI's guess but never replaces what the user saved.
+func claimed(src Source, untrusted bool, tags []string) (Source, []string) {
+	if untrusted && src == SourceUser {
+		return SourceImport, append(append([]string(nil), tags...), UserStatedTag)
+	}
+	return src, tags
 }
 
 // RememberResult reports what Remember did.
@@ -244,12 +261,13 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 	if src.Rank() == 0 {
 		return nil, fmt.Errorf("unknown source %q (use user, import or agent)", src)
 	}
+	src, in.Tags = claimed(src, in.Untrusted, in.Tags)
 	if err := checkSensitive(content, in.AllowSensitive); err != nil {
 		return nil, err
 	}
 	// Anything you type yourself is trusted. Text from an AI or an import
 	// could have come from a malicious web page or document.
-	if src != SourceUser && secrets.LooksLikeInstructions(content) {
+	if (src != SourceUser || in.Untrusted) && secrets.LooksLikeInstructions(content) {
 		return nil, &InjectionError{}
 	}
 	key := NormalizeKey(in.Key)
@@ -323,7 +341,9 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 				continue
 			}
 			same = append(same, ex)
-			if ex.Status == StatusActive && ex.Source.Rank() > src.Rank() &&
+			// A stale fact the user stated still outranks a guess: it waits for
+			// their review, not for an agent to replace it.
+			if (ex.Status == StatusActive || ex.Status == StatusStale) && ex.Source.Rank() > src.Rank() &&
 				(stronger == nil || ex.UpdatedAt.After(stronger.UpdatedAt)) {
 				stronger = ex
 			}
@@ -411,6 +431,8 @@ type UpdateInput struct {
 	Sources        *[]Ref
 	Confidence     *float64
 	AllowSensitive bool
+	// Untrusted text is checked for instructions to an AI, as in Remember.
+	Untrusted bool
 }
 
 // Update edits a memory in place. If the memory is current and has a key,
@@ -432,6 +454,9 @@ func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
 		}
 		if err := checkSensitive(c, in.AllowSensitive); err != nil {
 			return Memory{}, err
+		}
+		if in.Untrusted && secrets.LooksLikeInstructions(c) {
+			return Memory{}, &InjectionError{}
 		}
 		m.Content = c
 	}
@@ -593,9 +618,20 @@ func (s *Store) EmptyTrash() (int, error) {
 	return n, nil
 }
 
+// ErrOutranked is returned when an AI tries to make a memory win over one
+// that a more trusted source saved.
+var ErrOutranked = errors.New("not resolved: the other memory comes from a more trusted source, so only the user can choose this one")
+
 // Resolve makes the given memory the current fact for its key and marks every
-// other live memory with that key as superseded by it.
+// other live memory with that key as superseded by it. It is for the user,
+// through the command line or the review page.
 func (s *Store) Resolve(id string) (Memory, []Memory, error) {
+	return s.ResolveAs(id, SourceUser)
+}
+
+// ResolveAs is Resolve on behalf of actor. Anyone but the user may only pick
+// a memory at least as trusted as each memory it would replace.
+func (s *Store) ResolveAs(id string, actor Source) (Memory, []Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.refresh(); err != nil {
@@ -604,6 +640,21 @@ func (s *Store) Resolve(id string) (Memory, []Memory, error) {
 	keep, err := s.find(id)
 	if err != nil {
 		return Memory{}, nil, err
+	}
+	if actor != SourceUser {
+		if next, ok := s.mems[keep.SupersededBy]; ok && !keep.Live() && next.Source.Rank() > keep.Source.Rank() {
+			return Memory{}, nil, ErrOutranked
+		}
+		for _, ex := range s.mems {
+			if ex.ID == keep.ID || !ex.Live() || ex.Source.Rank() <= keep.Source.Rank() {
+				continue
+			}
+			paired := ex.ID == keep.ConflictsWith || ex.ConflictsWith == keep.ID
+			sameKey := keep.Key != "" && ex.Key == keep.Key && sameSlot(ex, keep)
+			if paired || sameKey {
+				return Memory{}, nil, ErrOutranked
+			}
+		}
 	}
 	replaced, err := s.resolveLocked(keep, time.Now().UTC())
 	if err != nil {
@@ -670,7 +721,9 @@ func (s *Store) ListIn(sc Scope, includeAll bool) ([]Memory, error) {
 
 // Replace saves in as the newer version of the memory with ID old: the old
 // one is kept as history, marked superseded from now on. The new memory
-// takes the old one's scope unless in sets its own.
+// takes the old one's scope, key, metadata, sources, type and commit unless
+// in sets its own, and keeps the old tags along with in's. An edit from a
+// less trusted source than the old version is saved as a conflict instead.
 func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 	prev, err := s.Get(old)
 	if err != nil {
@@ -691,12 +744,48 @@ func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 	if in.Metadata == nil {
 		in.Metadata = prev.Metadata
 	}
+	// A new version is about the same code, so it keeps what ties the old
+	// one to it; without this, a merged or edited fact never goes stale.
+	if in.Sources == nil {
+		in.Sources = prev.Sources
+	}
+	if in.Type == "" {
+		in.Type = prev.Type
+	}
+	if in.Commit == "" {
+		in.Commit = prev.Commit
+	}
+	src := in.Source
+	if src == "" {
+		src = SourceUser
+	}
+	src, _ = claimed(src, in.Untrusted, nil)
+	// A more trusted source restating a guess is sure of it: the old
+	// confidence belonged to the guess.
+	if in.Confidence == 0 && src.Rank() <= prev.Source.Rank() {
+		in.Confidence = prev.Conf
+	}
+	in.Tags = mergeTags(prev.Tags, in.Tags)
 	res, err := s.Remember(in)
 	if err != nil {
 		return nil, err
 	}
 	if res.Memory.ID == prev.ID {
 		return res, nil // the same text again
+	}
+	// A less trusted edit never replaces the old version: it waits as a
+	// conflict for the user to settle.
+	if src.Rank() < prev.Source.Rank() {
+		if res.Memory.Status != StatusConflict {
+			m, err := s.MarkConflict(res.Memory.ID, prev.ID)
+			if err != nil {
+				return nil, err
+			}
+			res.Memory = m
+		}
+		p := prev
+		res.ConflictsWith = &p
+		return res, nil
 	}
 
 	s.mu.Lock()
@@ -818,11 +907,25 @@ func (s *Store) Supersede(old, by string) (Memory, error) {
 }
 
 // Merge saves in as one memory that replaces every memory in ids, which are
-// kept as history. The new memory takes the scope of the first one unless in
-// sets its own.
+// kept as history. The new memory takes the scope, type, commit and
+// confidence of the first one unless in sets its own. Its sources and tags
+// are in's plus those of every memory merged.
 func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
 	if len(ids) < 2 {
 		return nil, errors.New("merging needs at least two memories")
+	}
+	// The merged memory points at everything its parts pointed at.
+	refs := append([]Ref(nil), in.Sources...)
+	for _, id := range ids {
+		m, err := s.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, m.Sources...)
+		in.Tags = mergeTags(in.Tags, m.Tags)
+	}
+	if len(refs) > 0 {
+		in.Sources = refs
 	}
 	res, err := s.Replace(ids[0], in)
 	if err != nil {

@@ -48,7 +48,7 @@ A week later, in Cursor, you ask for a weather script. Cursor calls `recall` wit
 | `remember` | When you share a fact, preference or decision worth keeping. Its `scope` is `personal`, `project` or `auto`, so facts about the codebase go to [project memory](/docs/project-memory) and facts about you stay personal. Project facts can also have a `type` and `sources`, the code they're about, so Woolly can flag them when that code changes |
 | `list_memories` | When you ask what Woolly knows |
 | `forget` | Only when you ask it to delete something. The memory goes to the trash, so you can restore it |
-| `resolve_conflict` | Only when you confirm which version of a fact is right |
+| `resolve_conflict` | Only when you confirm which version of a fact is right. It can't make a memory an AI saved win over one you saved; you settle those on the review page or with `woolly resolve` |
 | `decide` | When you make a choice or turn down an approach, to save it with the reason and what was rejected. Its `sources` tie it to the code it's about |
 | `why` | Before changing code it didn't write in this session, to read the decisions and gotchas behind it. See [Why is this code like this](/docs/why) |
 | `check_memory_files` | Before trusting a note in CLAUDE.md, AGENTS.md or its own memory that names code, or when you ask if your agent files are up to date. See [Check your agent files](/docs/memory-files) |

@@ -42,6 +42,26 @@ func appOf(r *http.Request) string {
 	return "API"
 }
 
+// fromReviewPage reports whether a request came from the review page, signed
+// in with its cookie, rather than from a script or app holding the token.
+// Only the review page speaks for the user; anything else may be relaying
+// text from an AI.
+func fromReviewPage(r *http.Request) bool {
+	if r.Header.Get("Authorization") != "" {
+		return false
+	}
+	_, err := r.Cookie(tokenCookie)
+	return err == nil
+}
+
+// actor is who a request acts for when settling a conflict.
+func actor(r *http.Request) memory.Source {
+	if fromReviewPage(r) {
+		return memory.SourceUser
+	}
+	return memory.SourceAgent
+}
+
 // Options are the optional parts of the API. Missing ones turn their
 // endpoints off.
 type Options struct {
@@ -93,7 +113,7 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 			return
 		}
 		in := memory.RememberInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Via: appOf(r), Project: req.Project,
-			Type: req.Type, Sources: req.Sources, Confidence: req.Conf}
+			Type: req.Type, Sources: req.Sources, Confidence: req.Conf, Untrusted: !fromReviewPage(r)}
 		if req.Source != "" {
 			src, ok := memory.ParseSource(req.Source)
 			if !ok {
@@ -121,7 +141,8 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		if !readJSON(w, r, &req) {
 			return
 		}
-		results, mode, err := engine.RecallIn(r.Context(), req.Query, req.Limit, req.IncludeAll, req.Project)
+		// The user's own memory; apps' users are searched through /v1/search.
+		results, mode, err := engine.RecallScoped(r.Context(), req.Query, req.Limit, req.IncludeAll, memory.Scope{Project: req.Project, Personal: true})
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
@@ -180,7 +201,7 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 			return
 		}
 		m, err := store.Update(r.PathValue("id"), memory.UpdateInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Project: req.Project,
-			Type: req.Type, Sources: req.Sources, Confidence: req.Conf})
+			Type: req.Type, Sources: req.Sources, Confidence: req.Conf, Untrusted: !fromReviewPage(r)})
 		if err != nil {
 			writeStoreError(w, err)
 			return
@@ -190,11 +211,12 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 	})
 
 	mux.HandleFunc("GET /api/profile", func(w http.ResponseWriter, r *http.Request) {
-		mems, err := store.List(false)
+		all, err := store.List(false)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		mems := memory.Personal(all) // a profile of the user, not of apps' users
 		p := profile.Build(mems)
 		record(r, "profile", nil, "", len(mems))
 		if r.URL.Query().Get("format") == "markdown" {
@@ -266,7 +288,7 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		if !readJSON(w, r, &req) {
 			return
 		}
-		kept, replaced, err := store.Resolve(req.KeepID)
+		kept, replaced, err := store.ResolveAs(req.KeepID, actor(r))
 		if err != nil {
 			writeStoreError(w, err)
 			return

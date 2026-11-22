@@ -191,15 +191,16 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 		return res, err
 	}
 	local := map[string]memory.Memory{}
+	// Memories apps keep for their own users never go in the team's file.
 	for _, m := range all {
-		if m.Project == r.Project {
+		if m.Project == r.Project && m.Unscoped() {
 			local[suffix(m.ID)] = m
 		}
 	}
 	trashed := map[string]memory.Memory{}
 	if trash, err := store.Trash(); err == nil {
 		for _, m := range trash {
-			if m.Project == r.Project {
+			if m.Project == r.Project && m.Unscoped() {
 				trashed[suffix(m.ID)] = m
 			}
 		}
@@ -266,7 +267,7 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 	// doesn't show up as a conflict with the note it replaced.
 	for _, m := range all {
 		id := suffix(m.ID)
-		if m.Project != r.Project || !m.Live() || inFile[id] || held[id] || !had[id] || m.UpdatedAt.After(st.SyncedAt) {
+		if m.Project != r.Project || !m.Unscoped() || !m.Live() || inFile[id] || held[id] || !had[id] || m.UpdatedAt.After(st.SyncedAt) {
 			continue
 		}
 		if _, err := store.Forget(m.ID); err != nil {
@@ -320,7 +321,7 @@ func (r *Repo) Sync(store *memory.Store) (Result, error) {
 		ids = append(ids, id)
 	}
 	for _, m := range all {
-		if m.Project != r.Project || !m.Live() || m.Key == handoffKey || strings.HasPrefix(m.Key, "user.") {
+		if m.Project != r.Project || !m.Unscoped() || !m.Live() || m.Key == handoffKey || strings.HasPrefix(m.Key, "user.") {
 			continue
 		}
 		id := suffix(m.ID)

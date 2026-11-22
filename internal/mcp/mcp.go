@@ -335,7 +335,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			src = parsed
 		}
-		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf}
+		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true}
 		if project != "" {
 			in.Type = a.Type
 			in.Sources = s.sources(project, a.Sources)
@@ -370,7 +370,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if a.Scope == "project" || a.Scope == "personal" {
 			limit = 50 // filtered below
 		}
-		results, _, err := s.Engine.RecallIn(ctx, a.Query, limit, false, project)
+		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, memory.Scope{Project: project, Personal: true})
 		if err != nil {
 			return "", err
 		}
@@ -409,10 +409,11 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 
 	case "get_profile":
 		s.pull()
-		mems, err := s.Store.List(false)
+		all, err := s.Store.List(false)
 		if err != nil {
 			return "", err
 		}
+		mems := memory.Personal(all)
 		s.log("profile", nil, "", len(mems))
 		out := notesHeader
 		if h := handoff.Latest(s.Store, s.Project); h != nil {
@@ -479,11 +480,11 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			return "", err
 		}
 		s.pull()
-		mems, err := s.Store.List(true)
+		all, err := s.Store.List(true)
 		if err != nil {
 			return "", err
 		}
-		ans := why.Find(mems, s.Project, s.Root, t)
+		ans := why.Find(memory.Personal(all), s.Project, s.Root, t)
 		var ids []string
 		for _, m := range ans.Matches {
 			ids = append(ids, m.Memory.ID)
@@ -525,7 +526,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		var mems []memory.Memory
 		for i := range all {
-			if all[i].In(memory.NormalizeProject(s.Project)) {
+			if all[i].Unscoped() && all[i].In(memory.NormalizeProject(s.Project)) {
 				mems = append(mems, all[i])
 			}
 		}
@@ -560,7 +561,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			KeepID string `json:"keep_id"`
 		}
 		_ = json.Unmarshal(raw, &a)
-		kept, replaced, err := s.Store.Resolve(a.KeepID)
+		kept, replaced, err := s.Store.ResolveAs(a.KeepID, memory.SourceAgent)
 		if err != nil {
 			return "", err
 		}

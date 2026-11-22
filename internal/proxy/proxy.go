@@ -135,7 +135,8 @@ func (p *Proxy) addMemories(ctx context.Context, body []byte, kind format) ([]by
 		go p.saveFacts(text)
 	}
 
-	results, _, err := p.Engine.Recall(ctx, text, p.Limit, false)
+	// Only the user's own memories: never what an app keeps about its users.
+	results, _, err := p.Engine.RecallScoped(ctx, text, p.Limit, false, memory.Scope{Personal: true})
 	if err != nil || len(results) == 0 {
 		return body, 0
 	}

@@ -136,6 +136,25 @@ type Scope struct {
 	Agent   string
 	Session string
 	Project string
+	// Personal leaves out memories that apps built on Woolly saved for one
+	// of their users, agents or sessions. The user's own AI apps set it, so
+	// what an app keeps about "alice" never shows up in their briefs.
+	Personal bool
+}
+
+// Unscoped reports whether the memory belongs to the user themselves rather
+// than to a user, agent or session of an app built on Woolly.
+func (m *Memory) Unscoped() bool { return m.User == "" && m.Agent == "" && m.Session == "" }
+
+// Personal returns the memories that belong to the user themselves.
+func Personal(mems []Memory) []Memory {
+	var out []Memory
+	for i := range mems {
+		if mems[i].Unscoped() {
+			out = append(out, mems[i])
+		}
+	}
+	return out
 }
 
 // CleanScopeID tidies a user, agent or session ID: one line, at most 128 characters.
@@ -150,19 +169,24 @@ func CleanScopeID(s string) string {
 // Normalized returns the scope with its IDs tidied.
 func (sc Scope) Normalized() Scope {
 	return Scope{
-		User:    CleanScopeID(sc.User),
-		Agent:   CleanScopeID(sc.Agent),
-		Session: CleanScopeID(sc.Session),
-		Project: NormalizeProject(sc.Project),
+		User:     CleanScopeID(sc.User),
+		Agent:    CleanScopeID(sc.Agent),
+		Session:  CleanScopeID(sc.Session),
+		Project:  NormalizeProject(sc.Project),
+		Personal: sc.Personal,
 	}
 }
 
-// Empty reports whether the scope has no user, agent or session.
+// Empty reports whether the scope has no user, agent or session. It ignores
+// Personal: a personal scope still filters.
 func (sc Scope) Empty() bool { return sc.User == "" && sc.Agent == "" && sc.Session == "" }
 
 // Matches reports whether m is in the scope. A user, agent or session must
 // match exactly when set; the project follows In.
 func (sc Scope) Matches(m *Memory) bool {
+	if sc.Personal && !m.Unscoped() {
+		return false
+	}
 	return (sc.User == "" || m.User == sc.User) &&
 		(sc.Agent == "" || m.Agent == sc.Agent) &&
 		(sc.Session == "" || m.Session == sc.Session) &&

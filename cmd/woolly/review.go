@@ -181,6 +181,9 @@ func (rv *reviewer) confirm(m memory.Memory) error {
 
 func (rv *reviewer) edit(m memory.Memory, text string) error {
 	refs, head := rv.sources(m)
+	if rv.repo != nil && len(m.Sources) > 0 && len(refs) == 0 {
+		refs = []memory.Ref{} // its code is gone; don't carry the dead sources over
+	}
 	_, err := rv.a.store.Replace(m.ID, memory.RememberInput{
 		Content: text, Tags: m.Tags, Type: m.Type, Sources: refs, Commit: head,
 		Source: memory.SourceUser, Via: cli, Project: m.Project,
