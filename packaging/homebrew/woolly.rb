@@ -1,28 +1,28 @@
 class Woolly < Formula
   desc "Local project memory for coding agents that flags stale facts"
   homepage "https://usewoolly.com"
-  version "0.20.0"
+  version "0.20.1"
   license "MIT"
 
   on_macos do
     on_arm do
-      url "https://github.com/rjcuff/woolly/releases/download/v0.20.0/woolly_darwin_arm64.tar.gz"
-      sha256 "30f2f1e109c8026a7ad02d413988af8f3057bd02a3c9622e13e8f2bcdbf2e1ec"
+      url "https://github.com/rjcuff/woolly/releases/download/v0.20.1/woolly_darwin_arm64.tar.gz"
+      sha256 "91e80631c2c65da1ab471d4a6c9e9cd25048a16e52dec7f51e4a62b431263b14"
     end
     on_intel do
-      url "https://github.com/rjcuff/woolly/releases/download/v0.20.0/woolly_darwin_amd64.tar.gz"
-      sha256 "3bec6d34d84feecb4114b54cae33ae0496749b04f4697386fdbaf058863fdc56"
+      url "https://github.com/rjcuff/woolly/releases/download/v0.20.1/woolly_darwin_amd64.tar.gz"
+      sha256 "40c92570cdd396c1b1bd9c8dad190947f48847f09a7a186f6e9ef2b56bfddb43"
     end
   end
 
   on_linux do
     on_arm do
-      url "https://github.com/rjcuff/woolly/releases/download/v0.20.0/woolly_linux_arm64.tar.gz"
-      sha256 "f014ff810bb80a5abe0af0bb6db82d6f93d5d0fa2ec16a988c67be3208e24ca5"
+      url "https://github.com/rjcuff/woolly/releases/download/v0.20.1/woolly_linux_arm64.tar.gz"
+      sha256 "772d2b87e7e4cb173961656594cd473e1888a145a9d772e261615ea78c06226a"
     end
     on_intel do
-      url "https://github.com/rjcuff/woolly/releases/download/v0.20.0/woolly_linux_amd64.tar.gz"
-      sha256 "aa89aadad5f394f0c9ef44feb34d1d3c209c7d1ab4ca230860ad20d74db5de8a"
+      url "https://github.com/rjcuff/woolly/releases/download/v0.20.1/woolly_linux_amd64.tar.gz"
+      sha256 "81d82df40d018ef8fa3bfc89b1b4530218cdc8a25f46b8850f8cc87a7d632687"
     end
   end
 
