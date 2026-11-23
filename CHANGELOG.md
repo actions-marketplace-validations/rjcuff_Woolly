@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.20.0
+
+Woolly as a Claude Code plugin, MCP over a web address, sync through a folder you already use, and plans for Woolly Team.
 
 - Woolly is a Claude Code plugin. Run `claude plugin marketplace add rjcuff/woolly`, then `claude plugin install woolly@woolly`. It sets up the same MCP server and hooks as `woolly connect claude-code`, and adds a `woolly-check` skill that checks your memory files against the code. You still need the `woolly` command installed. `woolly connect` warns you if the plugin is also installed, since the hooks would run twice.
 - `woolly connect --user <id>` and `--agent <name>` set apps up to run `woolly mcp` with that scope, so an app only sees one user's or agent's memories. Claude Code's startup hooks are skipped for a scoped connection.

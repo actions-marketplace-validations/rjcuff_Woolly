@@ -1,6 +1,6 @@
 {
   "name": "woolly",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "Project memory for Claude Code that ties facts to your code and flags them when a commit makes them stale. Needs the woolly command: https://usewoolly.com/docs/quickstart",
   "author": {
     "name": "Ryan Cuff",

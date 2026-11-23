@@ -1,6 +1,6 @@
 [package]
 name = "woolly-app"
-version = "0.16.0"
+version = "0.20.0"
 description = "Woolly: project memory your coding agents can trust"
 edition = "2021"
 license = "MIT"
