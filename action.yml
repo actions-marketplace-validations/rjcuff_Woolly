@@ -130,16 +130,19 @@ runs:
           git cat-file -e "$BASE^{commit}" 2>/dev/null || git fetch --quiet --no-tags --depth=1 origin "$BASE" || true
           args+=(--base "$BASE")
         fi
+        # Read the help once. Piping it straight into grep -q can kill woolly with
+        # SIGPIPE, which pipefail turns into "flag not supported".
+        help=$(woolly check --help 2>&1 || true)
         # Woolly 0.18.0 and later write the counts as JSON next to the report.
-        if woolly check --help 2>&1 | grep -q -- '--status-file'; then
+        if grep -q -- '--status-file' <<<"$help"; then
           args+=(--status-file "$status")
         fi
         # Woolly 0.20.0 and later can leave out the footer.
-        if [ "$FOOTER_INPUT" = "false" ] && woolly check --help 2>&1 | grep -q -- '--no-footer'; then
+        if [ "$FOOTER_INPUT" = "false" ] && grep -q -- '--no-footer' <<<"$help"; then
           args+=(--no-footer)
         fi
         # Woolly 0.21.0 and later mark each stale line in the pull request.
-        if [ "$ANNOTATIONS_INPUT" != "false" ] && woolly check --help 2>&1 | grep -q -- '--annotations-file'; then
+        if [ "$ANNOTATIONS_INPUT" != "false" ] && grep -q -- '--annotations-file' <<<"$help"; then
           args+=(--annotations-file "$annotations")
         fi
         set +e
