@@ -12,8 +12,8 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/rjcuff/woolly/releases/download/v0.20.1/woolly.mcpb",
-      "fileSha256": "769adcdcf39bc1b35b2f1bdcff270643ae3936f2de5dc3e1ae65fb8f86c76382",
+      "identifier": "https://github.com/rjcuff/woolly/releases/download/v0.21.0/woolly.mcpb",
+      "fileSha256": "dc7eb7aa8d56f264b3d39d39c5faac23100ca35616b7efd44f5f1377531c748c",
       "transport": {
         "type": "stdio"
       }
