@@ -14,7 +14,7 @@ test('the changelog becomes a short plain summary per release', () => {
     '- A new [`woolly init`](https://example.com) command. It does more too. And one more thing that is long enough.',
     '- Something else.',
     '',
-    '## 1.1.0',
+    '## 1.1.0 (2026-11-01)',
     '',
     '- **Bold** start without a period',
   ].join('\n');

@@ -42,7 +42,8 @@ export function parseChangelog(markdown: string, limit: number): Omit<Release, '
     .filter((section) => /^\d+\.\d+\.\d+\s/.test(section));
   return sections.slice(0, limit).map((section) => {
     const [heading, ...rest] = section.split('\n');
-    const version = heading.trim();
+    // Headings read "0.21.0 (2026-11-23)"; the version is the first word.
+    const version = heading.trim().split(/\s+/)[0];
     const bullet = rest.find((line) => line.startsWith('- ')) ?? '';
     return {
       version,

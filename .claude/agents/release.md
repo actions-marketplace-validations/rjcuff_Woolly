@@ -24,7 +24,7 @@ You are the release engineer for Woolly. You get a version (X.Y.Z) or a bump (pa
    - Edit each file and re-read it to confirm.
 3. Changelog:
    - Run `git log <last-tag>..HEAD --oneline`.
-   - In `CHANGELOG.md`, rename `## Unreleased` to `## X.Y.Z`, keep its hand-written text, and add short entries for commits it doesn't cover yet.
+   - In `CHANGELOG.md`, rename `## Unreleased` to `## X.Y.Z (YYYY-MM-DD)` with today's date, keep its hand-written text, and add short entries for commits it doesn't cover yet.
    - Plain American English, no em dashes, the same style as earlier entries.
 4. Build and dry run:
    - JS: `cd sdk/js && npm ci && npm run build && npm publish --dry-run`
