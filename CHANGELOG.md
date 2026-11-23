@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.21.0
 
 `woolly check` reads more of the files your agents follow, and marks stale lines right in pull requests.
 
@@ -12,6 +12,9 @@
 - The README leads with `woolly check`, shows results from 20 real repos, and lists the Woolly Team plans.
 - The Woolly Team founding pilot has ended. The team page FAQ now points to the Free plan as the way to try it.
 - CONTRIBUTING lists what `make check` needs. There's a Code of Conduct, a pull request template and an issue template for a wrong stale flag.
+- The homepage hero is taller on laptops and desktops, and the picture grows with it. Tablets and phones are unchanged.
+- The Python and JavaScript SDK READMEs have clearer wording, and the Python SDK folder has its own LICENSE file.
+- The repo has a read-only security review agent for Claude Code in `.claude/agents/security.md`.
 
 ## 0.20.1
 
