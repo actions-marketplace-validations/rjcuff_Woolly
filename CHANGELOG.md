@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The Python package (`woolly-ai` 0.6.1 on PyPI) has the new README describing Woolly as project memory for coding agents, and ships its MIT LICENSE file. Its code is unchanged.
+
 ## 0.21.0
 
 `woolly check` reads more of the files your agents follow, and marks stale lines right in pull requests.
