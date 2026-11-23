@@ -32,6 +32,8 @@ This covers AI apps over MCP and apps using the API as documented. It isn't a wa
 
 `woolly mcp --user alice` or `--agent support-bot` keeps that server inside one user's or agent's memory. It can't search, list, change, rate, link or forget your own memories, even by ID, and it can't read or write your session handoffs. Settling a conflict through `/v1/conflicts/{id}/resolve` returns 403 when an app would replace something more trusted.
 
+Over [MCP over HTTP](/docs/mcp#mcp-over-http), the scope comes from `?user=` or `?agent=` in the address the app uses. That keeps a trusted app in its lane, but it isn't a lock: anything holding the API token can drop the scope and reach all of your memories.
+
 ## Apps' users stay apart from you
 
 Apps you build on the [memory API](/docs/memory-api) save memories for their own users, agents and sessions. Those stay out of your personal AI apps and your profile, they are never written to a repo's shared `.woolly/woolly.md`, and a request scoped to one user can't read, change or delete another user's memory by its ID.
@@ -61,7 +63,7 @@ The server also:
 - Rejects requests from websites, so a page you visit can't read or change your memories.
 - Only answers requests addressed to `localhost` or `127.0.0.1`, which blocks DNS rebinding attacks.
 
-AI apps connected through MCP don't use the API. They talk to their own copy of Woolly directly.
+Most AI apps connected through MCP don't use the API. They talk to their own copy of Woolly directly. Apps that connect over HTTP instead, like Open WebUI, use `/mcp` on the same server, which needs the same token and has the same protections.
 
 ## Your files are private
 
@@ -70,6 +72,8 @@ The `~/.woolly` folder can only be opened by your user account, and each memory 
 ## Sync is encrypted
 
 [Sync](/docs/sync) is off until you turn it on. Devices share a secret key from the join code, which is never sent over the network. Every message is encrypted and signed with it, and old messages are refused. Keep the code private: anyone with it, on your network, can read and change your memories.
+
+If you [sync through a folder](/docs/sync#sync-through-a-folder), like Syncthing, Dropbox or a git repo, every file Woolly writes there is encrypted and signed with the same key, and file names are keyed hashes, so the folder's host sees neither your memories nor their IDs. Files that were changed or don't open with your key are skipped, and Woolly only reads plain files there, never links. Whoever holds the folder can still hold back changes or put back an older copy, which a git history makes easy. Your other devices write the newer version back the next time they sync, but a device that just joined may briefly get the older one. Anyone with both the folder and the join code can read your memories.
 
 ## You can see what each app did
 

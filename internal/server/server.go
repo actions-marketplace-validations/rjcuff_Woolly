@@ -73,7 +73,13 @@ type Options struct {
 	Home string
 	// StartSync starts listening for other devices after sync is set up.
 	StartSync func() error
+	// MCP, if set, serves MCP over Streamable HTTP at MCPPath, for apps
+	// like Open WebUI that can't start a command.
+	MCP http.Handler
 }
+
+// MCPPath is where MCP over HTTP is served. Like the API, it needs the token.
+const MCPPath = "/mcp"
 
 // Handler returns the HTTP handler for the Woolly API. If log is set, saves,
 // reads and deletes are recorded in it. Reads by the review page are not,
@@ -283,6 +289,19 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		writeJSON(w, http.StatusOK, map[string]any{"memories": orEmpty(mems)})
 	})
 
+	// Keeping an old guess counts as a use, so it leaves the queue for
+	// another ReviewAge, the same as `woolly review --keep`.
+	mux.HandleFunc("POST /api/review-queue/{id}/keep", func(w http.ResponseWriter, r *http.Request) {
+		m, err := store.Get(r.PathValue("id"))
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		store.Touch(m.ID)
+		record(r, "keep", []string{m.ID}, "", 0)
+		writeJSON(w, http.StatusOK, m)
+	})
+
 	mux.HandleFunc("GET /api/problems", func(w http.ResponseWriter, r *http.Request) {
 		problems := store.Problems()
 		if problems == nil {
@@ -370,6 +389,12 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 	registerV1(mux, store, engine, opts, record)
 	registerManage(mux, store, version, opts)
 	registerImport(mux, store, log, opts.Ollama)
+	if opts.MCP != nil {
+		// One pattern per method, since "GET /" already serves the page.
+		for _, m := range []string{"POST", "GET", "DELETE"} {
+			mux.Handle(m+" "+MCPPath, opts.MCP)
+		}
+	}
 
 	return LocalOnly(requireToken(token, mux))
 }

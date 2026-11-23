@@ -65,6 +65,7 @@ curl -X POST localhost:11435/api/recall \
 | `GET` | `/api/profile` | Add `?format=markdown` for Markdown |
 | `GET` | `/api/conflicts` | |
 | `GET` | `/api/review-queue` | Guesses an AI made that nothing has used in 90 days, for a "still true?" check |
+| `POST` | `/api/review-queue/{id}/keep` | Keep a guess. It counts as a use, so it leaves the list for another 90 days |
 | `GET` | `/api/problems` | Memory files Woolly couldn't read, with why. Fix or remove them by hand |
 | `POST` | `/api/resolve` | `keep_id`. Returns 400 if that would let a less trusted memory replace a more trusted one, or bring back a version you replaced; settle those on the review page |
 | `POST` | `/api/learn` | `text`, plus optional `project`, `dry_run`. Needs Ollama. See [Smart memory](/docs/learn) |
@@ -79,6 +80,7 @@ curl -X POST localhost:11435/api/recall \
 | `POST` | `/api/sync/now` | Sync with linked devices now |
 | `POST` | `/api/sync/leave` | Turn sync off on this device |
 | `GET` | `/api/version` | |
+| `POST` | `/mcp` | MCP over Streamable HTTP, for apps that can't start `woolly mcp`. Takes `?user=`, `?agent=` and `?project=`. See [MCP over HTTP](/docs/mcp#mcp-over-http) |
 
 ## Name your app
 

@@ -39,6 +39,13 @@ type Config struct {
 	Key   string `json:"key"` // base64url, 32 bytes
 	Name  string `json:"name,omitempty"`
 	Peers []Peer `json:"peers,omitempty"`
+	// Folders are sync folders, like a Syncthing folder or a git repo.
+	Folders []Folder `json:"folders,omitempty"`
+	// FolderOnly is set when sync was set up with `woolly sync folder`, so
+	// this device doesn't listen on the network. `woolly sync init` or a
+	// join clears it. A device that ran init never learns who joined it, so
+	// this can't be worked out from Peers.
+	FolderOnly bool `json:"folder_only,omitempty"`
 }
 
 // Peer is another device.
@@ -307,6 +314,8 @@ type Result struct {
 	Received int
 	Sent     int
 	Deleted  int
+	// Skipped counts files in a sync folder that didn't open with the key.
+	Skipped int
 }
 
 // Client talks to other devices.
@@ -356,18 +365,68 @@ func (c *Client) call(ctx context.Context, key []byte, addr string, req request)
 	return &rep, nil
 }
 
+// target is the other side of a sync: another device over the network, or a
+// shared folder.
+type target interface {
+	// manifest lists what the target has, and memories deleted for good.
+	manifest(ctx context.Context) (items []memory.Item, tombstones []string, name string, err error)
+	get(ctx context.Context, ids []string) ([]File, error)
+	// put saves files and tombstones, and says how many files it applied.
+	put(ctx context.Context, files []File, tombstones []string) (int, error)
+}
+
+// netDevice is another device reached over the network.
+type netDevice struct {
+	c    *Client
+	key  []byte
+	addr string
+	from string
+}
+
+func (d netDevice) manifest(ctx context.Context) ([]memory.Item, []string, string, error) {
+	rep, err := d.c.call(ctx, d.key, d.addr, request{Op: "manifest", From: d.from})
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return rep.Items, rep.Tombstones, rep.Name, nil
+}
+
+func (d netDevice) get(ctx context.Context, ids []string) ([]File, error) {
+	rep, err := d.c.call(ctx, d.key, d.addr, request{Op: "get", IDs: ids})
+	if err != nil {
+		return nil, err
+	}
+	return rep.Files, nil
+}
+
+func (d netDevice) put(ctx context.Context, files []File, tombstones []string) (int, error) {
+	rep, err := d.c.call(ctx, d.key, d.addr, request{Op: "put", Files: files, Tombstones: tombstones})
+	if err != nil {
+		return 0, err
+	}
+	return rep.Applied, nil
+}
+
 // Sync brings this device and the one at addr up to date with each other.
 func (c *Client) Sync(ctx context.Context, store *memory.Store, cfg *Config, addr string) (Result, error) {
-	res := Result{Peer: addr}
 	key, err := cfg.key()
 	if err != nil {
-		return res, err
+		return Result{Peer: addr}, err
 	}
-	remote, err := c.call(ctx, key, addr, request{Op: "manifest", From: cfg.Name})
+	return syncWith(ctx, store, netDevice{c: c, key: key, addr: addr, from: cfg.Name}, addr)
+}
+
+// syncWith brings the store and t up to date with each other: the newer
+// copy of each memory wins, and one deleted for good on either side is
+// deleted on both.
+func syncWith(ctx context.Context, store *memory.Store, t target, label string) (Result, error) {
+	res := Result{Peer: label}
+	items, tombstones, name, err := t.manifest(ctx)
 	if err != nil {
 		return res, err
 	}
-	res.Name = remote.Name
+	res.Name = name
+	remote := reply{Items: items, Tombstones: tombstones}
 
 	// Deleted for good on either side means deleted on both.
 	theirDead := map[string]bool{}
@@ -419,11 +478,11 @@ func (c *Client) Sync(ctx context.Context, store *memory.Store, cfg *Config, add
 
 	for len(want) > 0 {
 		n := min(len(want), 500)
-		got, err := c.call(ctx, key, addr, request{Op: "get", IDs: want[:n]})
+		got, err := t.get(ctx, want[:n])
 		if err != nil {
 			return res, err
 		}
-		applied, err := applyAll(store, got.Files, nil)
+		applied, err := applyAll(store, got, nil)
 		res.Received += applied
 		if err != nil {
 			return res, err
@@ -439,11 +498,11 @@ func (c *Client) Sync(ctx context.Context, store *memory.Store, cfg *Config, add
 	}
 	for first := true; first || len(give) > 0; first = false {
 		n := min(len(give), 500)
-		rep, err := c.call(ctx, key, addr, request{Op: "put", Files: give[:n], Tombstones: newDead})
+		applied, err := t.put(ctx, give[:n], newDead)
 		if err != nil {
 			return res, err
 		}
-		res.Sent += rep.Applied
+		res.Sent += applied
 		give, newDead = give[n:], nil
 	}
 	return res, nil

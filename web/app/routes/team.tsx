@@ -12,7 +12,7 @@ import { LogoIcon, WorksWith, type WorksWithTile } from '@/components/sky/works-
 import { getStars } from '@/lib/github';
 import { integrations } from '@/lib/integrations';
 import { seo } from '@/lib/seo';
-import { teamInstallUrl, teamLoginUrl } from '@/lib/shared';
+import { teamInstallUrl, teamLoginUrl, teamSalesUrl } from '@/lib/shared';
 
 export function meta(_: Route.MetaArgs) {
   return seo({
@@ -47,13 +47,13 @@ const FEATURES: Case[] = [
   { title: 'Every repository in one place', body: 'Coverage, open findings and recent checks across your organization, busiest first.' },
   { title: 'Evidence attached', body: 'Each finding links to the exact line, the commit that changed the code and its pull request.' },
   { title: 'Clear findings as a team', body: 'Mark findings fixed, dismissed or false positive, with a record of who decided and when.' },
-  { title: 'Your code never leaves GitHub', body: 'Checks run in your own GitHub Actions. Woolly Team receives only counts and file pointers.' },
+  { title: 'Your code never leaves GitHub', body: 'Checks run in your own GitHub Actions. Woolly Team receives counts, file pointers and repo details like names and commits, never your code.' },
 ];
 
 const QUESTIONS = [
   {
     question: 'Does Woolly Team read our source code?',
-    answer: 'No. Checks run in your GitHub Actions, and the app can read Actions only. It receives counts and file pointers.',
+    answer: 'No. Checks run in your GitHub Actions, and the app can read Actions only. It receives counts, file pointers and run details like commits and pull request numbers, never your source code.',
   },
   {
     question: 'Does it verify that our code is correct?',
@@ -62,6 +62,14 @@ const QUESTIONS = [
   {
     question: 'Which agents does it support?',
     answer: 'Any agent that reads CLAUDE.md, AGENTS.md, GEMINI.md, Cursor or Windsurf rules, or Copilot instructions.',
+  },
+  {
+    question: 'What counts toward a plan?',
+    answer: 'Private repositories you add to the app. Public repositories are free on every plan, and so are members. If you go over, the extra private repositories wait, with their checks kept, until you upgrade.',
+  },
+  {
+    question: 'We were in the pilot. What happens now?',
+    answer: 'Pilot organizations keep Business free until the pilot ends, and get half off their first year if they subscribe by then.',
   },
   {
     question: 'How do we remove our data?',
@@ -96,7 +104,7 @@ export default function Team({ loaderData }: Route.ComponentProps) {
       />
       <BuiltFor title="Everything your team needs to trust its agents" cases={FEATURES} />
       <TeamSteps />
-      <TeamPricing installUrl={teamInstallUrl} />
+      <TeamPricing installUrl={teamInstallUrl} salesUrl={teamSalesUrl} />
       <Faq items={QUESTIONS} lead="Anything else is in the docs." link={{ label: 'Read the docs', href: '/docs/pull-requests' }} />
       <Closing
         title="Give every agent on your team accurate context"

@@ -5,7 +5,7 @@ export const FAQ: Faq[] = [
   {
     question: 'Does Woolly send my data anywhere?',
     answer:
-      'No. There are no servers, no accounts and no telemetry. Your memories live in ~/.woolly on your laptop, and that is the whole story.',
+      'No. The Woolly app has no servers, no accounts and no telemetry. Your memories live in ~/.woolly on your laptop. Woolly Team is a separate, optional hosted service for organizations that receives counts, file pointers and repository details from your GitHub checks, never your memories or code.',
     keywords: ['privacy', 'cloud', 'server', 'tracking', 'data', 'offline'],
   },
   {

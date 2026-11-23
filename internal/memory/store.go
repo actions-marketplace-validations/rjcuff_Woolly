@@ -167,7 +167,7 @@ func (s *Store) write(m *Memory) error {
 	if err != nil {
 		return err
 	}
-	if _, err := tmp.Write(encode(m)); err != nil {
+	if _, err := tmp.Write(s.encode(m)); err != nil {
 		tmp.Close()
 		os.Remove(tmp.Name())
 		return err
@@ -526,7 +526,7 @@ func (s *Store) Forget(id string) (Memory, error) {
 	}
 	// The new time lets other devices see that forgetting is the newest change.
 	m.UpdatedAt = time.Now().UTC()
-	if err := writeFile(filepath.Join(s.trashDir(), m.ID+".md"), encode(m)); err != nil {
+	if err := writeFile(filepath.Join(s.trashDir(), m.ID+".md"), s.encode(m)); err != nil {
 		return Memory{}, err
 	}
 	if err := os.Remove(m.file); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -675,7 +675,7 @@ func (s *Store) Restore(id string) (Memory, error) {
 		}
 	}
 	m.Links = links
-	if err := writeFile(filepath.Join(s.dir, match), encode(m)); err != nil {
+	if err := writeFile(filepath.Join(s.dir, match), s.encode(m)); err != nil {
 		return Memory{}, err
 	}
 	if err := os.Remove(src); err != nil {

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { CopyMorph } from '@/components/frost/home-content';
 import { Button } from '@/components/sky/parts';
+import { InstallButtons } from '@/components/install-buttons';
 import { cn } from '@/lib/utils';
 import { DocShell } from '@/components/doc/shell';
 import { detectOS, macApp, windowsApp, type OS } from '@/lib/download';
@@ -118,6 +119,11 @@ export default function Download({ loaderData }: Route.ComponentProps) {
         </Link>
         .
       </p>
+
+      <div className="mt-8 flex flex-col gap-3">
+        <p className="text-[15.5px] text-[var(--body)]">Using Cursor or LM Studio? Once Woolly is installed, add it in one click. If the app then can't find woolly, run woolly connect instead, which uses the full path.</p>
+        <InstallButtons />
+      </div>
     </DocShell>
   );
 }

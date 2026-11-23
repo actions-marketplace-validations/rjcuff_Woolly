@@ -3,7 +3,7 @@ title: Sync your devices
 description: Keep your memories in step between your laptop, desktop and a Raspberry Pi. No cloud, no account.
 ---
 
-Woolly can keep your memories the same on all your devices. They talk directly over your own network, and everything they send is encrypted.
+Woolly can keep your memories the same on all your devices. They talk directly over your own network, and everything they send is encrypted. Away from home, sync through a folder you already sync instead, like Syncthing, Dropbox or a git repo. See [Sync through a folder](#sync-through-a-folder).
 
 ## Link two devices
 
@@ -52,6 +52,34 @@ woolly sync
 The join code is a secret key that only your devices have. It's never sent over the network. Every message between devices is encrypted and signed with it, so another computer on your network can't read your memories or send fake ones. Old messages are refused, so a recorded one can't be replayed.
 
 Keep the code private. Anyone with it, on your network, can read and change your memories. If it leaks, run `woolly sync leave` on every device and set sync up again.
+
+## Sync through a folder
+
+Devices on different networks can't reach each other directly. Point Woolly at a folder that some other tool already keeps in step between your computers, and Woolly syncs through it:
+
+```sh
+woolly sync folder ~/Sync
+```
+
+Woolly writes your memories into a `woolly-sync` folder inside it, encrypted with your join code, and prints the command for your other devices. To see the code again later, run `woolly sync status --show-code`.
+
+```sh
+woolly sync folder ~/Sync --code <code>
+```
+
+On each device, use the path where that same folder lives. Woolly checks the folder every 5 minutes while it runs (`woolly serve` or `woolly service install`), and when you run `woolly sync`.
+
+Good tools for the folder:
+
+- **Syncthing:** syncs a folder between your computers directly, with no account.
+- **Dropbox, iCloud Drive, OneDrive or Google Drive:** any synced folder works. The provider sees only encrypted files.
+- **A private git repo:** Woolly never runs git for you. Commit, push and pull the folder yourself, or with a scheduled job. Each memory is its own file, so two devices rarely change the same one. If git does report a conflict in a `.woolly` file, keep either version. The device that has the newer memory writes it back on its next sync.
+
+Every file in the folder is encrypted and signed with the join code, and file names are scrambled, so whoever holds the folder can't read your memories or their IDs. A file that was changed or doesn't open with your code is skipped, and `woolly sync` says how many. Copies a sync tool makes when two devices change the same file, like `.sync-conflict-` files, are left alone. Keep the code private: anyone with it and the folder can read your memories.
+
+`woolly sync folder <path> --remove` stops syncing through a folder and leaves its files alone. A device that only syncs through folders doesn't listen on the network.
+
+Want sync away from home with nothing to set up? `woolly sync status` has a link to tell us.
 
 ## Raspberry Pi and other small devices
 

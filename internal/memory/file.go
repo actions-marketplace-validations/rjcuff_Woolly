@@ -22,7 +22,11 @@ import (
 //	---
 //
 //	Lives in Denver, Colorado.
-func encode(m *Memory) []byte {
+func encode(m *Memory) []byte { return encodeAs(m, false) }
+
+// encodeAs is encode with a choice of how to write links: as plain IDs, or
+// as wikilinks for Obsidian.
+func encodeAs(m *Memory, wiki bool) []byte {
 	var b strings.Builder
 	w := func(k, v string) {
 		v = strings.TrimSpace(strings.ReplaceAll(v, "\n", " "))
@@ -54,7 +58,7 @@ func encode(m *Memory) []byte {
 	if m.Conf > 0 {
 		w("confidence", strconv.FormatFloat(m.Conf, 'f', -1, 64))
 	}
-	w("links", strings.Join(m.Links, ", "))
+	w("links", formatLinks(m.Links, wiki))
 	w("stale_reason", m.StaleReason)
 	w("stale_commit", m.StaleCommit)
 	if m.StaleAt != nil {
@@ -110,11 +114,7 @@ func decode(data []byte) (*Memory, error) {
 		case "superseded_by":
 			m.SupersededBy = v
 		case "links":
-			for _, id := range strings.Split(v, ",") {
-				if id = strings.TrimSpace(id); ValidID(id) {
-					m.Links = append(m.Links, id)
-				}
-			}
+			m.Links = parseLinks(v)
 		case "conflicts_with":
 			m.ConflictsWith = v
 		case "via":

@@ -236,3 +236,16 @@ func writeFile(path string, data []byte) error {
 
 // ParseFile reads a memory file without saving it.
 func ParseFile(data []byte) (*Memory, error) { return decode(data) }
+
+// ItemOf describes a memory file the way Manifest does, for sync targets
+// that hold raw files rather than a store, like a shared folder.
+func ItemOf(data []byte, trash bool) (Item, error) {
+	m, err := decode(data)
+	if err != nil {
+		return Item{}, err
+	}
+	if !ValidID(m.ID) {
+		return Item{}, fmt.Errorf("bad memory id %q", m.ID)
+	}
+	return Item{ID: m.ID, UpdatedAt: m.UpdatedAt, Trash: trash, Sum: sum(data)}, nil
+}

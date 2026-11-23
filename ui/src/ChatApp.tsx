@@ -104,9 +104,9 @@ export function ChatApp() {
         {tab === 'home' && (
           <Home
             onOpenTab={go}
-            onOpenConflicts={() => {
+            onOpenReview={(view) => {
               go('settings');
-              setLibrary('conflicts');
+              setLibrary(view);
             }}
             onImport={() => {
               go('memories');

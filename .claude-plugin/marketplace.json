@@ -1,0 +1,15 @@
+{
+  "name": "woolly",
+  "description": "Woolly: memory for coding agents that knows when it's out of date.",
+  "owner": {
+    "name": "Ryan Cuff",
+    "url": "https://usewoolly.com"
+  },
+  "plugins": [
+    {
+      "name": "woolly",
+      "source": "./plugin",
+      "description": "Project memory for Claude Code that ties facts to your code and flags them when a commit makes them stale."
+    }
+  ]
+}

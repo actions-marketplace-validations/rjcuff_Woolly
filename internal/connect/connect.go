@@ -116,6 +116,13 @@ func Apps(e Env) []App {
 			ID: "opencode", Name: "opencode",
 			Config: openCodeConfig(e), Format: FormatOpenCode,
 		},
+		{
+			// AnythingLLM Desktop reads this when you press Refresh on its
+			// Agent Skills page, so it needs no restart.
+			ID: "anythingllm", Name: "AnythingLLM",
+			Config: filepath.Join(e.configDir(), "anythingllm-desktop", "storage", "plugins", "anythingllm_mcp_servers.json"),
+			Format: FormatMCPServers,
+		},
 	}
 }
 
@@ -179,12 +186,35 @@ func (r Result) String() string {
 // because it has comments. Woolly won't rewrite a file it can't fully read.
 var ErrUnreadable = errors.New("config isn't plain JSON")
 
-// Entry builds the MCP server entry for an app's format.
-func Entry(f Format, command string) map[string]any {
-	if f == FormatOpenCode {
-		return map[string]any{"type": "local", "command": []any{command, "mcp"}}
+// ScopeArgs are the `woolly mcp` flags that limit an app to one user's or
+// agent's memories. Both empty means the app gets your own memory.
+func ScopeArgs(user, agent string) []string {
+	var args []string
+	if user != "" {
+		args = append(args, "--user", user)
 	}
-	e := map[string]any{"command": command, "args": []any{"mcp"}}
+	if agent != "" {
+		args = append(args, "--agent", agent)
+	}
+	return args
+}
+
+// mcpArgs is `mcp` followed by any scope flags.
+func mcpArgs(extra []string) []any {
+	args := []any{"mcp"}
+	for _, a := range extra {
+		args = append(args, a)
+	}
+	return args
+}
+
+// Entry builds the MCP server entry for an app's format. extra goes after
+// `mcp`, for example the flags from ScopeArgs.
+func Entry(f Format, command string, extra ...string) map[string]any {
+	if f == FormatOpenCode {
+		return map[string]any{"type": "local", "command": append([]any{command}, mcpArgs(extra)...)}
+	}
+	e := map[string]any{"command": command, "args": mcpArgs(extra)}
 	if f == FormatServers {
 		e["type"] = "stdio"
 	}
@@ -204,7 +234,7 @@ func (f Format) path() []string {
 
 // Connect adds Woolly to an app's config, running it with command. With
 // dryRun it reports what would change without writing anything.
-func Connect(a App, command string, dryRun bool) (Result, error) {
+func Connect(a App, command string, dryRun bool, extra ...string) (Result, error) {
 	cfg, orig, err := readConfig(a.Config)
 	if err != nil {
 		return 0, err
@@ -213,7 +243,7 @@ func Connect(a App, command string, dryRun bool) (Result, error) {
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", a.Config, err)
 	}
-	want := Entry(a.Format, command)
+	want := Entry(a.Format, command, extra...)
 	res := Added
 	if old, ok := servers[ServerName]; ok {
 		if reflect.DeepEqual(old, want) {
@@ -390,9 +420,9 @@ func writeConfig(path string, cfg map[string]any, orig []byte) error {
 }
 
 // Snippet is the JSON to paste by hand when Woolly can't edit a config.
-func Snippet(f Format, command string) string {
+func Snippet(f Format, command string, extra ...string) string {
 	cfg := map[string]any{}
-	_ = setServers(cfg, f, map[string]any{ServerName: Entry(f, command)})
+	_ = setServers(cfg, f, map[string]any{ServerName: Entry(f, command, extra...)})
 	b, _ := json.MarshalIndent(cfg, "", "  ")
 	return string(b)
 }

@@ -1,6 +1,7 @@
 // Package mcp serves Woolly to AI apps (Claude Code, Claude Desktop, Cursor,
-// and any other MCP client) over the Model Context Protocol's stdio transport:
-// newline-delimited JSON-RPC 2.0 on stdin/stdout.
+// and any other MCP client) over the Model Context Protocol: the stdio
+// transport, newline-delimited JSON-RPC 2.0 on stdin/stdout, and Streamable
+// HTTP with JSON replies for apps that connect to an address (see http.go).
 package mcp
 
 import (
@@ -65,6 +66,12 @@ type Server struct {
 	// or agent's memories instead of the user's own, the way the memory
 	// API's user_id and agent_id do.
 	User, Agent string
+	// NoSources is set when the server has no working folder, like over
+	// HTTP. Sources an agent gives are then dropped rather than saved
+	// unchecked, since an unchecked source would take whatever the code
+	// looks like at the next check as its baseline. The why and
+	// check_memory_files tools, which need the folder, are left out.
+	NoSources bool
 
 	app   string    // the connected app, from initialize
 	seen  time.Time // when woolly.md last changed, as of the last sync
@@ -114,13 +121,23 @@ func (s *Server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
 }
 
 func (s *Server) handleLine(ctx context.Context, line []byte) {
+	if reply, ok := s.Handle(ctx, line); ok {
+		s.outMu.Lock()
+		defer s.outMu.Unlock()
+		_, _ = s.out.Write(append(reply, '\n'))
+	}
+}
+
+// Handle answers one JSON-RPC message, whatever carried it. ok is false for
+// a notification, which gets no reply. A Server keeps state for one
+// connection, so don't call Handle on the same Server from two goroutines.
+func (s *Server) Handle(ctx context.Context, msg []byte) (reply []byte, ok bool) {
 	var req request
-	if err := json.Unmarshal(line, &req); err != nil {
-		s.send(response{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{-32700, "parse error"}})
-		return
+	if err := json.Unmarshal(msg, &req); err != nil {
+		return mustJSON(response{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{-32700, "parse error"}}), true
 	}
 	if len(req.ID) == 0 {
-		return // notification (e.g. notifications/initialized): no reply
+		return nil, false // notification (e.g. notifications/initialized): no reply
 	}
 	result, rerr := s.dispatch(ctx, req)
 	resp := response{JSONRPC: "2.0", ID: req.ID}
@@ -129,17 +146,15 @@ func (s *Server) handleLine(ctx context.Context, line []byte) {
 	} else {
 		resp.Result = result
 	}
-	s.send(resp)
+	return mustJSON(resp), true
 }
 
-func (s *Server) send(v any) {
+func mustJSON(v any) []byte {
 	data, err := json.Marshal(v)
 	if err != nil {
-		return
+		data, _ = json.Marshal(response{JSONRPC: "2.0", ID: json.RawMessage("null"), Error: &rpcError{-32603, "internal error"}})
 	}
-	s.outMu.Lock()
-	defer s.outMu.Unlock()
-	_, _ = s.out.Write(append(data, '\n'))
+	return data
 }
 
 func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
@@ -169,7 +184,7 @@ func (s *Server) dispatch(ctx context.Context, req request) (any, *rpcError) {
 	case "ping":
 		return map[string]any{}, nil
 	case "tools/list":
-		return map[string]any{"tools": tools}, nil
+		return map[string]any{"tools": s.toolList()}, nil
 	case "tools/call":
 		var p struct {
 			Name      string          `json:"name"`
@@ -759,6 +774,9 @@ func (s *Server) commit(project string) string {
 // sources reads the refs an agent gave for a project fact. The hook in
 // Sources, when set, checks them against the code.
 func (s *Server) sources(project string, refs []string) []memory.Ref {
+	if s.NoSources {
+		return nil
+	}
 	var out []memory.Ref
 	for _, r := range refs {
 		if ref, ok := memory.ParseRef(r); ok {
@@ -902,4 +920,20 @@ func DescribeRemember(res *memory.RememberResult) string {
 		fmt.Fprintf(&b, "\nReplaced older memory: %s", old.Content)
 	}
 	return b.String()
+}
+
+// folderTools need the app's working folder.
+var folderTools = map[string]bool{"why": true, "check_memory_files": true}
+
+func (s *Server) toolList() []map[string]any {
+	if !s.NoSources {
+		return tools
+	}
+	var out []map[string]any
+	for _, t := range tools {
+		if name, _ := t["name"].(string); !folderTools[name] {
+			out = append(out, t)
+		}
+	}
+	return out
 }
