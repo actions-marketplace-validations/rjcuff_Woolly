@@ -48,11 +48,11 @@ func validToken(r *http.Request, token string) bool {
 	return got != "" && subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1
 }
 
-// requireToken protects the /api/ and /v1/ routes. /api/version stays open
-// so tools can check whether Woolly is running.
+// requireToken protects the /api/, /v1/ and /mcp routes. /api/version stays
+// open so tools can check whether Woolly is running.
 func requireToken(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if (strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/version" || isV1(r.URL.Path)) && !validToken(r, token) {
+		if (strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/version" || isV1(r.URL.Path) || r.URL.Path == MCPPath) && !validToken(r, token) {
 			writeError(w, http.StatusUnauthorized,
 				"missing or wrong token. Open the page with `woolly ui`, or send the token from ~/.woolly/token as a Bearer token")
 			return

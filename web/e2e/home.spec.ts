@@ -113,8 +113,9 @@ test('the Teams link opens the Woolly Team page', async ({ page, isMobile }) => 
   const [a, b] = [await start.boundingBox(), await signIn.boundingBox()];
   expect(Math.abs(a!.y + a!.height / 2 - (b!.y + b!.height / 2))).toBeLessThan(2);
   const pricing = page.getByRole('region', { name: 'Pricing' });
-  await expect(pricing).toContainText('$299');
-  await expect(pricing.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', install);
+  for (const price of ['$0', '$99', '$299', 'Custom']) await expect(pricing).toContainText(price);
+  for (const link of await pricing.getByRole('link', { name: 'Get started' }).all()) await expect(link).toHaveAttribute('href', install);
+  await expect(pricing.getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', /issues\/new\?title=Woolly\+Team\+Enterprise$/);
   await expect(page.getByRole('region', { name: 'Get started' }).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', 'https://team.usewoolly.com/login');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://usewoolly.com/og/team.png');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);

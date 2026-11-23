@@ -156,6 +156,8 @@ export function Settings({ onToast, onOpen }: { onToast: (t: Toast) => void; onO
         {(
           [
             ['conflicts', 'Conflicts', I.alert],
+            ['queue', 'Still true?', I.check],
+            ['problems', 'Files to fix', I.alert],
             ['history', 'History', I.clock],
             ['trash', 'Trash', I.trash],
             ['activity', 'Activity', I.ask],

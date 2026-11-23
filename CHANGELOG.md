@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.20.0
+
+Woolly as a Claude Code plugin, MCP over a web address, sync through a folder you already use, and plans for Woolly Team.
+
+- Woolly is a Claude Code plugin. Run `claude plugin marketplace add rjcuff/woolly`, then `claude plugin install woolly@woolly`. It sets up the same MCP server and hooks as `woolly connect claude-code`, and adds a `woolly-check` skill that checks your memory files against the code. You still need the `woolly` command installed. `woolly connect` warns you if the plugin is also installed, since the hooks would run twice.
+- `woolly connect --user <id>` and `--agent <name>` set apps up to run `woolly mcp` with that scope, so an app only sees one user's or agent's memories. Claude Code's startup hooks are skipped for a scoped connection.
+- `woolly connect anythingllm` adds Woolly to AnythingLLM Desktop. The docs show how to add it to Jan and Msty Studio by hand.
+- The download page and the connect docs have Add to Cursor and Add to LM Studio buttons.
+- Pull request comments from `woolly check --markdown` and the GitHub Action end with one small line linking to Woolly and Woolly Team. Turn it off with `--no-footer` or the Action's `footer: false`.
+- Open your memories as an Obsidian vault and Woolly writes linked memories as Obsidian links. `WOOLLY_LINKS=wikilinks` or `plain` picks a style by hand. Every style is always read.
+- The review page has a **Still true?** list of old AI guesses to keep or forget, and a **Files to fix** list of memory files Woolly couldn't read. Home's **To review** counts both conflicts and old guesses. `POST /api/review-queue/{id}/keep` keeps one.
+- `woolly serve` serves MCP over Streamable HTTP at `http://127.0.0.1:11435/mcp`, for apps like Open WebUI that connect to a web address instead of starting a command. It needs the local API token, and takes `?user=`, `?agent=` and `?project=` to scope a session.
+- `woolly sync folder <path>` syncs your devices through a folder you already sync, like Syncthing, Dropbox or a git repo, so it works away from home. Every file in it is encrypted and signed with your join code, and file names are scrambled. Other devices join with `--code`. `woolly sync status` lists folders and has a link to tell us if you'd use sync with no setup.
+- Release builds sign the Windows programs when a code signing certificate is set up, and write Scoop and winget manifests next to the archives.
+- Woolly Team has plans: Free for public repositories and 1 private one, Team at $99 a month for 10 private repositories, Business at $299 for 50, and Enterprise. Pilot organizations keep Business free until the pilot ends. usewoolly.com/team shows all four.
+- The pull request docs have GitLab and Bitbucket pipelines that run the check on merge requests and comment when something went stale.
+- Woolly Team's Business plan posts a weekly Slack digest of new stale lines nobody has reviewed, with counts and file:line pointers only.
+- Over MCP on HTTP, code sources an app gives with a fact are left off rather than saved unchecked, and the `why` and `check_memory_files` tools aren't offered.
+- With a Windows code signing certificate, the desktop app build signs the app, its bundled woolly and the installer.
+- The FAQ, README, privacy page and docs now say plainly that the Woolly app has no servers and that Woolly Team is a separate, optional hosted service that never receives your memories or code. The privacy page has a Woolly Team section.
+
 ## 0.19.0
 
 A new look for usewoolly.com, and a page for Woolly Team.

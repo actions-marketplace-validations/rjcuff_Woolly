@@ -27,7 +27,7 @@ const maxLogSize = 10 << 20
 
 // passEnv are the settings the background process should keep. launchd and
 // systemd start it with a bare environment.
-var passEnv = []string{"WOOLLY_HOME", "WOOLLY_HOST", "WOOLLY_PROXY_HOST", "WOOLLY_NO_EMBED", "OLLAMA_HOST", "OLLAMA_EMBED_MODEL"}
+var passEnv = []string{"WOOLLY_HOME", "WOOLLY_HOST", "WOOLLY_PROXY_HOST", "WOOLLY_NO_EMBED", "OLLAMA_HOST", "OLLAMA_EMBED_MODEL", "WOOLLY_LINKS"}
 
 const serviceUsage = `Usage:
   woolly service install     run Woolly in the background and start it at login

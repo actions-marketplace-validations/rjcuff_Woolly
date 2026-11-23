@@ -13,13 +13,13 @@ function dayKey(d: Date) {
 /** The home screen: what your AI tools know and what they've been doing. */
 export function Home({
   onOpenTab,
-  onOpenConflicts,
+  onOpenReview,
   onImport,
   onToast,
   refresh,
 }: {
   onOpenTab: (tab: 'apps' | 'memories') => void;
-  onOpenConflicts: () => void;
+  onOpenReview: (view: 'conflicts' | 'queue') => void;
   onImport: () => void;
   onToast: (t: Toast) => void;
   refresh: number;
@@ -27,11 +27,18 @@ export function Home({
   const [mems, setMems] = useState<Memory[] | null>(null);
   const [log, setLog] = useState<Activity[]>([]);
   const [apps, setApps] = useState<AppStatus[]>([]);
+  const [queue, setQueue] = useState(0);
 
   const load = useCallback(async () => {
     try {
-      const [all, activity, appList] = await Promise.all([api.list(true), api.activity(2000), api.apps().catch(() => [])]);
+      const [all, activity, appList, old] = await Promise.all([
+        api.list(true),
+        api.activity(2000),
+        api.apps().catch(() => []),
+        api.reviewQueue().catch(() => []),
+      ]);
       setMems(all);
+      setQueue(old.length);
       setLog(activity);
       setApps(appList);
     } catch (e) {
@@ -126,9 +133,9 @@ export function Home({
           <Kpi
             label="To review"
             value={
-              stats.conflicts > 0 ? (
-                <button className="kpi-link" onClick={onOpenConflicts}>
-                  {stats.conflicts}
+              stats.conflicts + queue > 0 ? (
+                <button className="kpi-link" onClick={() => onOpenReview(stats.conflicts > 0 ? 'conflicts' : 'queue')}>
+                  {stats.conflicts + queue}
                 </button>
               ) : (
                 0

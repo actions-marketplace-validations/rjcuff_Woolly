@@ -38,7 +38,14 @@ woolly connect
 woolly init --hooks   # in your repo
 ```
 
-Claude Code, Cursor, Codex, Gemini CLI, VS Code, Windsurf, Claude Desktop, LM Studio and opencode now share one memory for the repo, and every commit checks it against the code. On Windows, run `irm https://usewoolly.com/install.ps1 | iex` instead.
+Claude Code, Cursor, Codex, Gemini CLI, VS Code, Windsurf, Claude Desktop, LM Studio, opencode and AnythingLLM now share one memory for the repo, and every commit checks it against the code. On Windows, run `irm https://usewoolly.com/install.ps1 | iex` instead.
+
+Using Claude Code? After installing `woolly`, you can add it as a plugin instead of running `woolly connect`:
+
+```sh
+claude plugin marketplace add rjcuff/woolly
+claude plugin install woolly@woolly
+```
 
 Prefer an app? [Download Woolly for Mac or Windows](https://usewoolly.com/download). Also on [Homebrew and Linux](https://usewoolly.com/docs/quickstart).
 
@@ -108,7 +115,7 @@ On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conver
 
 **Is this a memory API for my app?** It has one, shaped like mem0's, with [JavaScript](https://usewoolly.com/docs/javascript) and [Python](https://usewoolly.com/docs/python) packages. But Woolly is built first for your own coding agents. If you're adding memory to a product with thousands of users, a hosted memory API is the better fit.
 
-**Does anything leave my machine?** No. There are no Woolly servers.
+**Does anything leave my machine?** No. The Woolly app has no servers. [Woolly Team](https://usewoolly.com/team) is a separate, optional hosted service for organizations, and it receives counts, file pointers and repository details like names and commits from checks you run in your own GitHub Actions, never your memories or code.
 
 ## Built in public
 

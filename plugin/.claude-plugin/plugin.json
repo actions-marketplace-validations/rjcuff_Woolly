@@ -1,0 +1,19 @@
+{
+  "name": "woolly",
+  "version": "0.20.0",
+  "description": "Project memory for Claude Code that ties facts to your code and flags them when a commit makes them stale. Needs the woolly command: https://usewoolly.com/docs/quickstart",
+  "author": {
+    "name": "Ryan Cuff",
+    "url": "https://usewoolly.com"
+  },
+  "homepage": "https://usewoolly.com",
+  "repository": "https://github.com/rjcuff/woolly",
+  "license": "MIT",
+  "keywords": ["memory", "mcp", "claude-md", "stale", "context"],
+  "mcpServers": {
+    "woolly": {
+      "command": "woolly",
+      "args": ["mcp"]
+    }
+  }
+}

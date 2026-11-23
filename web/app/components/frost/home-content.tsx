@@ -384,7 +384,7 @@ export function TeamCallout() {
         <h2 className="max-w-[580px] text-balance text-[36px] font-light leading-[1.04] tracking-[-0.03em] sm:text-[50px]">Visibility across every repository</h2>
         <p className="max-w-[480px] text-[16.5px] leading-[1.6] opacity-90">Woolly Team brings stale-context findings from every repository into one dashboard with a shared review queue. It never reads your code.</p>
         <p className="text-[15px]">
-          <span className="text-[28px] font-light tracking-[-0.03em]">$299</span> per month per organization. Free during the pilot.
+          From <span className="text-[28px] font-light tracking-[-0.03em]">$99</span> per month per organization. Free for public repositories.
         </p>
         <div className="flex flex-wrap gap-3">
           <Pill href={teamUrl} solid>

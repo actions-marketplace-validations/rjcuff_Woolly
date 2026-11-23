@@ -14,7 +14,7 @@ export function meta(_: Route.MetaArgs) {
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy" updated="November 11, 2026">
+    <LegalPage title="Privacy" updated="November 22, 2026">
       <p>
         Woolly is built so your memories stay on your computer. This page explains what the Woolly
         app and this website do with data.
@@ -23,7 +23,7 @@ export default function Privacy() {
       <h2>The Woolly app</h2>
       <ul>
         <li>Your memories are stored as files on your computer, in <code>~/.woolly</code> unless you choose another folder.</li>
-        <li>Woolly has no accounts, no analytics and no tracking. It never sends your memories to us or anyone else.</li>
+        <li>The Woolly app has no accounts, no analytics and no tracking. It never sends your memories to us or anyone else. Woolly Team, the optional hosted service for organizations, is covered below.</li>
         <li>
           Woolly keeps a log on your computer of what each connected app saved, read and deleted, so you
           can check on them. It's stored in <code>~/.woolly/activity.log</code> and is never sent anywhere.
@@ -49,6 +49,46 @@ export default function Privacy() {
           when you run it. GitHub's privacy policy covers that request.
         </li>
         <li>You can delete everything at any time by deleting the <code>~/.woolly</code> folder.</li>
+      </ul>
+
+      <h2>Woolly Team</h2>
+      <p>
+        Woolly Team is an optional hosted dashboard at team.usewoolly.com. It is only used if your
+        organization installs the Woolly Team GitHub App.
+      </p>
+      <ul>
+        <li>
+          You sign in with GitHub. We store your GitHub login and user ID, the account the app is
+          installed on, and when you first and last signed in, and keep an encrypted cookie for your
+          session.
+        </li>
+        <li>
+          From each installed repository we store its name and whether it is private. For each check
+          run we store the run's ID and link, the commit it checked, what triggered it, its pull request
+          numbers, whether it came from a fork, and the status file Woolly's check writes in your own
+          GitHub Actions run. That file holds counts and file pointers (file, line number, commit). None
+          of this holds your source code or the text of your memory files.
+        </li>
+        <li>We store review decisions your team makes in the dashboard, such as marking a line fixed.</li>
+        <li>
+          If your organization turns on the Slack digest, we store the Slack webhook address you give us,
+          encrypted, and send that channel a weekly list of new stale lines: counts and file pointers, no
+          file contents.
+        </li>
+        <li>
+          If your organization pays for a plan, Stripe handles the payment. We store the plan, its status
+          and renewal date, Stripe's ids for the customer and subscription, and who started it. We never
+          see card details.
+        </li>
+        <li>
+          Runs and reviews are deleted after 90 days by default, and people who haven't signed in for 90
+          days are removed. Repository names are kept while the app is installed on them. Uninstalling
+          the GitHub App deletes everything stored for that installation.
+        </li>
+        <li>
+          Woolly Team never receives the memories in <code>~/.woolly</code>. The service runs on Fly.io
+          with a Neon Postgres database, which are covered by their own privacy policies.
+        </li>
       </ul>
 
       <h2>This website</h2>

@@ -103,9 +103,12 @@ func registerManage(mux *http.ServeMux, store *memory.Store, version string, opt
 	mux.HandleFunc("POST /api/sync/init", func(w http.ResponseWriter, r *http.Request) {
 		cfg, err := peer.Load(opts.Home)
 		if err == nil && cfg == nil {
-			if cfg, err = peer.NewConfig(); err == nil {
-				err = cfg.Save(opts.Home)
-			}
+			cfg, err = peer.NewConfig()
+		}
+		if err == nil {
+			// Other devices will join over the network, so listen for them.
+			cfg.FolderOnly = false
+			err = cfg.Save(opts.Home)
 		}
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -138,11 +141,12 @@ func registerManage(mux *http.ServeMux, store *memory.Store, version string, opt
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		if cfg.Key != req.Code && len(cfg.Peers) > 0 {
+		if cfg.Key != req.Code && len(cfg.Peers)+len(cfg.Folders) > 0 {
 			writeError(w, http.StatusConflict, "this device already syncs with a different group. Stop syncing first")
 			return
 		}
 		cfg.Key = req.Code
+		cfg.FolderOnly = false
 		cfg.AddPeer(peer.NormalizeAddr(req.Addr))
 		if err := cfg.Save(opts.Home); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
@@ -198,6 +202,22 @@ func syncAll(ctx context.Context, store *memory.Store, cfg *peer.Config, opts Op
 			}
 			if n := res.Received + res.Sent + res.Deleted; n > 0 {
 				opts.Activity.Add(activity.Entry{App: p.Addr, Action: "sync", Count: n})
+			}
+		}
+		out = append(out, r)
+	}
+	for i := range cfg.Folders {
+		f := &cfg.Folders[i]
+		c, cancel := context.WithTimeout(ctx, time.Minute)
+		res, err := peer.SyncFolder(c, store, cfg, f.Path)
+		cancel()
+		r := syncResult{Addr: f.Path, Name: "sync folder", Received: res.Received, Sent: res.Sent}
+		if err != nil {
+			r.Error, f.LastErr = err.Error(), err.Error()
+		} else {
+			f.LastErr, f.LastSync = "", time.Now().UTC()
+			if n := res.Received + res.Sent + res.Deleted; n > 0 {
+				opts.Activity.Add(activity.Entry{App: "sync folder", Action: "sync", Count: n})
 			}
 		}
 		out = append(out, r)

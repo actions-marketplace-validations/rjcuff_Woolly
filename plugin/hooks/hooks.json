@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v woolly >/dev/null 2>&1; then woolly context --app claude-code; else echo 'Woolly plugin: the woolly command is not installed or not on PATH. Install it from https://usewoolly.com/docs/quickstart'; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v woolly >/dev/null 2>&1; then woolly handoff --app claude-code; fi",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v woolly >/dev/null 2>&1; then woolly handoff --app claude-code; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

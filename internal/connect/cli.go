@@ -69,25 +69,43 @@ func (c CLIApp) Connected() bool {
 	return exec.Command(bin, "mcp", "get", ServerName).Run() == nil
 }
 
-// Connect adds Woolly through the app's command. For Claude Code it also
-// adds the startup hook.
-func (c CLIApp) Connect(command string, dryRun bool) (Result, error) {
+// Connect adds Woolly through the app's command. extra goes after `mcp`,
+// for example the flags from ScopeArgs. The app's CLI can't show the saved
+// arguments, so with extra an existing entry is replaced to be sure it has
+// them.
+func (c CLIApp) Connect(command string, dryRun bool, extra ...string) (Result, error) {
 	bin, err := LookPath(c.Bin)
 	if err != nil {
 		return 0, fmt.Errorf("the %s command isn't installed", c.Bin)
 	}
-	res := Unchanged
-	if !c.Connected() {
-		res = Added
-		if !dryRun {
-			args := []string{"mcp", "add", ServerName, "--", command, "mcp"}
-			if c.ID == ClaudeCode.ID {
-				args = []string{"mcp", "add", "--scope", "user", ServerName, "--", command, "mcp"}
-			}
-			if out, err := exec.Command(bin, args...).CombinedOutput(); err != nil {
-				return 0, fmt.Errorf("%s mcp add failed: %s", c.Bin, strings.TrimSpace(string(out)))
-			}
+	connected := c.Connected()
+	if connected && len(extra) == 0 {
+		return Unchanged, nil
+	}
+	res := Added
+	if connected {
+		res = Updated
+	}
+	if dryRun {
+		return res, nil
+	}
+	if connected {
+		if _, err := c.Disconnect(false); err != nil {
+			return 0, fmt.Errorf("couldn't replace the existing entry to add the scope: %w", err)
 		}
+	}
+	args := []string{"mcp", "add", ServerName, "--", command, "mcp"}
+	if c.ID == ClaudeCode.ID {
+		args = []string{"mcp", "add", "--scope", "user", ServerName, "--", command, "mcp"}
+	}
+	args = append(args, extra...)
+	if out, err := exec.Command(bin, args...).CombinedOutput(); err != nil {
+		msg := fmt.Sprintf("%s mcp add failed: %s", c.Bin, strings.TrimSpace(string(out)))
+		if connected {
+			// The old entry is gone, so say how to get Woolly back.
+			msg += fmt.Sprintf(". Woolly was removed from %s first, so it isn't connected now. Add it back with: %s %s", c.Name, c.Bin, strings.Join(args, " "))
+		}
+		return 0, errors.New(msg)
 	}
 	return res, nil
 }

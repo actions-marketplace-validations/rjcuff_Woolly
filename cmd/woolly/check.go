@@ -152,6 +152,9 @@ func (a *app) checkRepo(dir, project string, o checkOptions) (checkReport, error
 	return rep, nil
 }
 
+// commentFooter ends a pull request comment with where the check came from.
+const commentFooter = "\n<sub>Checked by [Woolly](https://usewoolly.com). To track stale lines across all your repos, see [Woolly Team](https://usewoolly.com/team).</sub>\n"
+
 // cmdCheck checks this repo's facts against its code.
 func cmdCheck(args []string) error {
 	fs := newFlags("check")
@@ -166,6 +169,7 @@ func cmdCheck(args []string) error {
 	noFiles := fs.Bool("no-memory-files", false, "don't check CLAUDE.md, AGENTS.md, Cursor rules and other agents' memory")
 	asStatus := fs.Bool("status-json", false, "print counts and file:line pointers as JSON, with no text from memory or code")
 	statusFile := fs.String("status-file", "", "also write the --status-json output to this file")
+	noFooter := fs.Bool("no-footer", false, "with --markdown, leave out the line that links to Woolly")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
@@ -280,6 +284,9 @@ func cmdCheck(args []string) error {
 		md := markdownCheck(rep)
 		if rep.Memory != nil {
 			md += markdownAudit(r.Dir, *rep.Memory, strings.TrimSpace(*base))
+		}
+		if !*noFooter {
+			md += commentFooter
 		}
 		fmt.Print(md)
 	case !*quiet || stale > 0:

@@ -117,6 +117,9 @@ export const api = {
   emptyTrash: () => call<{ deleted: number }>('/api/trash', { method: 'DELETE' }),
   resolve: (keepId: string) =>
     call<unknown>('/api/resolve', { method: 'POST', body: JSON.stringify({ keep_id: keepId }) }),
+  reviewQueue: () => call<{ memories: Memory[] }>('/api/review-queue').then((r) => r.memories),
+  keep: (id: string) => call<Memory>(`/api/review-queue/${encodeURIComponent(id)}/keep`, { method: 'POST', body: '{}' }),
+  problems: () => call<{ problems: string[] }>('/api/problems').then((r) => r.problems),
   activity: (limit = 300) => call<{ activity: Activity[] }>(`/api/activity?limit=${limit}`).then((r) => r.activity),
   apps: () => call<{ apps: AppStatus[] }>('/api/apps').then((r) => r.apps),
   setApp: (id: string, connect: boolean) =>

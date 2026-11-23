@@ -118,3 +118,31 @@ test('the manager links back to the app', async ({ page }) => {
 test('no horizontal scrolling', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });
+
+test('settings shows old guesses to check and lets you keep one', async ({ page, isMobile }) => {
+  const text = `Probably deploys on Fridays ${unique()}`;
+  const saved = await page.request.post('/api/remember', { data: { content: text, source: 'agent' } });
+  const { memory } = await saved.json();
+  // Real guesses need 90 quiet days to show up, so serve this one as old.
+  let kept = false;
+  await page.route('**/api/review-queue', (route) => route.fulfill({ json: { memories: kept ? [] : [memory] } }));
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && r.url().endsWith(`/api/review-queue/${memory.id}/keep`)) kept = true;
+  });
+  await openTab(page, isMobile, 'Settings');
+  await page.getByRole('button', { name: 'Still true?' }).click();
+  await expect(page.getByRole('heading', { name: 'Still true?' })).toBeVisible();
+  const card = page.locator('.card').filter({ hasText: text });
+  await card.getByRole('button', { name: 'Still true' }).click();
+  await expect(card).toHaveCount(0);
+  await expect(page.getByText('Nothing to review')).toBeVisible();
+  expect(kept).toBe(true);
+});
+
+test('settings lists memory files Woolly could not read', async ({ page, isMobile }) => {
+  await page.route('**/api/problems', (route) => route.fulfill({ json: { problems: ['memories/broken.md'] } }));
+  await openTab(page, isMobile, 'Settings');
+  await page.getByRole('button', { name: 'Files to fix' }).click();
+  await expect(page.getByRole('heading', { name: 'Files to fix' })).toBeVisible();
+  await expect(page.getByText('memories/broken.md')).toBeVisible();
+});

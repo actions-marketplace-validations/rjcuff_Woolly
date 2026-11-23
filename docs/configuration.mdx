@@ -17,6 +17,7 @@ Woolly needs no configuration. These settings are there if you want them.
 | `WOOLLY_SYNC_ADDR` | `0.0.0.0:11437` | Where Woolly listens for your other devices |
 | `WOOLLY_DREAM` | on | Set to `off` to stop Woolly dreaming on its own. See [Dreaming](/docs/dreaming) |
 | `WOOLLY_PROJECT` | not set | Project name to use instead of the git repo's |
+| `WOOLLY_LINKS` | not set | How linked memories are written. `wikilinks` writes them as Obsidian links, `plain` as bare IDs. Not set, Woolly uses links when your memories are in an Obsidian vault. See [Open your memories in Obsidian](#open-your-memories-in-obsidian) |
 
 ## What's in ~/.woolly
 
@@ -30,6 +31,18 @@ Woolly needs no configuration. These settings are there if you want them.
 | `deleted` | IDs of memories deleted for good, so sync deletes them everywhere |
 | `index/` | Search data built from your memories. Safe to delete |
 | `logs/` | Output from the background service |
+
+## Open your memories in Obsidian
+
+Each memory is a Markdown file in `~/.woolly/memories`, so you can open that folder, or `~/.woolly`, as an Obsidian vault. Woolly sees the vault's `.obsidian` folder and writes linked memories as links Obsidian understands:
+
+```yaml
+links: ["[[20261110-153000-1a2b3c4d]]"]
+```
+
+To choose for yourself, set `WOOLLY_LINKS` to `wikilinks` or `plain`. Woolly reads every style, so you can switch at any time. A memory is only rewritten in the new style when it next changes.
+
+Edit the text of a memory in Obsidian as you would by hand, but leave its properties alone. Obsidian's Properties panel can rewrite lines like `tags:` in a form Woolly doesn't read. Woolly checks every file it reads, and `woolly doctor` lists any it can't.
 
 ## Syncing between computers
 

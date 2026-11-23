@@ -17,6 +17,7 @@ func (a *app) serverOptions() server.Options {
 	return server.Options{
 		Activity: a.log, Learner: a.learner(), Dreamer: a.dreamer(), Ollama: a.ollama,
 		Home: a.home, StartSync: func() error { return a.ensureSync() },
+		MCP: a.mcpHTTP(),
 	}
 }
 

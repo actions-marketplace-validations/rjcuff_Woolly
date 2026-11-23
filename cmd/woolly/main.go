@@ -82,7 +82,7 @@ Usage:
   woolly ui                    open the review page in your browser
   woolly connect [app...]      add Woolly to Claude, Cursor, VS Code, Codex, Gemini and more
   woolly disconnect [app...]   remove it again
-  woolly sync [init|join|status]  keep memories in step between your devices
+  woolly sync [init|join|folder|status]  keep memories in step between your devices
   woolly service install       run Woolly in the background, starting at login
   woolly service status|uninstall
   woolly serve [--proxy]       run the local HTTP API and review page (default 127.0.0.1:11435)

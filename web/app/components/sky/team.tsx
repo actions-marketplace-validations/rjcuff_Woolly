@@ -58,33 +58,56 @@ function PlanCard({ plan }: { plan: Plan }) {
   );
 }
 
-/** The free check next to the night blue Team plan. */
-export function TeamPricing({ installUrl }: { installUrl: string }) {
+interface TeamPricingProps {
+  installUrl: string;
+  salesUrl: string;
+}
+
+/** The Woolly Team plans, with Team in night blue. Every plan includes the open source check. */
+export function TeamPricing({ installUrl, salesUrl }: TeamPricingProps) {
   const plans: Plan[] = [
     {
-      name: 'Woolly',
-      price: 'Free',
-      per: 'Open source',
-      blurb: 'For individual developers and single repositories.',
-      perks: ['Checks agent files and memory against your code', 'Pull request comments for stale lines', 'Runs locally and in your own CI'],
-      cta: { label: 'Download Woolly', href: '/download' },
+      name: 'Free',
+      price: '$0',
+      per: 'per month',
+      blurb: 'For trying Woolly Team on your own repositories.',
+      perks: ['Unlimited public repositories', '1 private repository', 'Unlimited members', 'Shared review queue and activity', 'Data export and deletion controls'],
+      cta: { label: 'Get started', href: installUrl },
     },
     {
-      name: 'Woolly Team',
-      price: '$299',
+      name: 'Team',
+      price: '$99',
       per: 'per month per organization',
-      blurb: 'For engineering teams running agents across many repositories.',
-      perks: ['Everything in Woolly', 'Organization-wide dashboard', 'Shared review queue and activity', 'Up to 25 repositories, unlimited members', 'Data export and deletion controls'],
+      blurb: 'For a team running agents across its main repositories.',
+      perks: ['Everything in Free', '10 private repositories', 'Pay by card, cancel any time'],
       cta: { label: 'Get started', href: installUrl },
       featured: true,
+    },
+    {
+      name: 'Business',
+      price: '$299',
+      per: 'per month per organization',
+      blurb: 'For engineering organizations with many repositories.',
+      perks: ['Everything in Free', '50 private repositories', 'Weekly Slack digest of new stale lines', 'Pay by card, cancel any time'],
+      cta: { label: 'Get started', href: installUrl },
+    },
+    {
+      name: 'Enterprise',
+      price: 'Custom',
+      per: 'billed yearly',
+      blurb: 'For companies that need it on their own servers.',
+      perks: ['Unlimited private repositories', 'Self-hosted dashboard', 'Single sign-on and a support agreement'],
+      cta: { label: 'Talk to us', href: salesUrl },
     },
   ];
   return (
     <section id="pricing" aria-label="Pricing" className="scroll-mt-6 bg-white py-20 sm:py-28">
       <div className={WRAP}>
         <h2 className={H2}>Simple pricing for every team</h2>
-        <p className={cn(LEAD, 'mt-5 max-w-[520px]')}>Start with the open source check. Add Woolly Team when you need to see across repositories.</p>
-        <div className="mt-10 grid gap-4 sm:mt-12 md:grid-cols-2">
+        <p className={cn(LEAD, 'mt-5 max-w-[560px]')}>
+          The Woolly check is free and open source in every plan. Plans differ in how many private repositories your dashboard covers.
+        </p>
+        <div className="mt-10 grid gap-4 sm:mt-12 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((p) => (
             <PlanCard key={p.name} plan={p} />
           ))}

@@ -40,8 +40,22 @@ else
 fi
 
 # The app shows the release's version, not whatever tauri.conf.json last said.
+# With a Windows certificate, Tauri also signs every program it bundles, the
+# app, the woolly helper and the installer, through scripts/winsign.sh.
+settings=""
+case "$version" in *-dev) ;; *) settings="\"version\":\"$version\"" ;; esac
+if [ -n "${WINDOWS_CERT_PATH:-}" ]; then
+  signer="$(pwd)/scripts/winsign.sh"
+  command -v cygpath >/dev/null 2>&1 && signer=$(cygpath -m "$signer")
+  settings="${settings:+$settings,}\"bundle\":{\"windows\":{\"signCommand\":{\"cmd\":\"sh\",\"args\":[\"$signer\",\"%1\"]}}}"
+fi
 config=""
-case "$version" in *-dev) ;; *) config="--config {\"version\":\"$version\"}" ;; esac
+if [ -n "$settings" ]; then
+  # A file, since the settings can hold spaces that would split arguments here.
+  printf '{%s}\n' "$settings" > app/.build-config.json
+  trap 'rm -f app/.build-config.json' EXIT
+  config="--config .build-config.json"
+fi
 (cd app && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npx tauri build $target $config)
 
 case "$(uname -s)" in

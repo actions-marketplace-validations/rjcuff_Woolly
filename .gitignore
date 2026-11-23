@@ -19,3 +19,4 @@ dist-app/
 plans/
 ROADMAP.md
 roadmap.md
+app/.build-config.json

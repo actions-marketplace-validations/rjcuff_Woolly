@@ -5,6 +5,13 @@ set -eu
 
 version="${1:?usage: scripts/release.sh <version>}"
 cd "$(dirname "$0")/.."
+
+# The Claude Code plugin updates for users only when its version changes.
+plugin_version=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugin/.claude-plugin/plugin.json | head -1)
+if [ "$plugin_version" != "$version" ]; then
+  echo "plugin/.claude-plugin/plugin.json has version $plugin_version, not $version. Bump it first." >&2
+  exit 1
+fi
 rm -rf dist
 mkdir -p dist
 
@@ -23,6 +30,7 @@ for target in darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 linux/arm window
   cp LICENSE README.md "$dir/"
 
   if [ "$os" = windows ]; then
+    scripts/winsign.sh "$dir/$bin"
     (cd "$dir" && zip -q "../$name.zip" "$bin" LICENSE README.md)
   else
     tar -czf "dist/$name.tar.gz" -C "$dir" "$bin" LICENSE README.md
@@ -32,5 +40,6 @@ done
 
 (cd dist && shasum -a 256 woolly_* > checksums.txt)
 scripts/mcpb.sh "$version"
+scripts/windows-packages.sh "$version"
 echo "Built woolly $version into dist/"
 ls -1 dist

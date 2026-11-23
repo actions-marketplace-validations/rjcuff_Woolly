@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rjcuff/woolly/internal/connect"
+	"github.com/rjcuff/woolly/internal/memory"
 )
 
 // Claude Code and Codex are set up through their own CLIs rather than by
@@ -23,9 +24,22 @@ func cmdConnect(args []string) error {
 	fs := newFlags("connect")
 	dryRun := fs.Bool("dry-run", false, "show what would change without changing anything")
 	remove := fs.Bool("remove", false, "remove Woolly from the apps instead")
+	user := fs.String("user", "", "give the apps only this user's memories, like `woolly mcp --user`")
+	agent := fs.String("agent", "", "give the apps only this agent's memories, like `woolly mcp --agent`")
 	ids, err := parse(fs, args)
 	if err != nil {
 		return err
+	}
+	extra, err := scopeFlags(*user, *agent)
+	if err != nil {
+		return err
+	}
+	if *remove && len(extra) > 0 {
+		return errors.New("--user and --agent can't be used with disconnect")
+	}
+	if len(extra) > 0 && len(ids) == 0 {
+		// Scoping every app would take your own memory away from all of them.
+		return errors.New("name the apps to scope, like `woolly connect cursor --agent support-bot`")
 	}
 	env, err := connect.EnvFromOS(runtime.GOOS)
 	if err != nil {
@@ -46,6 +60,9 @@ func cmdConnect(args []string) error {
 		verb = "Disconnecting"
 	}
 	fmt.Printf("%s Woolly (%s)\n", verb, command)
+	if len(extra) > 0 {
+		fmt.Printf("Scoped to %s\n", strings.Join(extra, " "))
+	}
 	if *dryRun {
 		fmt.Println("Dry run: nothing will change.")
 	}
@@ -54,12 +71,12 @@ func cmdConnect(args []string) error {
 	var restart []string
 	done := 0
 	if wanted[claudeCodeID] {
-		if claudeCode(command, *remove, *dryRun, len(ids) > 0) {
+		if claudeCode(command, extra, *remove, *dryRun, len(ids) > 0) {
 			done++
 		}
 	}
 	if wanted[codexID] {
-		if codex(command, *remove, *dryRun, len(ids) > 0) {
+		if codex(command, extra, *remove, *dryRun, len(ids) > 0) {
 			done++
 		}
 	}
@@ -71,9 +88,9 @@ func cmdConnect(args []string) error {
 			printRow("-", a.Name, "not found")
 			continue
 		}
-		res, err := applyApp(a, command, *remove, *dryRun)
+		res, err := applyApp(a, command, extra, *remove, *dryRun)
 		if err != nil {
-			printRow("!", a.Name, explain(err, a, command))
+			printRow("!", a.Name, explain(err, a, command, extra))
 			continue
 		}
 		printRow("✓", a.Name, describe(res, *dryRun))
@@ -115,17 +132,27 @@ func pickApps(apps []connect.App, ids []string) (map[string]bool, error) {
 	return wanted, nil
 }
 
-func applyApp(a connect.App, command string, remove, dryRun bool) (connect.Result, error) {
+func applyApp(a connect.App, command string, extra []string, remove, dryRun bool) (connect.Result, error) {
 	if remove {
 		return connect.Disconnect(a, dryRun)
 	}
-	return connect.Connect(a, command, dryRun)
+	return connect.Connect(a, command, dryRun, extra...)
 }
 
-func explain(err error, a connect.App, command string) string {
+// scopeFlags checks --user and --agent and turns them into `woolly mcp` flags.
+func scopeFlags(user, agent string) ([]string, error) {
+	for name, v := range map[string]string{"--user": user, "--agent": agent} {
+		if v != "" && memory.CleanScopeID(v) == "" {
+			return nil, fmt.Errorf("%s is blank", name)
+		}
+	}
+	return connect.ScopeArgs(memory.CleanScopeID(user), memory.CleanScopeID(agent)), nil
+}
+
+func explain(err error, a connect.App, command string, extra []string) string {
 	if errors.Is(err, connect.ErrUnreadable) {
 		return fmt.Sprintf("can't safely edit %s (it has comments or an unexpected layout).\n      Add this to it yourself:\n%s",
-			a.Config, indent(connect.Snippet(a.Format, command), "      "))
+			a.Config, indent(connect.Snippet(a.Format, command, extra...), "      "))
 	}
 	return err.Error()
 }
@@ -156,15 +183,28 @@ func printRow(mark, name, msg string) {
 
 // claudeCode connects Claude Code and adds its startup hook. It reports
 // whether it did anything.
-func claudeCode(command string, remove, dryRun, explicit bool) bool {
-	if !cliApp(connect.ClaudeCode, command, remove, dryRun, explicit) {
+func claudeCode(command string, extra []string, remove, dryRun, explicit bool) bool {
+	if !cliApp(connect.ClaudeCode, command, extra, remove, dryRun, explicit) {
 		return false
 	}
-	startupHook(command, remove, dryRun)
+	scoped := len(extra) > 0
+	if scoped {
+		// The hooks load and save your own memory, which a scoped Claude
+		// Code shouldn't get, so any from an earlier connect come out.
+		printRow("-", "  hooks", "a scoped Claude Code gets no hooks, since they use your own memory")
+	}
+	startupHook(command, remove || scoped, dryRun)
+	if home, err := os.UserHomeDir(); err == nil && !remove && connect.PluginInstalled(home) {
+		if scoped {
+			printRow("!", "  plugin", "the Woolly plugin is installed and still gives Claude Code your own memory. Remove it with `claude plugin uninstall woolly`")
+		} else {
+			printRow("!", "  plugin", "the Woolly plugin is also installed, so its hooks would run twice. Keep one: run `woolly disconnect claude-code` or `claude plugin uninstall woolly`")
+		}
+	}
 	return true
 }
 
-func cliApp(c connect.CLIApp, command string, remove, dryRun, explicit bool) bool {
+func cliApp(c connect.CLIApp, command string, extra []string, remove, dryRun, explicit bool) bool {
 	if !c.Installed() {
 		if explicit {
 			printRow("!", c.Name, "the "+c.Bin+" command isn't installed")
@@ -178,7 +218,7 @@ func cliApp(c connect.CLIApp, command string, remove, dryRun, explicit bool) boo
 	if remove {
 		res, err = c.Disconnect(dryRun)
 	} else {
-		res, err = c.Connect(command, dryRun)
+		res, err = c.Connect(command, dryRun, extra...)
 	}
 	if err != nil {
 		printRow("!", c.Name, err.Error())
@@ -223,8 +263,8 @@ func startupHook(command string, remove, dryRun bool) {
 	}
 }
 
-func codex(command string, remove, dryRun, explicit bool) bool {
-	return cliApp(connect.Codex, command, remove, dryRun, explicit)
+func codex(command string, extra []string, remove, dryRun, explicit bool) bool {
+	return cliApp(connect.Codex, command, extra, remove, dryRun, explicit)
 }
 
 // connectedApps lists the installed apps that have Woolly, for woolly doctor.

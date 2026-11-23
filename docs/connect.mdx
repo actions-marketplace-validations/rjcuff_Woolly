@@ -26,18 +26,34 @@ Connecting Woolly (/opt/homebrew/bin/woolly)
 Restart Claude Desktop to load the change.
 ```
 
-It works with Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode. It only adds a `woolly` entry and keeps the rest of each config as it was. Before it changes a file, it saves a copy next to it ending in `.woolly-backup`.
+It works with Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio, opencode and AnythingLLM. It only adds a `woolly` entry and keeps the rest of each config as it was. Before it changes a file, it saves a copy next to it ending in `.woolly-backup`.
 
 | Command | What it does |
 | --- | --- |
 | `woolly connect` | Connect every app it finds |
 | `woolly connect cursor vscode` | Connect only these apps |
 | `woolly connect --dry-run` | Show what would change without changing anything |
+| `woolly connect cursor --agent support-bot` | Give the app only one agent's memories. `--user <id>` does the same for one user |
 | `woolly disconnect` | Remove Woolly from the apps again |
 
-App names: `claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `codex`, `gemini`, `lmstudio`, `opencode`.
+App names: `claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `codex`, `gemini`, `lmstudio`, `opencode`, `anythingllm`.
 
 Claude Code and Codex are set up through their own `claude mcp add` and `codex mcp add` commands. The others are set up by editing their config files.
+
+With `--user` or `--agent`, the app runs `woolly mcp --user <id>` or `woolly mcp --agent <name>`, so it only reads and writes that user's or agent's memories. See [An agent's own memory](/docs/mcp#an-agents-own-memory). Claude Code's startup hooks are skipped for a scoped connection, because they load your own memory. A scoped connect removes those hooks if an earlier `woolly connect` added them. You have to name the apps to scope, so your other apps keep your own memory. Claude Code and Codex don't show Woolly's saved arguments, so to take a scope off one of them, run `woolly disconnect claude-code` and then `woolly connect claude-code`.
+
+## Claude Code plugin
+
+If you use Claude Code, you can add Woolly as a plugin instead. The plugin sets up the same MCP server and the same hooks as `woolly connect`, and adds a `woolly-check` skill that checks your CLAUDE.md and other memory files against the code. You still need the `woolly` command installed first, see [Quickstart](/docs/quickstart).
+
+```sh
+claude plugin marketplace add rjcuff/woolly
+claude plugin install woolly@woolly
+```
+
+Or inside Claude Code, run `/plugin marketplace add rjcuff/woolly` and pick Woolly from `/plugin`.
+
+Use the plugin or `woolly connect claude-code`, not both, or every hook runs twice. `woolly connect` warns you if it finds the plugin. To switch from `woolly connect` to the plugin, run `woolly disconnect claude-code` first.
 
 ## Memory that loads by itself
 
@@ -109,7 +125,13 @@ Restart Claude Desktop.
 
 ### Cursor
 
-Add the same block to `~/.cursor/mcp.json`:
+With Woolly installed, click to add it to Cursor or LM Studio:
+
+<InstallButtons />
+
+Apps opened from the Dock or Start menu may not find `woolly` this way. If so, run `woolly connect cursor` or `woolly connect lmstudio` instead, which writes the full path.
+
+Or add the same block to `~/.cursor/mcp.json`:
 
 ```json title="~/.cursor/mcp.json"
 {
@@ -129,6 +151,28 @@ VS Code uses `servers` instead of `mcpServers`. Run **MCP: Open User Configurati
     "woolly": { "type": "stdio", "command": "woolly", "args": ["mcp"] }
   }
 }
+```
+
+### AnythingLLM
+
+`woolly connect anythingllm` adds Woolly to AnythingLLM Desktop's `plugins/anythingllm_mcp_servers.json`. If AnythingLLM doesn't show up as found, open its **Agent Skills** page once so it creates that folder, then run the command again. Press **Refresh** on the Agent Skills page to load Woolly. No restart is needed.
+
+### Jan
+
+In Jan, open **Settings → MCP Servers**, click **+**, and enter:
+
+- Server Name: `woolly`
+- Command: `woolly`
+- Arguments: `mcp`
+
+Turn on the server. If it doesn't connect, restart Jan.
+
+### Msty Studio
+
+In Msty Studio, open **Toolbox**, choose **Add New Tool**, pick **STDIO / JSON**, and paste:
+
+```json
+{ "command": "woolly", "args": ["mcp"] }
 ```
 
 <Callout title="Command not found?">

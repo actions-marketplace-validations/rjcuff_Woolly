@@ -68,7 +68,7 @@ The comment quotes each stale line as code, so a line can't mention people, load
 
 ## Where your data goes
 
-- The check runs on your GitHub runner, GitHub's or your own, against your checkout. It uses no model, and Woolly has no servers.
+- The check runs on your GitHub runner, GitHub's or your own, against your checkout. It uses no model and sends nothing to Woolly. Only if your organization installs the optional [Woolly Team](/team) app does Team read the run's status file, which holds counts and file pointers.
 - The runner downloads Woolly from GitHub releases. With the default comment setting it also calls the GitHub API to post the comment.
 - The report, which quotes the stale lines, goes to the job log, the job summary and, when something went stale, a pull request comment. Anyone who can read the repo's Actions and pull requests can read those. In a public repo that's everyone.
 - Personal memory, like Claude Code's auto memory and Codex memories, lives in the home folder of your own computer, not on GitHub's runners, so the Action doesn't see it. On a self-hosted runner, run the job as a user who has none.
@@ -81,6 +81,7 @@ The comment quotes each stale line as code, so a line can't mention people, load
 | `base` | the pull request's base commit | The commit or branch to compare against. On a push, it defaults to the commit before the push |
 | `comment` | `true` | Comment on the pull request when something goes stale. `false` only writes the job summary |
 | `fail-on-stale` | `false` | Fail the job when the change makes something stale |
+| `footer` | `true` | End the comment with one line that links to Woolly. `false` leaves it out |
 | `token` | `github.token` | The token for commenting. It needs `pull-requests: write` |
 
 ## Outputs
@@ -133,6 +134,70 @@ The Action writes this file for every check. To keep it with the workflow run, g
           path: ${{ steps.woolly.outputs.status-file }}
           retention-days: 14
 ```
+
+## GitLab and Bitbucket
+
+The GitHub Action is the easiest setup, but the check runs anywhere with git and a shell. These pipelines install Woolly, check the merge request against its base, and post the report as a comment when something went stale. Unlike the Action, they add a new comment each time instead of updating one.
+
+### GitLab
+
+Add a [project access token](https://docs.gitlab.com/user/project/settings/project_access_tokens/) with the `api` scope and the Reporter role as a masked CI/CD variable named `WOOLLY_GITLAB_TOKEN`. Without it, the report only goes to the job log.
+
+```yaml title=".gitlab-ci.yml"
+woolly:
+  image: debian:bookworm-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  variables:
+    GIT_DEPTH: "0" # the check needs the base commit
+    WOOLLY_HOME: "$CI_PROJECT_DIR/.woolly-home"
+    WOOLLY_NO_EMBED: "1"
+  script:
+    - apt-get update -qq && apt-get install -y -qq git curl ca-certificates jq > /dev/null
+    - curl -fsSL https://usewoolly.com/install.sh | WOOLLY_INSTALL_DIR="$CI_PROJECT_DIR/.woolly-bin" sh
+    - export PATH="$CI_PROJECT_DIR/.woolly-bin:$PATH"
+    - set +e; woolly check --markdown --no-backfill --base "$CI_MERGE_REQUEST_DIFF_BASE_SHA" > report.md; code=$?; set -e
+    - cat report.md
+    - |
+      if [ "$code" = 1 ] && [ -n "$WOOLLY_GITLAB_TOKEN" ]; then
+        jq -n --rawfile body report.md '{body: $body}' | curl -fsS -X POST \
+          -H "PRIVATE-TOKEN: $WOOLLY_GITLAB_TOKEN" -H "Content-Type: application/json" --data @- \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes" > /dev/null
+      fi
+    - '[ "$code" -le 1 ]' # stale lines don't fail the job; use '[ "$code" = 0 ]' to fail it
+```
+
+### Bitbucket
+
+Add a [repository access token](https://support.atlassian.com/bitbucket-cloud/docs/repository-access-tokens/) with the **Pull requests: Write** scope as a secured repository variable named `WOOLLY_BITBUCKET_TOKEN`.
+
+```yaml title="bitbucket-pipelines.yml"
+pipelines:
+  pull-requests:
+    "**":
+      - step:
+          name: Woolly check
+          image: debian:bookworm-slim
+          clone:
+            depth: full # the check needs the base commit
+          script:
+            - apt-get update -qq && apt-get install -y -qq git curl ca-certificates jq > /dev/null
+            - curl -fsSL https://usewoolly.com/install.sh | WOOLLY_INSTALL_DIR="$BITBUCKET_CLONE_DIR/.woolly-bin" sh
+            - export PATH="$BITBUCKET_CLONE_DIR/.woolly-bin:$PATH" WOOLLY_HOME="$BITBUCKET_CLONE_DIR/.woolly-home" WOOLLY_NO_EMBED=1
+            - git fetch origin "$BITBUCKET_PR_DESTINATION_BRANCH"
+            - BASE=$(git merge-base HEAD "origin/$BITBUCKET_PR_DESTINATION_BRANCH")
+            - set +e; woolly check --markdown --no-backfill --base "$BASE" > report.md; code=$?; set -e
+            - cat report.md
+            - >
+              if [ "$code" = 1 ] && [ -n "$WOOLLY_BITBUCKET_TOKEN" ]; then
+              jq -n --rawfile raw report.md '{content: {raw: $raw}}' | curl -fsS -X POST
+              -H "Authorization: Bearer $WOOLLY_BITBUCKET_TOKEN" -H "Content-Type: application/json" --data @-
+              "https://api.bitbucket.org/2.0/repositories/$BITBUCKET_REPO_FULL_NAME/pullrequests/$BITBUCKET_PR_ID/comments" > /dev/null;
+              fi
+            - '[ "$code" -le 1 ]'
+```
+
+Both pipelines run on your own runners against your checkout, like the Action, and send nothing to Woolly. Woolly Team's dashboard only reads GitHub for now.
 
 ## Run the same check yourself
 

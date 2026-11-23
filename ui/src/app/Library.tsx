@@ -3,10 +3,12 @@ import { type Activity, api, type Memory } from '../api';
 import { AppLogo } from './logos';
 import { ago, I, Icon, Skeleton, type Toast } from './ui';
 
-export type LibraryView = 'conflicts' | 'history' | 'trash' | 'activity';
+export type LibraryView = 'conflicts' | 'queue' | 'problems' | 'history' | 'trash' | 'activity';
 
 const TITLES: Record<LibraryView, string> = {
   conflicts: 'Conflicts',
+  queue: 'Still true?',
+  problems: 'Files to fix',
   history: 'History',
   trash: 'Trash',
   activity: 'Activity',
@@ -22,6 +24,7 @@ const VERBS: Record<string, string> = {
   forget: 'Forgot',
   restore: 'Restored',
   resolve: 'Kept',
+  keep: 'Kept',
   empty_trash: 'Emptied the trash',
   import: 'Imported',
   learn: 'Learned',
@@ -29,7 +32,7 @@ const VERBS: Record<string, string> = {
   sync: 'Synced',
 };
 
-/** Conflicts, history, trash and the activity log, inside the app. */
+/** Conflicts, old guesses to check, unreadable files, history, trash and the activity log, inside the app. */
 export function Library({
   view,
   onBack,
@@ -44,6 +47,7 @@ export function Library({
   const [items, setItems] = useState<Memory[] | null>(null);
   const [all, setAll] = useState<Map<string, Memory>>(new Map());
   const [log, setLog] = useState<Activity[] | null>(null);
+  const [problems, setProblems] = useState<string[] | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +55,14 @@ export function Library({
         const [entries, mems, trash] = await Promise.all([api.activity(300), api.list(true), api.trash()]);
         setAll(new Map([...mems, ...trash].map((m) => [m.id, m])));
         setLog(entries);
+        return;
+      }
+      if (view === 'problems') {
+        setProblems(await api.problems());
+        return;
+      }
+      if (view === 'queue') {
+        setItems(await api.reviewQueue());
         return;
       }
       const mems = await api.list(true);
@@ -66,6 +78,7 @@ export function Library({
   useEffect(() => {
     setItems(null);
     setLog(null);
+    setProblems(null);
     load();
   }, [load]);
 
@@ -80,7 +93,8 @@ export function Library({
     }
   };
 
-  const loading = view === 'activity' ? log === null : items === null;
+  const loading = view === 'activity' ? log === null : view === 'problems' ? problems === null : items === null;
+  const listView = view !== 'activity' && view !== 'problems';
 
   return (
     <div className="ca-page narrow">
@@ -108,21 +122,46 @@ export function Library({
         </div>
       )}
 
-      {!loading && view !== 'activity' && items?.length === 0 && (
+      {!loading && view === 'queue' && items && items.length > 0 && (
+        <p className="sec-sub">An AI guessed these, and nothing has used them in 90 days. Keep the ones that are still true and forget the rest.</p>
+      )}
+
+      {!loading && listView && items?.length === 0 && (
         <Empty
-          icon={view === 'conflicts' ? I.check : view === 'trash' ? I.trash : I.clock}
-          title={view === 'conflicts' ? 'Nothing to review' : view === 'trash' ? 'Trash is empty' : 'No history yet'}
+          icon={view === 'conflicts' || view === 'queue' ? I.check : view === 'trash' ? I.trash : I.clock}
+          title={view === 'conflicts' || view === 'queue' ? 'Nothing to review' : view === 'trash' ? 'Trash is empty' : 'No history yet'}
           text={
             view === 'conflicts'
               ? 'When an app saves something that disagrees with you, it shows up here.'
-              : view === 'trash'
-                ? 'Forgotten memories wait here until you empty the trash.'
-                : 'Older versions of facts show up here when they change.'
+              : view === 'queue'
+                ? 'Every guess an AI made was used or changed in the last 90 days.'
+                : view === 'trash'
+                  ? 'Forgotten memories wait here until you empty the trash.'
+                  : 'Older versions of facts show up here when they change.'
           }
         />
       )}
 
-      {!loading && view !== 'activity' && items && items.length > 0 && (
+      {!loading && view === 'problems' && problems?.length === 0 && (
+        <Empty icon={I.check} title="Every file reads fine" text="Memory files Woolly can't fully read show up here, so you can fix them by hand." />
+      )}
+
+      {!loading && view === 'problems' && problems && problems.length > 0 && (
+        <>
+          <p className="sec-sub">Woolly couldn't fully read these memory files, so they are left out of search. Open each one in a text editor and fix or remove it.</p>
+          <div className="cards">
+            {problems.map((p) => (
+              <div key={p} className="card">
+                <p className="card-text">
+                  <code>{p}</code>
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!loading && listView && items && items.length > 0 && (
         <div className="cards">
           {items.map((m) => {
             const other = m.conflicts_with ? all.get(m.conflicts_with) : undefined;
@@ -150,6 +189,16 @@ export function Library({
                         )}
                         <button className="btn primary" onClick={() => act(() => api.resolve(m.id), 'Updated')}>
                           Use this
+                        </button>
+                      </>
+                    )}
+                    {view === 'queue' && (
+                      <>
+                        <button className="btn secondary" onClick={() => act(() => api.forget(m.id), 'Forgotten')}>
+                          Forget
+                        </button>
+                        <button className="btn primary" onClick={() => act(() => api.keep(m.id), 'Kept')}>
+                          Still true
                         </button>
                       </>
                     )}
@@ -184,7 +233,7 @@ export function Library({
                 ? e.query
                   ? `Searched “${e.query}”`
                   : `Read ${e.count ?? 0} memories`
-                : subject && ['remember', 'update', 'forget', 'restore', 'resolve'].includes(e.action)
+                : subject && ['remember', 'update', 'forget', 'restore', 'resolve', 'keep'].includes(e.action)
                   ? `${VERBS[e.action]} “${subject}”`
                   : ['import', 'learn', 'sync', 'dream'].includes(e.action)
                     ? `${VERBS[e.action]} ${e.count ?? 0}`

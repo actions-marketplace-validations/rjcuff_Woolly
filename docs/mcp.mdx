@@ -86,7 +86,29 @@ Each connected app runs its own copy of `woolly mcp`, but they all read and writ
 
 ## Privacy
 
-The app and Woolly talk directly on your computer, not over the internet. Woolly has no servers. What the AI app itself does with the answers it gets is covered by that app's privacy policy.
+The app and Woolly talk directly on your computer, not over the internet, whether the app starts `woolly mcp` or connects to `/mcp` on your own `woolly serve`. Nothing goes to a Woolly server. What the AI app itself does with the answers it gets is covered by that app's privacy policy.
+
+## MCP over HTTP
+
+Some apps can't start a command. They connect to an MCP server at a web address instead, using the Streamable HTTP transport. Open WebUI is one. For those apps, `woolly serve` (and the background service) also serves MCP at:
+
+```txt
+http://127.0.0.1:11435/mcp
+```
+
+It has the same tools as `woolly mcp`. Every request needs the token from `~/.woolly/token`, sent as `Authorization: Bearer <token>`. Like the rest of the local API, it only answers on your computer and refuses requests from websites.
+
+To give the app one user's or agent's memories, add them to the address, like `http://127.0.0.1:11435/mcp?agent=support-bot` or `?user=alice`. Add `?project=acme` to search one project's notes along with yours. This keeps an app you trust in its own lane, but it isn't a lock: anything with the token can leave the scope off the address and reach all of your memories. Only give the token to apps you'd trust with everything.
+
+Over HTTP Woolly doesn't know which folder the app works in, so it can't check facts against your code. The `why` and `check_memory_files` tools aren't offered, and code sources an app gives with a fact are left off rather than saved unchecked. Use `woolly mcp` in the repo for those.
+
+### Open WebUI
+
+1. Make sure `woolly serve` or the background service (`woolly service install`) is running.
+2. In Open WebUI, as an admin, open **Settings → Admin → Integrations**. Under **External Tool Servers**, click **+ Add Connection**.
+3. Set **Type** to **MCP (Streamable HTTP)** and the URL to `http://127.0.0.1:11435/mcp`. For **Auth**, choose **Bearer** and paste the token from `~/.woolly/token` into **Key**.
+
+Woolly only answers on `127.0.0.1`. On Linux, if Open WebUI runs in Docker, start it with host networking (`--network=host`) so it can reach your computer's `127.0.0.1`. On a Mac or Windows, Docker runs containers in a virtual machine that can't reach it, so install Open WebUI with `pip` or `uv` instead.
 
 ## Troubleshooting
 
