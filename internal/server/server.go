@@ -210,6 +210,10 @@ func Handler(store *memory.Store, engine *recall.Engine, version, token string, 
 		}
 		m, err := store.Update(r.PathValue("id"), memory.UpdateInput{Content: req.Content, Key: req.Key, Tags: req.Tags, Project: req.Project,
 			Type: req.Type, Sources: req.Sources, Confidence: req.Conf, Untrusted: !fromReviewPage(r)})
+		if errors.Is(err, memory.ErrOutranked) {
+			writeError(w, http.StatusForbidden, err.Error())
+			return
+		}
 		if err != nil {
 			writeStoreError(w, err)
 			return

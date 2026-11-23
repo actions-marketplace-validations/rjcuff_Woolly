@@ -40,13 +40,30 @@ notes = (
 print(json.dumps({"tag_name": "v" + v, "name": "v" + v, "body": notes, "draft": False, "prerelease": False, "make_latest": "true"}))
 ' "$version" "${APP_VERSION:-}")
 
-id=$(curl -fsS -X POST \
-  -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/$repo/releases" -d "$body" |
-  python3 -c 'import json, sys; print(json.loads(sys.stdin.read(), strict=False)["id"])')
+# Reuse the release if an earlier run already made it, so a failed upload
+# can be finished by running this again.
+existing=$(curl -fsS -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/$repo/releases/tags/$tag" 2>/dev/null || true)
+if [ -n "$existing" ]; then
+  id=$(printf '%s' "$existing" | python3 -c 'import json, sys; print(json.loads(sys.stdin.read(), strict=False)["id"])')
+  uploaded=$(printf '%s' "$existing" | python3 -c 'import json, sys; print("\n".join(a["name"] for a in json.loads(sys.stdin.read(), strict=False)["assets"] if a.get("state") == "uploaded"))')
+  echo "Release $tag already exists, finishing its uploads."
+else
+  id=$(curl -fsS -X POST \
+    -H "Authorization: Bearer $token" -H "Accept: application/vnd.github+json" \
+    "https://api.github.com/repos/$repo/releases" -d "$body" |
+    python3 -c 'import json, sys; print(json.loads(sys.stdin.read(), strict=False)["id"])')
+  uploaded=""
+fi
 
 for f in dist/*; do
+  # release.sh also writes scoop/ and winget/ folders here; they aren't release files.
+  [ -f "$f" ] || continue
   name=$(basename "$f")
+  if printf '%s\n' "$uploaded" | grep -qxF "$name"; then
+    echo "already uploaded $name"
+    continue
+  fi
   case "$name" in
     *.zip | *.mcpb) type=application/zip ;;
     *.dmg) type=application/x-apple-diskimage ;;

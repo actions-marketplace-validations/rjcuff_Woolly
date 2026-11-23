@@ -455,7 +455,18 @@ type UpdateInput struct {
 
 // Update edits a memory in place. If the memory is current and has a key,
 // it becomes the current fact for that key.
+//
+// An untrusted edit (from an app or an AI) never overrules something more
+// trusted: new text for a memory the user saved is kept as a conflicting
+// version for the user to pick, other changes to it are refused with
+// ErrOutranked, and a key that collides with a more trusted fact makes the
+// edited memory a conflict instead of replacing that fact.
 func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
+	if in.Untrusted {
+		if m, done, err := s.updateTrusted(id, in); done || err != nil {
+			return m, err
+		}
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.refresh(); err != nil {
@@ -498,6 +509,15 @@ func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
 	}
 	m.UpdatedAt = time.Now().UTC()
 	if m.Status == StatusActive && m.Key != "" {
+		if top := s.outrankedBy(m); in.Untrusted && top != nil {
+			// It disagrees with a more trusted fact: the user settles it.
+			m.Status = StatusConflict
+			m.ConflictsWith = top.ID
+			if err := s.write(m); err != nil {
+				return Memory{}, err
+			}
+			return m.clone(), nil
+		}
 		if _, err := s.resolveLocked(m, m.UpdatedAt); err != nil {
 			return Memory{}, err
 		}
@@ -505,6 +525,62 @@ func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
 		return Memory{}, err
 	}
 	return m.clone(), nil
+}
+
+// updateTrusted handles an untrusted edit of a memory more trusted than any
+// app can be (one the user saved). done is false when the memory isn't one,
+// and Update goes on as usual.
+func (s *Store) updateTrusted(id string, in UpdateInput) (m Memory, done bool, err error) {
+	prev, err := s.Get(id)
+	if err != nil {
+		return Memory{}, true, err
+	}
+	if prev.Source.Rank() <= SourceImport.Rank() {
+		return Memory{}, false, nil
+	}
+	if in.Key != nil || in.Tags != nil || in.Project != nil || in.Type != nil || in.Sources != nil || in.Confidence != nil {
+		return Memory{}, true, fmt.Errorf("only the user changes the key, tags, project, type, sources or confidence of a memory they saved: %w", ErrOutranked)
+	}
+	if in.Content == nil {
+		return prev, true, nil
+	}
+	c := strings.TrimSpace(*in.Content)
+	if c == "" {
+		return Memory{}, true, errors.New("memory content is empty")
+	}
+	if c == prev.Content {
+		return prev, true, nil
+	}
+	// Like a v1 PUT: the new text is saved one step down and waits as a
+	// conflict with the user's version.
+	res, err := s.Replace(prev.ID, RememberInput{Content: c, Source: SourceUser, AllowSensitive: in.AllowSensitive, Untrusted: true})
+	if err != nil {
+		return Memory{}, true, err
+	}
+	return res.Memory, true, nil
+}
+
+// outrankedBy returns the most trusted live memory, more trusted than keep,
+// that keep would replace (paired with it as a conflict, or the same key in
+// the same scope), or nil. Among equals, a current one beats a conflict.
+func (s *Store) outrankedBy(keep *Memory) *Memory {
+	var top *Memory
+	for _, ex := range s.mems {
+		if ex.ID == keep.ID || !ex.Live() || ex.Source.Rank() <= keep.Source.Rank() {
+			continue
+		}
+		paired := ex.ID == keep.ConflictsWith || ex.ConflictsWith == keep.ID
+		sameKey := keep.Key != "" && ex.Key == keep.Key && sameSlot(ex, keep)
+		if !paired && !sameKey {
+			continue
+		}
+		if top == nil || ex.Source.Rank() > top.Source.Rank() ||
+			(ex.Source.Rank() == top.Source.Rank() && ex.Status == StatusActive && top.Status != StatusActive) ||
+			(ex.Source.Rank() == top.Source.Rank() && ex.Status == top.Status && ex.ID < top.ID) {
+			top = ex
+		}
+	}
+	return top
 }
 
 // trashDir holds forgotten memories until the trash is emptied.
@@ -743,15 +819,8 @@ func (s *Store) ResolveAs(id string, actor Source) (Memory, []Memory, error) {
 		if !keep.Live() {
 			return Memory{}, nil, ErrOutranked
 		}
-		for _, ex := range s.mems {
-			if ex.ID == keep.ID || !ex.Live() || ex.Source.Rank() <= keep.Source.Rank() {
-				continue
-			}
-			paired := ex.ID == keep.ConflictsWith || ex.ConflictsWith == keep.ID
-			sameKey := keep.Key != "" && ex.Key == keep.Key && sameSlot(ex, keep)
-			if paired || sameKey {
-				return Memory{}, nil, ErrOutranked
-			}
+		if s.outrankedBy(keep) != nil {
+			return Memory{}, nil, ErrOutranked
 		}
 	}
 	replaced, err := s.resolveLocked(keep, time.Now().UTC())

@@ -22,7 +22,10 @@ test('terms page loads and links back to privacy', async ({ page }) => {
   await page.goto('/terms');
   await expect(page).toHaveTitle('Terms | Woolly');
   await expect(page.getByRole('heading', { name: 'Trademark' })).toBeVisible();
-  await page.getByRole('main').getByRole('link', { name: 'privacy policy' }).click();
+  await expect(page.locator('#woolly-team')).toHaveText('Woolly Team subscriptions');
+  await expect(page.getByRole('main')).toContainText('within 14 days of your first payment');
+  await expect(page.getByRole('main').getByRole('link', { name: 'ryan.cuff@icloud.com' })).toHaveAttribute('href', 'mailto:ryan.cuff@icloud.com');
+  await page.getByRole('main').getByRole('link', { name: 'privacy policy' }).first().click();
   await expect(page).toHaveURL(/\/privacy$/);
 });
 

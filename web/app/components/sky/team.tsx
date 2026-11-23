@@ -95,8 +95,8 @@ export function TeamPricing({ installUrl, salesUrl }: TeamPricingProps) {
       name: 'Enterprise',
       price: 'Custom',
       per: 'billed yearly',
-      blurb: 'For companies that need it on their own servers.',
-      perks: ['Unlimited private repositories', 'Self-hosted dashboard', 'Single sign-on and a support agreement'],
+      blurb: 'For companies with more repositories or their own paperwork.',
+      perks: ['Unlimited private repositories', 'A support agreement', 'Invoices instead of a card'],
       cta: { label: 'Talk to us', href: salesUrl },
     },
   ];
@@ -112,6 +112,10 @@ export function TeamPricing({ installUrl, salesUrl }: TeamPricingProps) {
             <PlanCard key={p.name} plan={p} />
           ))}
         </div>
+        <p className="mt-6 text-sm text-[var(--muted)]">
+          One flat price per organization, however many people are on it. Sales tax is added at checkout where it applies.
+          See the <a className="underline" href="/terms#woolly-team">subscription terms</a>.
+        </p>
       </div>
     </section>
   );
