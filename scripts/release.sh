@@ -7,11 +7,13 @@ version="${1:?usage: scripts/release.sh <version>}"
 cd "$(dirname "$0")/.."
 
 # The Claude Code plugin updates for users only when its version changes.
-plugin_version=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' plugin/.claude-plugin/plugin.json | head -1)
-if [ "$plugin_version" != "$version" ]; then
-  echo "plugin/.claude-plugin/plugin.json has version $plugin_version, not $version. Bump it first." >&2
-  exit 1
-fi
+for manifest in plugin/.claude-plugin/plugin.json plugin-directory/.claude-plugin/plugin.json; do
+  plugin_version=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$manifest" | head -1)
+  if [ "$plugin_version" != "$version" ]; then
+    echo "$manifest has version $plugin_version, not $version. Bump it first." >&2
+    exit 1
+  fi
+done
 rm -rf dist
 mkdir -p dist
 

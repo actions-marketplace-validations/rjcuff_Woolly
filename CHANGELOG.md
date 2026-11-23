@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The Python package (`woolly-ai` 0.6.1 on PyPI) has the new README describing Woolly as project memory for coding agents, and ships its MIT LICENSE file. Its code is unchanged.
+- `plugin-directory/` is a skill-only copy of the Claude Code plugin for the Claude plugin directory, which takes local MCP servers and command hooks only from Verified organizations. It has the `woolly-check` skill. The full plugin with the MCP server and session hooks is unchanged.
 
 ## 0.21.0
 
