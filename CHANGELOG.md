@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- `woolly check` no longer runs out of time on repos whose history has a line over 1 MB, like a minified or generated file. The history read used to stop at that line and wait for the one minute limit; Cline's check now finishes in about 10 seconds instead of never.
 - The Python package (`woolly-ai` 0.6.1 on PyPI) has the new README describing Woolly as project memory for coding agents, and ships its MIT LICENSE file. Its code is unchanged.
+- `plugin-directory/` is a skill-only copy of the Claude Code plugin for the Claude plugin directory, which takes local MCP servers and command hooks only from Verified organizations. It has the `woolly-check` skill. The full plugin with the MCP server and session hooks is unchanged.
 
-## 0.21.0
+## 0.21.0 (2026-11-23)
 
 `woolly check` reads more of the files your agents follow, and marks stale lines right in pull requests.
 
@@ -20,15 +22,15 @@
 - The Python and JavaScript SDK READMEs have clearer wording, and the Python SDK folder has its own LICENSE file.
 - The repo has a read-only security review agent for Claude Code in `.claude/agents/security.md`.
 
-## 0.20.1
+## 0.20.1 (2026-11-23)
 
 A fix so AI apps can't overrule what you saved, and Woolly Team's subscription terms.
 
-- An AI app or a script editing a memory you saved through `PATCH /api/memories/{id}` (the `update` method in the Python and JavaScript SDKs) no longer changes it. New text is saved as a separate version that waits as a conflict for you to pick, like `PUT /v1/memories/{id}` already did. Changing the key, tags, project, type, sources or confidence of your memory returns 403. An app giving one of its own memories the same key as a fact you saved no longer replaces your fact; its memory becomes a conflict instead. The review page and the command line still edit anything.
+- **Breaking:** an AI app or a script editing a memory you saved through `PATCH /api/memories/{id}` (the `update` method in the Python and JavaScript SDKs) no longer changes it. New text is saved as a separate version that waits as a conflict for you to pick, like `PUT /v1/memories/{id}` already did. Changing the key, tags, project, type, sources or confidence of your memory returns 403. An app giving one of its own memories the same key as a fact you saved no longer replaces your fact; its memory becomes a conflict instead. The review page and the command line still edit anything.
 - The terms page has a Woolly Team subscriptions section: monthly billing, sales tax, cancelling, a 14 day refund on the first payment, and a private contact email. The Enterprise plan no longer lists a self-hosted dashboard or single sign-on, and "Talk to us" sends an email instead of opening a public GitHub issue.
 - `scripts/publish.sh` skips folders in `dist/` and can finish a release whose uploads stopped partway, only skipping files GitHub finished uploading.
 
-## 0.20.0
+## 0.20.0 (2026-11-23)
 
 Woolly as a Claude Code plugin, MCP over a web address, sync through a folder you already use, and plans for Woolly Team.
 
@@ -49,10 +51,11 @@ Woolly as a Claude Code plugin, MCP over a web address, sync through a folder yo
 - With a Windows code signing certificate, the desktop app build signs the app, its bundled woolly and the installer.
 - The FAQ, README, privacy page and docs now say plainly that the Woolly app has no servers and that Woolly Team is a separate, optional hosted service that never receives your memories or code. The privacy page has a Woolly Team section.
 
-## 0.19.0
+## 0.19.0 (2026-11-22)
 
 A new look for usewoolly.com, a page for Woolly Team, and safer, steadier memory for the agents you build.
 
+- **Breaking:** the Python and JavaScript `resolve` methods now raise an error when an app tries to keep a less trusted memory, or bring back one that was replaced or retired. Catch it, or let the user settle it on the review page.
 - The website is an ice age picture book now, with a sky hero full of woolly mammoths, a soft serif for headings, light blue cards and one night blue for every action. The homepage has the apps Woolly works with, who it's for, the benchmark numbers, questions and a closing call to action. Download, Privacy, Terms, the docs and the not found page match it.
 - Phones get a menu button that opens the links in a drawer.
 - Woolly Team has its own page at usewoolly.com/team, with how it works, pricing and questions. team.usewoolly.com sends people who aren't signed in there.
@@ -88,7 +91,7 @@ A new look for usewoolly.com, a page for Woolly Team, and safer, steadier memory
 - `woolly dream` decides which of two disagreeing facts is newer by when each was last stated or confirmed, not when it was first saved.
 - Usage and embedding cache files are written through temp files of their own, so the MCP server and `woolly serve` saving at the same time never corrupt them. One may still overwrite the other's latest counts.
 
-## 0.18.0
+## 0.18.0 (2026-11-20)
 
 Pull request checks you can pin, trust with outside text, and read from other tools.
 
@@ -101,7 +104,7 @@ Pull request checks you can pin, trust with outside text, and read from other to
 - The docs pin the Action, list the permissions it needs and why, say where the report goes, and warn against `pull_request_target`.
 - CI on GitHub Actions runs the Go tests and runs the Action itself on Linux and macOS against a repo with known stale lines.
 
-## 0.17.0
+## 0.17.0 (2026-11-19)
 
 Woolly checks the memory your agents already have. No setup, no moving your notes.
 
@@ -115,7 +118,7 @@ Woolly checks the memory your agents already have. No setup, no moving your note
 - A new benchmark runs `woolly check` on the agent files of well-known open source repos: `python3 bench/agentfiles/run.py`.
 - The installer ends with the pixel mammoth and the three commands to start with. `woolly` on its own shows a header, and the terminal output has color when it's a terminal. Set `NO_COLOR` to turn it off.
 
-## 0.16.0
+## 0.16.0 (2026-11-18)
 
 Woolly shows its work. Ask it why code is the way it is, see what it caught, and let pull requests say which facts they break.
 
@@ -129,7 +132,7 @@ Woolly shows its work. Ask it why code is the way it is, see what it caught, and
 - The first `woolly init` brings in what CLAUDE.md, AGENTS.md, GEMINI.md, Cursor and Windsurf rules and Copilot instructions already say, one fact per list item under the heading it fits, then points those facts at the code they mention. It skips code blocks, anything personal, secrets and lines that read like prompt injection, and doesn't change your files. `--no-import` skips it.
 - A new website: one blue on ice white, a pixel mammoth, and docs to match.
 
-## 0.15.0
+## 0.15.0 (2026-11-17)
 
 Memory that knows when it's wrong. Project facts now point at the code they're about, and Woolly flags the ones the code no longer backs up.
 
@@ -147,14 +150,14 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - A new site and docs: one quiet column, easier to read, leading with stale detection.
 - A stale-fact benchmark, `bench/stale/run.py`. On 50 scripted changes to a small ESP32 firmware repo, Woolly flagged 28 of the 30 facts that went wrong and none of the 20 that didn't, in a median of 35 ms. Every number Woolly publishes is in `bench/RESULTS.md`.
 
-## 0.14.1
+## 0.14.1 (2026-11-16)
 
 - Search by meaning is more accurate. Woolly now gives `nomic-embed-text` the search and document prefixes it was trained with (and the query prefix `mxbai-embed-large` expects). On LOCOMO, the share of questions where Woolly's top 20 results held the answer rose from 75.9% to 83.2% on the first three conversations. Saved embeddings are refreshed once, the first time you search.
 - `bench/locomo/run.py --retrieval-only` measures Woolly's search alone, with no answer model: how often the answer is in the top 5, 10 and 20 results, and how often every message it needs is.
 - The Mac and Windows apps show the right version. The 0.14.0 apps ran Woolly 0.14.0 but called themselves 0.13.1.
 - The favicon is the mammoth again.
 
-## 0.14.0
+## 0.14.0 (2026-11-16)
 
 - A memory layer API for the agents you build, with mem0's routes and field names: `POST /v1/memories` turns a conversation into memories, and `POST /v1/search` finds them. For each fact a local model decides whether it's new, updates an older memory, says one is no longer true, or is already known, and reports `ADD`, `UPDATE`, `DELETE` or `NONE`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
 - Memories can belong to a `user_id`, `agent_id` or `run_id`, so one user's memories are never shown to or changed by another.
@@ -165,7 +168,7 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - `woolly resolve` now settles conflicts that have no key.
 - The JavaScript package (`woolly-ai` 0.2.0) and the Python package (`woolly-ai` 0.4.0) have the memory layer too: `add`, `search`, `getAll` / `get_all`, `history`, `deleteAll` / `delete_all` and `dream`, scoped by user, agent or run.
 
-## 0.13.1
+## 0.13.1 (2026-11-13)
 
 - A Windows app. [Download Woolly-windows.exe](https://github.com/rjcuff/woolly/releases/latest/download/Woolly-windows.exe), run it, and Woolly starts in the background with an icon in the system tray. It has the same screens as the Mac app and installs for your account without admin rights. It isn't signed yet, so SmartScreen may ask you to choose More info, then Run anyway.
 - The website offers Download for Mac or Download for Windows, depending on your computer.
@@ -175,7 +178,7 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - `--help` lists options the way the docs write them, like `--key`, and no longer ends with an error. A mistyped command suggests the right one.
 - The install script points you to `woolly connect` next.
 
-## 0.13.0
+## 0.13.0 (2026-11-13)
 
 - Project memory in git: `woolly init`. A repo's memory lives in `.woolly/woolly.md`, one fact per line under Overview, Stack, Conventions, Decisions, Gotchas and Commands, so every teammate's agent reads and updates the same notes. Edit the file by hand and Woolly picks it up. Facts with a key replace older ones, lines someone deleted are forgotten, and `.gitattributes` gets `merge=union` so adding facts at the same time doesn't conflict. Personal facts never go in the repo, and lines with secrets or instructions to an AI aren't loaded. See [Project memory](https://usewoolly.com/docs/project-memory).
 - Decisions are saved when a Claude Code session ends, in repos with `woolly.md`, using your local model. Turn it off with `woolly init --no-capture`.
@@ -187,7 +190,7 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - JavaScript and TypeScript package: `npm install woolly-ai`. Save, recall, learn and add memory to prompts from Node apps, plus `woollyMemory()` middleware for the Vercel AI SDK that adds the user's relevant memories to every call. See [JavaScript](https://usewoolly.com/docs/javascript).
 - A LOCOMO benchmark you can run on your own computer with Ollama: `python3 bench/locomo/run.py`. It reports answer accuracy and, separately, how often Woolly's search found the message with the answer. See [Benchmark](https://usewoolly.com/docs/benchmark).
 
-## 0.12.0
+## 0.12.0 (2026-11-12)
 
 - Import is smarter with Ollama. When the learning model is installed, Woolly has it read your recent messages about yourself and combines what it finds with the simple rules. In testing it found every fact in a sample export, up from about half.
 
@@ -197,21 +200,21 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - Decisions. `woolly decide` and the new `decide` MCP tool save a choice with the reason and the options that were turned down. Sessions start with an Already decided list, and agents are told not to suggest a rejected option again. The Memories tab can filter to decisions.
 - Notes that know when they're out of date. Project notes saved in a git repo record the commit, and the startup context marks a note when files it mentions changed since.
 
-## 0.11.0
+## 0.11.0 (2026-11-12)
 
 - The Mac app is signed and notarized by Apple, so it opens with a double-click. [Download it](https://github.com/rjcuff/woolly/releases/latest/download/Woolly-mac.dmg). One download works on Apple Silicon and Intel.
 
 - Pick up where you left off. When Claude Code compacts a conversation or a session ends, Woolly saves a handoff note for the project: what you were working on, what got done, what was decided and what's next. The next session starts with it, in Claude Code or any connected app. A quick note is saved instantly, then a local model writes a better one in the background when Ollama is running. `woolly handoff` shows it, and MCP apps can save one with the new `handoff` tool. Run `woolly connect claude-code` again to add the new hooks.
 - Share project memory with your team. `woolly share` keeps a repo's project notes in `.woolly/memories` as plain files to commit. Teammates' AI tools start with the same notes, and new notes are written back as they're saved. Only project notes are shared, never personal ones, and notes from a repo are checked for secrets and injected instructions. `--agents-md` also keeps a Project notes section in AGENTS.md for tools without MCP.
 
-## 0.10.0
+## 0.10.0 (2026-11-12)
 
 - The Woolly app. `woolly ui` opens a new app with Home (your memories at a glance, with a chart of what apps saved each day), Memories (add, search, edit in place, forget), Apps (connect Claude, Cursor, VS Code and more with one click) and Settings (Ollama, sync, conflicts, history, trash and activity).
 - A Mac app in preview wraps the same screens, with a menu bar icon. Download `Woolly-mac.dmg` from the release. It isn't signed yet, so the first time you open it, go to System Settings → Privacy & Security and choose Open Anyway.
 - `woolly learn` no longer saves anything from a message that only asks questions.
 - New API endpoints for the app: `GET /api/apps`, `POST /api/apps/{id}/connect` and `/disconnect`, `GET /api/settings`, and `POST /api/sync/init`, `/join`, `/now`, `/leave`.
 
-## 0.9.0
+## 0.9.0 (2026-11-11)
 
 - Smart memory. `woolly learn` uses a model running in Ollama to pick out facts from a conversation or any text. A fact on the same subject as an older one replaces it, like a new city or a new editor, and repeats are skipped. Facts are saved as things an AI figured out, so they never overrule what you said yourself, and secrets and instructions are still refused. Also in the API (`POST /api/learn`) and Python (`w.learn(...)`). The default model is `qwen2.5:3b`; set `WOOLLY_LLM_MODEL` to change it. See [Smart memory](https://usewoolly.com/docs/learn).
 - The proxy uses the model to save facts from your chats when it's available.
@@ -221,14 +224,14 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - Forgetting and restoring a memory now update its time, so sync knows it's the newest change.
 - Python package 0.3.0 adds `learn()`.
 
-## 0.8.0
+## 0.8.0 (2026-11-11)
 
 - Claude Desktop can install Woolly with a double-click: download `woolly.mcpb` from the latest release. It holds Woolly for macOS, Windows and Linux.
 - Woolly is listed on the official MCP Registry as `io.github.rjcuff/woolly`.
 - Projects. Facts about a codebase can belong to that project, and facts about you stay global. Apps working in a git repo see your memories plus that project's, and nothing from other projects. Keys only clash within a project. Use `--project` on `remember`, `recall` and `list`, `project` in the API and Python package, and the project picker on the review page. See [Projects](https://usewoolly.com/docs/projects).
 - The profile only lists facts about you. Project notes are shown separately.
 
-## 0.7.0
+## 0.7.0 (2026-11-11)
 
 - Memory that loads by itself. `woolly connect` adds a startup hook to Claude Code, so each session starts with your profile and the notes about the project you're in. `woolly context` prints what it loads. `woolly disconnect` removes the hook.
 - Every memory records the app that saved it, like Claude Code, Cursor, the proxy or the command line. The review page shows it as "via Cursor".
@@ -236,7 +239,7 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - Apps using the local API can name themselves with the `X-Woolly-Client` header. The Python package sends "Python app" by default, or the `app` you pass to `Woolly()`.
 - `woolly doctor` says whether Claude Code loads your profile at startup.
 
-## 0.6.0
+## 0.6.0 (2026-11-11)
 
 - `woolly connect` adds Woolly to Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode in one step. It keeps the rest of each config and saves a backup first. `woolly disconnect` undoes it.
 - `woolly service install` runs Woolly in the background and starts it at login, like Ollama. It uses a LaunchAgent on macOS, a systemd user service on Linux and a startup entry on Windows, none of which need admin rights.
@@ -245,18 +248,18 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - `woolly update` updates Woolly to the latest version and verifies the download. It's the only command that contacts the internet, and only when you run it.
 - The website shows the GitHub star count in the nav once it passes 100.
 
-## 0.5.0
+## 0.5.0 (2026-11-10)
 
 - New Python package: `pip install woolly-ai`. Save, recall and add memories to prompts from your own apps. See [Python](https://usewoolly.com/docs/python).
 - New README and docs introduction.
 
-## 0.4.0
+## 0.4.0 (2026-11-10)
 
 - `woolly proxy` gives memory to Ollama and to apps that use the OpenAI or Anthropic API. It adds relevant memories to each chat and saves facts you state.
 - Windows install script: `irm https://usewoolly.com/install.ps1 | iex`.
 - Homebrew: `brew install rjcuff/tap/woolly`.
 
-## 0.3.0
+## 0.3.0 (2026-11-10)
 
 ### Security
 
@@ -279,17 +282,17 @@ Memory that knows when it's wrong. Project facts now point at the code they're a
 - `go install` builds now report the right version.
 - The install script creates its install folder if it doesn't exist.
 
-## 0.2.1
+## 0.2.1 (2026-11-10)
 
 - The project moved to github.com/rjcuff/woolly and usewoolly.com. Old links redirect.
 
-## 0.2.0
+## 0.2.0 (2026-11-10)
 
 - `woolly ui` opens a review page to add, search, edit and forget memories, resolve conflicts and copy your profile.
 - `woolly profile` and the `get_profile` tool give a short summary of what Woolly knows about you.
 - Passwords, API keys and other secrets are refused.
 
-## 0.1.0
+## 0.1.0 (2026-11-10)
 
 - First release: remember, recall, list, forget, conflicts and resolve.
 - `woolly import` for ChatGPT and Claude exports.

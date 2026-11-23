@@ -1,0 +1,13 @@
+{
+  "name": "woolly",
+  "version": "0.21.0",
+  "description": "Checks CLAUDE.md, AGENTS.md, rules files and Claude Code memory for lines that name code a commit removed or renamed. Needs the free woolly command: https://usewoolly.com/docs/quickstart",
+  "author": {
+    "name": "Ryan Cuff",
+    "url": "https://usewoolly.com"
+  },
+  "homepage": "https://usewoolly.com",
+  "repository": "https://github.com/rjcuff/woolly",
+  "license": "MIT",
+  "keywords": ["claude-md", "agents-md", "stale", "memory", "context"]
+}

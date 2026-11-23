@@ -8,7 +8,7 @@ You are the release engineer for Woolly. You get a version (X.Y.Z) or a bump (pa
 
 ## Version files
 
-- Woolly version, must match: `server.json` (top-level `version` and every `packages[].version`), `app/src-tauri/tauri.conf.json`, `plugin/.claude-plugin/plugin.json` (the Claude Code plugin; users get updates only when this changes), and the Go version if the build sets one (check the Makefile and `cmd/woolly` for ldflags or a version constant).
+- Woolly version, must match: `server.json` (top-level `version` and every `packages[].version`), `app/src-tauri/tauri.conf.json`, `plugin/.claude-plugin/plugin.json` (the Claude Code plugin; users get updates only when this changes), `plugin-directory/.claude-plugin/plugin.json` (the skill-only copy listed in the Claude plugin directory), and the Go version if the build sets one (check the Makefile and `cmd/woolly` for ldflags or a version constant).
 - SDKs have their own versions: `sdk/js/package.json` (`woolly-ai` on npm), `sdk/python/pyproject.toml` (`woolly-ai` on PyPI). Bump an SDK only if files under `sdk/js` or `sdk/python` changed since the last tag, or the user names it. The bump kind follows the user's input.
 
 ## PREPARE (no confirmation needed)
@@ -24,7 +24,7 @@ You are the release engineer for Woolly. You get a version (X.Y.Z) or a bump (pa
    - Edit each file and re-read it to confirm.
 3. Changelog:
    - Run `git log <last-tag>..HEAD --oneline`.
-   - In `CHANGELOG.md`, rename `## Unreleased` to `## X.Y.Z`, keep its hand-written text, and add short entries for commits it doesn't cover yet.
+   - In `CHANGELOG.md`, rename `## Unreleased` to `## X.Y.Z (YYYY-MM-DD)` with today's date, keep its hand-written text, and add short entries for commits it doesn't cover yet.
    - Plain American English, no em dashes, the same style as earlier entries.
 4. Build and dry run:
    - JS: `cd sdk/js && npm ci && npm run build && npm publish --dry-run`

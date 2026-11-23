@@ -120,3 +120,45 @@ func TestPluginInstalled(t *testing.T) {
 		t.Error("an unreadable file should not count")
 	}
 }
+
+// plugin-directory/ is the copy submitted to the Claude plugin directory. It
+// must stay skill-only (no MCP server, no hooks) and match plugin/.
+func TestDirectoryPluginMatchesPlugin(t *testing.T) {
+	root := filepath.Join("..", "..")
+	read := func(parts ...string) []byte {
+		t.Helper()
+		raw, err := os.ReadFile(filepath.Join(append([]string{root}, parts...)...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+	type manifest struct {
+		Name       string          `json:"name"`
+		Version    string          `json:"version"`
+		MCPServers json.RawMessage `json:"mcpServers"`
+		Hooks      json.RawMessage `json:"hooks"`
+	}
+	var full, dir manifest
+	if err := json.Unmarshal(read("plugin", ".claude-plugin", "plugin.json"), &full); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(read("plugin-directory", ".claude-plugin", "plugin.json"), &dir); err != nil {
+		t.Fatal(err)
+	}
+	if dir.Name != full.Name || dir.Version != full.Version {
+		t.Errorf("plugin-directory is %s %s, plugin is %s %s", dir.Name, dir.Version, full.Name, full.Version)
+	}
+	if dir.MCPServers != nil || dir.Hooks != nil {
+		t.Error("plugin-directory must not declare MCP servers or hooks")
+	}
+	for _, p := range []string{".mcp.json", filepath.Join("hooks", "hooks.json")} {
+		if _, err := os.Stat(filepath.Join(root, "plugin-directory", p)); err == nil {
+			t.Errorf("plugin-directory must not have %s", p)
+		}
+	}
+	skill := filepath.Join("skills", "woolly-check", "SKILL.md")
+	if string(read("plugin", skill)) != string(read("plugin-directory", skill)) {
+		t.Error("plugin-directory woolly-check skill differs from plugin/")
+	}
+}

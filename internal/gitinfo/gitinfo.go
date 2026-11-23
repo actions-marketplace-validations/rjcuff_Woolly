@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -364,12 +365,20 @@ func Removals(dir, since string, want map[string]bool, pathspec []string, deadli
 	if err := cmd.Start(); err != nil {
 		return out, false
 	}
-	sc := bufio.NewScanner(pipe)
-	sc.Buffer(make([]byte, 1<<20), 1<<20)
+	r := bufio.NewReaderSize(pipe, 64<<10)
 	var cur Change
 	skipFile := false
-	for sc.Scan() {
-		l := sc.Bytes()
+	readErr := error(nil)
+	for {
+		// A single huge line (a minified or generated file) must not stop
+		// the read: git would block on a full pipe until the deadline.
+		l, err := readLine(r, 1<<20)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				readErr = err
+			}
+			break
+		}
 		switch {
 		case bytes.HasPrefix(l, []byte("@@@")):
 			f := strings.SplitN(string(l[3:]), " ", 2)
@@ -406,6 +415,37 @@ func Removals(dir, since string, want map[string]bool, pathspec []string, deadli
 			}
 		}
 	}
+	if readErr != nil {
+		cancel() // stop git rather than leave it blocked on the pipe
+	}
 	err = cmd.Wait()
-	return out, ctx.Err() == nil && err == nil
+	return out, readErr == nil && ctx.Err() == nil && err == nil
+}
+
+// readLine returns the next line without its newline. A line longer than
+// max is cut to its first max bytes and the rest is skipped. At the end of
+// the input it returns the last partial line, then io.EOF.
+func readLine(r *bufio.Reader, max int) ([]byte, error) {
+	var line []byte
+	for {
+		chunk, err := r.ReadSlice('\n')
+		if len(line) < max {
+			room := max - len(line)
+			if len(chunk) > room {
+				line = append(line, chunk[:room]...)
+			} else {
+				line = append(line, chunk...)
+			}
+		}
+		switch {
+		case err == nil:
+			return bytes.TrimSuffix(line, []byte("\n")), nil
+		case errors.Is(err, bufio.ErrBufferFull):
+			continue
+		case errors.Is(err, io.EOF) && len(line) > 0:
+			return line, nil
+		default:
+			return nil, err
+		}
+	}
 }
