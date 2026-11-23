@@ -28,10 +28,13 @@ woolly check
 No setup, no account, no model. Woolly reads CLAUDE.md and the files it imports, AGENTS.md, Claude Code rules, skills and subagents, Cursor, Windsurf and Cline rules, Copilot instructions, Claude Code's auto memory, Codex memories and claude-mem, and flags every line that names a function, file or script the code no longer has, with the commit that changed it.
 
 ```
-Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b0427.
-  .github/copilot-instructions.md:30  Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`
-    src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json in 791d23899 (2026-05-25)
-1 line names code that's gone. Your agents still read it as true.
+Checked 1857 lines in AGENTS.md (3 files), .github/copilot-instructions.md, Claude Code commands (2 files), Claude Code skills (7 files) and Cline rules (8 files) against 34c104e.
+  .github/copilot-instructions.md:30  Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`…
+    src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json, which is gone now too in 791d238996 (2026-05-25)
+  .github/copilot-instructions.md:32  For Responses API providers: add to `isNextGenModelProvider()` in `src/…
+    isNextGenModelProvider was removed from apps/vscode/src/utils/model-utils.ts in 6cdd882acb (2026-06-25)
+  ...
+62 lines name code that's gone. Your agents still read them as true.
 ```
 
 `woolly check --fix` rewrites renamed names and moved paths for you. On Windows, install with `irm https://usewoolly.com/install.ps1 | iex`. [Check your agent files](https://usewoolly.com/docs/memory-files)
