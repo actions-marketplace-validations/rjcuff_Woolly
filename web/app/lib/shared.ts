@@ -22,7 +22,10 @@ export const teamUrl = 'https://team.usewoolly.com';
 export const teamInstallUrl = 'https://github.com/apps/woolly-team/installations/new';
 export const teamLoginUrl = `${teamUrl}/login`;
 /** Where the Enterprise plan's contact link goes. */
-export const teamSalesUrl = `${githubUrl}/issues/new?title=Woolly+Team+Enterprise`;
+// Where paying customers and Enterprise questions go. A personal address
+// for now; swap it for a business one here.
+export const contactEmail = 'ryan.cuff@icloud.com';
+export const teamSalesUrl = `mailto:${contactEmail}?subject=Woolly%20Team%20Enterprise`;
 export const linkedinUrl = 'https://www.linkedin.com/company/usewoolly';
 export const productHuntUrl =
   'https://www.producthunt.com/products/woolly?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-woolly';

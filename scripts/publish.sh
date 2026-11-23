@@ -46,7 +46,7 @@ existing=$(curl -fsS -H "Authorization: Bearer $token" -H "Accept: application/v
   "https://api.github.com/repos/$repo/releases/tags/$tag" 2>/dev/null || true)
 if [ -n "$existing" ]; then
   id=$(printf '%s' "$existing" | python3 -c 'import json, sys; print(json.loads(sys.stdin.read(), strict=False)["id"])')
-  uploaded=$(printf '%s' "$existing" | python3 -c 'import json, sys; print("\n".join(a["name"] for a in json.loads(sys.stdin.read(), strict=False)["assets"]))')
+  uploaded=$(printf '%s' "$existing" | python3 -c 'import json, sys; print("\n".join(a["name"] for a in json.loads(sys.stdin.read(), strict=False)["assets"] if a.get("state") == "uploaded"))')
   echo "Release $tag already exists, finishing its uploads."
 else
   id=$(curl -fsS -X POST \

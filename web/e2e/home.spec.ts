@@ -115,7 +115,9 @@ test('the Teams link opens the Woolly Team page', async ({ page, isMobile }) => 
   const pricing = page.getByRole('region', { name: 'Pricing' });
   for (const price of ['$0', '$99', '$299', 'Custom']) await expect(pricing).toContainText(price);
   for (const link of await pricing.getByRole('link', { name: 'Get started' }).all()) await expect(link).toHaveAttribute('href', install);
-  await expect(pricing.getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', /issues\/new\?title=Woolly\+Team\+Enterprise$/);
+  await expect(pricing.getByRole('link', { name: 'Talk to us' })).toHaveAttribute('href', 'mailto:ryan.cuff@icloud.com?subject=Woolly%20Team%20Enterprise');
+  await expect(pricing).not.toContainText('Self-hosted');
+  await expect(pricing.getByRole('link', { name: 'subscription terms' })).toHaveAttribute('href', '/terms#woolly-team');
   await expect(page.getByRole('region', { name: 'Get started' }).getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', 'https://team.usewoolly.com/login');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://usewoolly.com/og/team.png');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);

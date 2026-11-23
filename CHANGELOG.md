@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.1
+
+A fix so AI apps can't overrule what you saved, and Woolly Team's subscription terms.
+
+- An AI app or a script editing a memory you saved through `PATCH /api/memories/{id}` (the `update` method in the Python and JavaScript SDKs) no longer changes it. New text is saved as a separate version that waits as a conflict for you to pick, like `PUT /v1/memories/{id}` already did. Changing the key, tags, project, type, sources or confidence of your memory returns 403. An app giving one of its own memories the same key as a fact you saved no longer replaces your fact; its memory becomes a conflict instead. The review page and the command line still edit anything.
+- The terms page has a Woolly Team subscriptions section: monthly billing, sales tax, cancelling, a 14 day refund on the first payment, and a private contact email. The Enterprise plan no longer lists a self-hosted dashboard or single sign-on, and "Talk to us" sends an email instead of opening a public GitHub issue.
+- `scripts/publish.sh` skips folders in `dist/` and can finish a release whose uploads stopped partway, only skipping files GitHub finished uploading.
+
 ## 0.20.0
 
 Woolly as a Claude Code plugin, MCP over a web address, sync through a folder you already use, and plans for Woolly Team.
@@ -23,16 +31,13 @@ Woolly as a Claude Code plugin, MCP over a web address, sync through a folder yo
 
 ## 0.19.0
 
-A new look for usewoolly.com, and a page for Woolly Team.
+A new look for usewoolly.com, a page for Woolly Team, and safer, steadier memory for the agents you build.
 
 - The website is an ice age picture book now, with a sky hero full of woolly mammoths, a soft serif for headings, light blue cards and one night blue for every action. The homepage has the apps Woolly works with, who it's for, the benchmark numbers, questions and a closing call to action. Download, Privacy, Terms, the docs and the not found page match it.
 - Phones get a menu button that opens the links in a drawer.
 - Woolly Team has its own page at usewoolly.com/team, with how it works, pricing and questions. team.usewoolly.com sends people who aren't signed in there.
 - The favicon, app icons, link previews and brand images are night blue.
 - The Product Hunt banner and the Bluesky links are gone.
-
-Safer, steadier memory for the agents you build.
-
 - Memories can be a `preference`, a `procedure` or an `episode`, as well as the project kinds. The MCP `remember` tool takes them for personal memory too, and `recall` takes `type` to get only some kinds. In the memory API, add messages with `memory_type` and search with `filters.type`; results include `type`. The Python and JavaScript SDKs take `type` in `recall` and `search` and `memory_type`/`memoryType` in `add`.
 - Woolly learns which memories help. Each recall and session brief counts as a use, and AI apps can rate a memory with the new MCP `rate_memory` tool or `POST /v1/memories/{id}/feedback` (`feedback` in the SDKs). Helpful memories rank a little higher, unhelpful ones a little lower; nothing is hidden or deleted. Counts stay in `usage.json` on your device. Older `usage.json` files still load; going back to an older Woolly resets the counts and votes.
 - Search ranks what you said above what an AI guessed, using each memory's confidence, skips near copies of a better result so the top few say different things, and drops weak meaning-only matches. `woolly recall --explain` shows how each result was scored, and API results include `score_parts`.
@@ -46,7 +51,6 @@ Safer, steadier memory for the agents you build.
 - `make eval` runs a fast recall quality check and a table of memory lifecycle cases, with no Ollama needed.
 - The JavaScript package (`woolly-ai` 0.4.0 on npm) and the Python package (`woolly-ai` 0.6.0 on PyPI) have all of the above: `type`, `memory_type`/`memoryType`, `feedback`, `link`, `scoped_conflicts`/`scopedConflicts` and `resolve_scoped`/`resolveScoped`. Their `resolve` methods can now raise an error, as described below.
 - Both packages have a new description on npm and PyPI that says Woolly is project memory for coding agents.
-
 - AI apps can't skip the check for planted instructions by saying a memory came from you. The `remember` tool, `/api/remember` from scripts and the SDKs, and edits through `PUT /v1/memories/{id}` and `PATCH /api/memories/{id}` now refuse text that reads like instructions to an AI, whatever source they give. What you type on the command line or the review page is saved as before.
 - When an AI app or a script says a fact came from you, it's saved with source `import` and the tag `user-stated`. It still beats an AI's guess, but it can't replace a fact you saved yourself; it waits as a conflict. Before, an AI app could replace any fact you saved this way.
 - An AI app or a script can no longer resolve a conflict in favor of the less trusted memory, or bring back a version that was replaced or retired. `resolve_conflict` and `/api/resolve` return an error; the review page and `woolly resolve` still let you pick either. The Python and JavaScript `resolve` methods raise that error too.
