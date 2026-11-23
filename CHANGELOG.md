@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- The Python package (`woolly-ai` 0.6.1 on PyPI) has the new README describing Woolly as project memory for coding agents, and ships its MIT LICENSE file. Its code is unchanged.
+
+## 0.21.0
+
+`woolly check` reads more of the files your agents follow, and marks stale lines right in pull requests.
+
+- `woolly check` now also reads Claude Code rules (`.claude/rules`), skills (`.claude/skills/*/SKILL.md`), commands (`.claude/commands`) and subagents (`.claude/agents`), files CLAUDE.md imports with `@path` (relative to the importing file, up to five hops, inside the repo only), Copilot's `.github/instructions/*.instructions.md`, Windsurf's `.windsurf/rules`, Cline's `.clinerules`, Kiro's `.kiro/steering`, `AGENTS.local.md`, `AGENT.md` and `WARP.md`.
+- `woolly check --format compact` prints one `path:line: message` line per finding, for editors, Vim's quickfix list and VS Code problem matchers. `--format github` prints GitHub Actions annotations, and `--annotations-file <path>` writes them next to another format.
+- The GitHub Action marks each stale line in the pull request's changed files. Lines the change made stale are warnings, and ones already stale are notices. Turn it off with `annotations: "false"`.
+- The README demo shows `woolly check` and `--fix` on a real refactor. The Quickstart starts with `woolly check`, and `woolly help` lists check, review, why, init and connect first.
+- Every connected agent now hears that Woolly is project memory that knows when a fact goes stale. The Claude Desktop extension lists all 12 tools.
+- The README leads with `woolly check`, shows results from 20 real repos, and lists the Woolly Team plans.
+- The Woolly Team founding pilot has ended. The team page FAQ now points to the Free plan as the way to try it.
+- CONTRIBUTING lists what `make check` needs. There's a Code of Conduct, a pull request template and an issue template for a wrong stale flag.
+- The homepage hero is taller on laptops and desktops, and the picture grows with it. Tablets and phones are unchanged.
+- The Python and JavaScript SDK READMEs have clearer wording, and the Python SDK folder has its own LICENSE file.
+- The repo has a read-only security review agent for Claude Code in `.claude/agents/security.md`.
+
 ## 0.20.1
 
 A fix so AI apps can't overrule what you saved, and Woolly Team's subscription terms.

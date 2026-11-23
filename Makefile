@@ -28,7 +28,6 @@ ui-test:
 web-test:
 	cd web && npm run types:check && npm run test:e2e
 
-# Run this before every commit.
 # Tests the Python package against a real woolly server.
 py-test: build
 	cd sdk/python && python3 -m unittest discover -s tests
@@ -37,6 +36,7 @@ py-test: build
 js-test: build
 	cd sdk/js && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npm test
 
+# Run this before every pull request that touches more than Go.
 check: test web-test ui-test py-test js-test
 
 # make release VERSION=0.1.1

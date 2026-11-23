@@ -68,8 +68,8 @@ const QUESTIONS = [
     answer: 'Private repositories you add to the app. Public repositories are free on every plan, and so are members. If you go over, the extra private repositories wait, with their checks kept, until you upgrade.',
   },
   {
-    question: 'We were in the pilot. What happens now?',
-    answer: 'Pilot organizations keep Business free until the pilot ends, and get half off their first year if they subscribe by then.',
+    question: 'Can we try it before we pay?',
+    answer: 'Yes. The Free plan covers unlimited public repositories and 1 private one, with no time limit. Upgrade to Team or Business when you want more private repositories.',
   },
   {
     question: 'How do we remove our data?',

@@ -1,4 +1,5 @@
-// Command woolly is a local-first memory for your AI tools.
+// Command woolly is project memory for coding agents that knows when a
+// fact goes stale, and checks the agent files they already read.
 //
 // Ollama runs your models. Woolly remembers for them.
 package main
@@ -54,11 +55,14 @@ func init() {
 const usage = `Woolly: project memory your coding agents can trust. Local, and it knows when a fact goes stale.
 
 Usage:
-  woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]
-                               [--type hardware] [--source-ref main/pins.h:12-18]
-  woolly check [--fix] [--json] [--quiet]  check facts, CLAUDE.md, AGENTS.md and agents' memory against the code
+  woolly check [--fix] [--json] [--quiet] [--format compact|github]
+                               check facts, CLAUDE.md, AGENTS.md and agents' memory against the code
   woolly review                confirm, fix or retire stale facts
   woolly why <file[:line|#name]> [--json]  the decisions and facts behind this code, and if they still hold
+  woolly init [--hooks] [--export claude,agents] [--no-capture]  keep project memory in this repo for your team
+  woolly connect [app...]      add Woolly to Claude, Cursor, VS Code, Codex, Gemini and more
+  woolly remember <text> [--key k] [--tags a,b] [--project p] [--source user|agent|import] [--allow-secret]
+                               [--type hardware] [--source-ref main/pins.h:12-18]
   woolly caught [--badge]      the stale facts Woolly kept away from your agents in this repo
   woolly learn [text]          pick out facts from text or a conversation with a local model
   woolly dream [--project p] [--dry-run]  tidy memory and learn lessons from past sessions
@@ -75,12 +79,10 @@ Usage:
   woolly log [--app name] [-n 50]  what each app saved, read and deleted
   woolly context               print what Woolly knows, for an app to read at startup
   woolly handoff               where you left off in this project
-  woolly init [--hooks] [--export claude,agents] [--no-capture]  keep project memory in this repo for your team
   woolly project [edit]        show or edit this repo's project memory
   woolly decide <choice> [--why ...] [--rejected "X: reason"] [--source-ref src/auth.ts#requireUser]  save a decision
   woolly resolve <id>          keep this memory as the current fact for its key
   woolly ui                    open the review page in your browser
-  woolly connect [app...]      add Woolly to Claude, Cursor, VS Code, Codex, Gemini and more
   woolly disconnect [app...]   remove it again
   woolly sync [init|join|folder|status]  keep memories in step between your devices
   woolly service install       run Woolly in the background, starting at login
@@ -92,10 +94,8 @@ Usage:
   woolly doctor                check your setup
   woolly version
 
-Memories are plain Markdown files in ~/.woolly/memories (set WOOLLY_HOME to move them).
-If Ollama is running, Woolly uses it for semantic search; otherwise keyword search.
-
-Connect your AI apps:  woolly connect
+Start in a repo:  woolly check
+Memories are plain Markdown files in ~/.woolly (set WOOLLY_HOME to move them).
 `
 
 func main() {

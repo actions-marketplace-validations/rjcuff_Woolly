@@ -15,7 +15,7 @@ python3 bench/agentfiles/run.py
 | Lines checked | 2,990 |
 | Repos with a line that names code that's gone | 4 of 20 |
 | Lines flagged | 11 |
-| Flags that were right | 11 of 11 ([verdicts](agentfiles/verdicts.json), checked by Claude against each repo) |
+| Flags that were right | 11 of 11 ([verdicts](agentfiles/verdicts.json), checked against each repo by Claude, then by hand) |
 | Median `woolly check` time | 0.67 s |
 
 ## Stale facts

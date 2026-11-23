@@ -8,39 +8,52 @@ Woolly flags lines in CLAUDE.md, AGENTS.md, Cursor rules and agent memory that a
 
 [![Release](https://img.shields.io/github/v/release/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
+[![CI](https://github.com/rjcuff/woolly/actions/workflows/ci.yml/badge.svg)](https://github.com/rjcuff/woolly/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/stargazers)
 
-[Website](https://usewoolly.com) · [Docs](https://usewoolly.com/docs) · [Download for Mac and Windows](https://usewoolly.com/download) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
+[Website](https://usewoolly.com) · [Docs](https://usewoolly.com/docs) · [Download for Mac and Windows](https://usewoolly.com/download) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Glama](https://glama.ai/mcp/servers/@rjcuff/woolly)
 
-![Woolly saving notes for two projects, Claude Code loading only the acme notes at startup, and woolly log showing what each app did](docs/demo.gif)
+![woolly check flagging three lines in a drone repo's CLAUDE.md after a refactor, then woolly check --fix rewriting the renamed function and moved file](docs/demo.gif)
 
 </div>
 
-## The problem
-
-You switch between Claude Code, Cursor and Codex on the same repo, and each one starts from zero. You explain the pin map again, the config value you settled on, the gotcha that cost you a day. Tools that do remember have a worse problem. They keep repeating facts the code stopped backing up weeks ago, and your agent follows them with confidence.
-
-Woolly is project memory your coding agents can trust. It runs on your machine, and it knows when a fact goes stale. Every fact points at the file, function or lines it's about. When that code changes, Woolly marks the fact stale instead of letting your agent follow it.
-
-```
-$ woolly check
-Checked 24 facts in drone against 4e1c9a2.
-  stale  imu_read_accel returns raw counts; divide by 16384 for g
-         main/imu.c: imu_read_accel was renamed to imu_read_accel_g in 4e1c9a2
-1 fact went stale. Run woolly review to confirm, fix or retire it.
-```
-
-## Get started
+## Try it on your repo
 
 ```sh
 curl -fsSL https://usewoolly.com/install.sh | sh
+cd your-repo
+woolly check
+```
+
+No setup, no account, no model. Woolly reads CLAUDE.md and the files it imports, AGENTS.md, Claude Code rules, skills and subagents, Cursor, Windsurf and Cline rules, Copilot instructions, Claude Code's auto memory, Codex memories and claude-mem, and flags every line that names a function, file or script the code no longer has, with the commit that changed it.
+
+```
+Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b0427.
+  .github/copilot-instructions.md:30  Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`
+    src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json in 791d23899 (2026-05-25)
+1 line names code that's gone. Your agents still read it as true.
+```
+
+`woolly check --fix` rewrites renamed names and moved paths for you. On Windows, install with `irm https://usewoolly.com/install.ps1 | iex`. [Check your agent files](https://usewoolly.com/docs/memory-files)
+
+## The problem
+
+Your agents follow the notes you give them. CLAUDE.md, AGENTS.md, Cursor rules and memory tools like claude-mem all keep repeating facts the code stopped backing up weeks ago, and nothing checks them. A refactor renames a function, the note keeps the old name, and your agent follows it with confidence.
+
+Switching between Claude Code, Cursor and Codex makes it worse. Each one starts from zero, so you explain the same gotchas again, or write them into notes that go stale.
+
+Woolly is project memory your coding agents can trust. It runs on your machine, and it knows when a fact goes stale. Every fact points at the file, function or lines it's about. When that code changes, Woolly marks the fact stale instead of letting your agent follow it.
+
+## Use it in every session
+
+```sh
 woolly connect
 woolly init --hooks   # in your repo
 ```
 
-Claude Code, Cursor, Codex, Gemini CLI, VS Code, Windsurf, Claude Desktop, LM Studio, opencode and AnythingLLM now share one memory for the repo, and every commit checks it against the code. On Windows, run `irm https://usewoolly.com/install.ps1 | iex` instead.
+Claude Code, Cursor, Codex, Gemini CLI, VS Code, Windsurf, Claude Desktop, LM Studio, opencode and AnythingLLM now share one memory for the repo, and every commit checks it against the code. Each session starts with the lines that went out of date, so the agent knows not to follow them.
 
-Using Claude Code? After installing `woolly`, you can add it as a plugin instead of running `woolly connect`:
+Using Claude Code? After installing `woolly`, you can add it as a plugin instead of running `woolly connect`.
 
 ```sh
 claude plugin marketplace add rjcuff/woolly
@@ -48,15 +61,6 @@ claude plugin install woolly@woolly
 ```
 
 Prefer an app? [Download Woolly for Mac or Windows](https://usewoolly.com/download). Also on [Homebrew and Linux](https://usewoolly.com/docs/quickstart).
-
-## Check the notes your agents already read
-
-```sh
-cd your-repo
-woolly check
-```
-
-No setup. Woolly reads CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, Claude Code's auto memory, Codex memories and claude-mem, and flags every line that names a function, file or script the code no longer has, with the commit that changed it. `woolly check --fix` rewrites renamed names and moved paths for you. [Check your agent files](https://usewoolly.com/docs/memory-files)
 
 ## What you get
 
@@ -103,15 +107,30 @@ Run it in a repo and commit `.woolly/`. The first time, it brings in what your C
 
 [Project memory](https://usewoolly.com/docs/project-memory)
 
-## Fast on a laptop
+## Woolly Team
 
-On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark, Woolly had the answer in its top 20 results for 83.2% of 382 questions, 95.6% for questions about dates and time, in a median of 19 ms. It runs entirely on a laptop with Ollama. [Run it yourself](https://usewoolly.com/docs/benchmark)
+[Woolly Team](https://usewoolly.com/team) is an optional GitHub App that watches every repository in your organization and shows stale agent notes in one review queue. It reads results from the checks you run in your own GitHub Actions, never your memories or code.
+
+| Plan | Price | Private repositories |
+| --- | --- | --- |
+| Free | $0 | 1, plus unlimited public |
+| Team | $99 a month | 10 |
+| Business | $299 a month | 50, with a weekly Slack digest |
+| Enterprise | Custom | Unlimited, invoiced yearly |
+
+One flat price per organization, no per-seat fees. The open source check stays free in every plan.
+
+## Tested on real repos
+
+We ran `woolly check` on the agent files of 20 well-known open source repos, 2,990 lines in all. It flagged 11 lines in 4 repos, and all 11 named code that really was gone. The median check took 0.67 seconds. [Run it yourself](bench/RESULTS.md)
+
+On 50 scripted changes to a small drone firmware repo, Woolly flagged 28 of the 30 facts that went stale, with no false alarms. Its search also does well on the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark. [Benchmarks](https://usewoolly.com/docs/benchmark)
 
 ## Questions
 
 **Do I need Ollama?** No. Woolly works on its own, and stale detection never needs a model. With Ollama running, it also searches by meaning and picks out decisions and gotchas when a session ends.
 
-**How is this different from other memory tools?** Most remember what a conversation said. Woolly also checks it against the code: every project fact cites its source, and when the code changes, the fact is flagged instead of trusted. It runs on your own machine with no cloud, works with every agent at once, and uses a local model only.
+**How is this different from other memory tools?** Most remember what a conversation said. Woolly also checks it against the code. Every project fact cites its source, and when the code changes, the fact is flagged instead of trusted. It runs on your own machine with no cloud, works with every agent at once, and uses a local model only. Some agents can now audit their own instruction files with a model, inside one session. Woolly needs no model, names the commit that broke each line, fixes renames with `--fix`, runs in CI on every pull request, and also reads Codex memories and claude-mem.
 
 **Is this a memory API for my app?** It has one, shaped like mem0's, with [JavaScript](https://usewoolly.com/docs/javascript) and [Python](https://usewoolly.com/docs/python) packages. But Woolly is built first for your own coding agents. If you're adding memory to a product with thousands of users, a hosted memory API is the better fit.
 
@@ -121,7 +140,7 @@ On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conver
 
 Woolly ships weekly, and every release is in the [changelog](CHANGELOG.md). Issues, ideas and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how the repo is laid out and how to run the tests.
 
-If Woolly saved you from re-explaining your stack one more time, a star helps other people find it.
+If `woolly check` found a line your agent was still following, a star helps other people find it.
 
 - [Docs](https://usewoolly.com/docs) and [all commands](https://usewoolly.com/docs/cli)
 - [Security](SECURITY.md)

@@ -30,7 +30,7 @@ import (
 
 var supportedVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
-const instructions = `Woolly is the user's personal, local memory, shared across all of their AI tools.
+const instructions = `Woolly is project memory for this repo that knows when a fact goes stale. Every project fact points at the code it's about, and facts whose code changed are flagged instead of trusted. It also keeps a few personal facts about the user, on their own computer.
 At the start of a task, call "recall" with a short query about the topic to load relevant context.
 When you learn a durable fact (a preference, a decision, a fact about the user or their projects), call "remember".
 Call "get_profile" once at the start of a conversation for a summary of the user.

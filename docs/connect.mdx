@@ -36,7 +36,7 @@ It works with Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gem
 | `woolly connect cursor --agent support-bot` | Give the app only one agent's memories. `--user <id>` does the same for one user |
 | `woolly disconnect` | Remove Woolly from the apps again |
 
-App names: `claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `codex`, `gemini`, `lmstudio`, `opencode`, `anythingllm`.
+The app names are `claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `codex`, `gemini`, `lmstudio`, `opencode`, `anythingllm`.
 
 Claude Code and Codex are set up through their own `claude mcp add` and `codex mcp add` commands. The others are set up by editing their config files.
 
@@ -71,7 +71,7 @@ If a config file has comments, Woolly won't rewrite it. It prints the lines to p
 
 ## Pick up where you left off
 
-When Claude Code compacts a long conversation, or a session ends (including `/clear`), Woolly saves a short handoff note for the project: what you were working on, what got done, what was decided and what's next. The next session starts with it, in Claude Code or any other connected app.
+When Claude Code compacts a long conversation, or a session ends (including `/clear`), Woolly saves a short handoff note for the project, with what you were working on, what got done, what was decided and what's next. The next session starts with it, in Claude Code or any other connected app.
 
 A quick note is saved right away. If Ollama is running with a chat model, Woolly then writes a better summary in the background. Only what you and the assistant wrote is read, never tool output.
 
@@ -109,7 +109,7 @@ To load your profile at startup, add this to `~/.claude/settings.json`:
 
 ### Claude Desktop
 
-The easiest way: download [woolly.mcpb](https://github.com/rjcuff/woolly/releases/latest/download/woolly.mcpb) and double-click it. Claude Desktop installs Woolly as an extension, with nothing else to set up. It works on macOS, Windows and Linux.
+The easiest way is to download [woolly.mcpb](https://github.com/rjcuff/woolly/releases/latest/download/woolly.mcpb) and double-click it. Claude Desktop installs Woolly as an extension, with nothing else to set up. It works on macOS, Windows and Linux.
 
 Or open **Settings → Developer → Edit Config** and add Woolly:
 

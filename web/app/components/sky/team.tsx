@@ -107,7 +107,7 @@ export function TeamPricing({ installUrl, salesUrl }: TeamPricingProps) {
         <p className={cn(LEAD, 'mt-5 max-w-[560px]')}>
           The Woolly check is free and open source in every plan. Plans differ in how many private repositories your dashboard covers.
         </p>
-        <div className="mt-10 grid gap-4 sm:mt-12 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-10 grid gap-4 sm:mt-12 md:grid-cols-2">
           {plans.map((p) => (
             <PlanCard key={p.name} plan={p} />
           ))}

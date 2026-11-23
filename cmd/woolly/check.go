@@ -170,11 +170,24 @@ func cmdCheck(args []string) error {
 	asStatus := fs.Bool("status-json", false, "print counts and file:line pointers as JSON, with no text from memory or code")
 	statusFile := fs.String("status-file", "", "also write the --status-json output to this file")
 	noFooter := fs.Bool("no-footer", false, "with --markdown, leave out the line that links to Woolly")
+	format := fs.String("format", formatText, "how to print agent file findings: text, compact (path:line: message) or github (Actions annotations)")
+	annotations := fs.String("annotations-file", "", "also write agent file findings as GitHub Actions annotations to this file")
 	if _, err := parse(fs, args); err != nil {
 		return err
 	}
 	if *asStatus && (*asJSON || *asMarkdown) {
 		return errors.New("--status-json can't be combined with --json or --markdown; use --status-file to write it alongside them")
+	}
+	switch *format {
+	case formatText, formatCompact, formatGitHub:
+	default:
+		return fmt.Errorf("--format must be text, compact or github, not %q", *format)
+	}
+	if *format != formatText && (*asJSON || *asMarkdown || *asStatus) {
+		return errors.New("--format can't be combined with --json, --markdown or --status-json")
+	}
+	if *format != formatText && *noFiles {
+		return errors.New("--format prints agent file findings, so it can't be combined with --no-memory-files")
 	}
 	cwd := *dir
 	if cwd == "" {
@@ -218,7 +231,7 @@ func cmdCheck(args []string) error {
 			limit = 2 * time.Minute
 		}
 		stopSpin := func() {}
-		if !*hook && !*asJSON && !*asMarkdown && !*asStatus {
+		if !*hook && !*asJSON && !*asMarkdown && !*asStatus && *format == formatText {
 			stopSpin = spin("Reading your agents' memory and the code's history")
 		}
 		ar := a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
@@ -226,7 +239,7 @@ func cmdCheck(args []string) error {
 		if *fix && len(ar.Findings) > 0 {
 			fixed, err := audit.Fix(ar.Findings)
 			for _, f := range fixed {
-				if *asJSON || *asMarkdown || *asStatus {
+				if *asJSON || *asMarkdown || *asStatus || *format != formatText {
 					break
 				}
 				fmt.Printf("%s %s: %s %s %s\n", paint(green, "fixed"), f.Where(), f.What, paint(dim, "->"), f.Fix)
@@ -235,7 +248,7 @@ func cmdCheck(args []string) error {
 				return err
 			}
 			if len(fixed) > 0 {
-				if !*asJSON && !*asMarkdown && !*asStatus {
+				if !*asJSON && !*asMarkdown && !*asStatus && *format == formatText {
 					fmt.Println()
 				}
 				ar = a.auditRepo(r.Dir, r.Project, time.Now().Add(limit))
@@ -271,7 +284,16 @@ func cmdCheck(args []string) error {
 			os.Stdout.Write(b)
 		}
 	}
+	if *annotations != "" && rep.Memory != nil {
+		if err := os.WriteFile(*annotations, []byte(githubFindings(r.Dir, *rep.Memory, strings.TrimSpace(*base))), 0o644); err != nil {
+			return err
+		}
+	}
 	switch {
+	case *format == formatCompact:
+		fmt.Print(compactFindings(*rep.Memory))
+	case *format == formatGitHub:
+		fmt.Print(githubFindings(r.Dir, *rep.Memory, strings.TrimSpace(*base)))
 	case *asStatus:
 		// Printed above.
 	case *asJSON:

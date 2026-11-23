@@ -75,7 +75,7 @@ Good tools for the folder:
 - **Dropbox, iCloud Drive, OneDrive or Google Drive:** any synced folder works. The provider sees only encrypted files.
 - **A private git repo:** Woolly never runs git for you. Commit, push and pull the folder yourself, or with a scheduled job. Each memory is its own file, so two devices rarely change the same one. If git does report a conflict in a `.woolly` file, keep either version. The device that has the newer memory writes it back on its next sync.
 
-Every file in the folder is encrypted and signed with the join code, and file names are scrambled, so whoever holds the folder can't read your memories or their IDs. A file that was changed or doesn't open with your code is skipped, and `woolly sync` says how many. Copies a sync tool makes when two devices change the same file, like `.sync-conflict-` files, are left alone. Keep the code private: anyone with it and the folder can read your memories.
+Every file in the folder is encrypted and signed with the join code, and file names are scrambled, so whoever holds the folder can't read your memories or their IDs. A file that was changed or doesn't open with your code is skipped, and `woolly sync` says how many. Copies a sync tool makes when two devices change the same file, like `.sync-conflict-` files, are left alone. Keep the code private. Anyone with it and the folder can read your memories.
 
 `woolly sync folder <path> --remove` stops syncing through a folder and leaves its files alone. A device that only syncs through folders doesn't listen on the network.
 

@@ -352,3 +352,86 @@ func TestMovedTwice(t *testing.T) {
 		t.Fatalf("findings = %+v", rep.Findings)
 	}
 }
+
+// Claude Code rules, skills, commands and subagents, Copilot's path
+// instructions, Windsurf, Cline and Kiro rules are agent files too.
+func TestMoreAgentFileFormats(t *testing.T) {
+	dir := driftedRepo(t)
+	files := map[string]string{
+		".claude/rules/firmware.md":              "---\npaths: main/**\n---\n- imu_read_accel gives raw counts\n",
+		".claude/skills/flash/SKILL.md":          "---\nname: flash\n---\n- imu_read_accel gives raw counts\n",
+		".claude/commands/check.md":              "- imu_read_accel gives raw counts\n",
+		".claude/agents/reviewer.md":             "- imu_read_accel gives raw counts\n",
+		".github/instructions/c.instructions.md": "- imu_read_accel gives raw counts\n",
+		".windsurf/rules/imu.md":                 "- imu_read_accel gives raw counts\n",
+		".clinerules/imu.md":                     "- imu_read_accel gives raw counts\n",
+		".kiro/steering/imu.md":                  "- imu_read_accel gives raw counts\n",
+		"AGENT.md":                               "- imu_read_accel gives raw counts\n",
+		"WARP.md":                                "- imu_read_accel gives raw counts\n",
+	}
+	for name, text := range files {
+		write(t, dir, name, text)
+	}
+	git(t, dir, "add", ".")
+	rep := Run(dir, Options{})
+	flagged := map[string]string{}
+	for _, f := range rep.Findings {
+		if f.What == "imu_read_accel" {
+			flagged[f.File] = f.Source
+		}
+	}
+	want := map[string]string{
+		".claude/rules/firmware.md":              "Claude Code rules",
+		".claude/skills/flash/SKILL.md":          "Claude Code skills",
+		".claude/commands/check.md":              "Claude Code commands",
+		".claude/agents/reviewer.md":             "Claude Code subagents",
+		".github/instructions/c.instructions.md": "Copilot instructions",
+		".windsurf/rules/imu.md":                 "Windsurf rules",
+		".clinerules/imu.md":                     "Cline rules",
+		".kiro/steering/imu.md":                  "Kiro steering",
+		"AGENT.md":                               "AGENT.md",
+		"WARP.md":                                "WARP.md",
+	}
+	for file, source := range want {
+		if flagged[file] != source {
+			t.Errorf("%s: flagged as %q, want %q", file, flagged[file], source)
+		}
+	}
+	// The frontmatter line in the rule file isn't a note.
+	for _, f := range rep.Findings {
+		if f.File == ".claude/rules/firmware.md" && f.N != 4 {
+			t.Errorf("rule finding on line %d, want 4", f.N)
+		}
+	}
+}
+
+// Files CLAUDE.md imports with @path are read, and their own imports too,
+// but not emails, code spans, home paths or paths outside the repo.
+func TestClaudeImports(t *testing.T) {
+	dir := driftedRepo(t)
+	b, _ := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	write(t, dir, "CLAUDE.md", string(b)+"\nSee @docs/firmware.md and mail ryan@example.md, not `@docs/skip.md`.\n")
+	write(t, dir, "docs/firmware.md", "- Use @deeper.md for more\n")
+	write(t, dir, "docs/deeper.md", "- imu_read_accel gives raw counts\n")
+	write(t, dir, "docs/skip.md", "- imu_read_accel gives raw counts\n")
+	git(t, dir, "add", ".")
+	rep := Run(dir, Options{})
+	got := map[string]bool{}
+	for _, f := range rep.Files {
+		got[f.File] = true
+	}
+	if !got["docs/firmware.md"] || !got["docs/deeper.md"] {
+		t.Fatalf("imports not read: %+v", rep.Files)
+	}
+	if got["docs/skip.md"] || got["example.md"] {
+		t.Fatalf("read a file that wasn't imported: %+v", rep.Files)
+	}
+}
+
+func TestImports(t *testing.T) {
+	text := "@AGENTS.md\nSee @../../outside.md and @/etc/x.md and @~/x.md\n```\n@in-code.md\n```\n- read `@span.md` or @sub/./style.md\n"
+	got := strings.Join(imports("pkg/CLAUDE.md", text), ",")
+	if got != "pkg/AGENTS.md,pkg/sub/style.md" {
+		t.Fatalf("imports = %q", got)
+	}
+}

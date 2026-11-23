@@ -21,6 +21,9 @@ inputs:
   footer:
     description: End the comment with one line that links to Woolly. "false" leaves it out.
     default: "true"
+  annotations:
+    description: Mark each stale line in the pull request's changed files, next to the code. "false" leaves them out. Needs Woolly 0.21.0 or later.
+    default: "true"
   base:
     description: The commit or branch to compare against. Defaults to the pull request's base commit, or the commit before a push.
     default: ""
@@ -113,11 +116,13 @@ runs:
         # Facts were true on the branch this pull request merges into.
         BASE_INPUT: ${{ inputs.base }}
         FOOTER_INPUT: ${{ inputs.footer }}
+        ANNOTATIONS_INPUT: ${{ inputs.annotations }}
         EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       run: |
         report="$RUNNER_TEMP/woolly-report.md"
         status="$RUNNER_TEMP/woolly-status.json"
-        rm -f "$status"
+        annotations="$RUNNER_TEMP/woolly-annotations.txt"
+        rm -f "$status" "$annotations"
         BASE="${BASE_INPUT:-$EVENT_BASE}"
         args=(--markdown --no-backfill)
         if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
@@ -125,13 +130,20 @@ runs:
           git cat-file -e "$BASE^{commit}" 2>/dev/null || git fetch --quiet --no-tags --depth=1 origin "$BASE" || true
           args+=(--base "$BASE")
         fi
+        # Read the help once. Piping it straight into grep -q can kill woolly with
+        # SIGPIPE, which pipefail turns into "flag not supported".
+        help=$(woolly check --help 2>&1 || true)
         # Woolly 0.18.0 and later write the counts as JSON next to the report.
-        if woolly check --help 2>&1 | grep -q -- '--status-file'; then
+        if grep -q -- '--status-file' <<<"$help"; then
           args+=(--status-file "$status")
         fi
         # Woolly 0.20.0 and later can leave out the footer.
-        if [ "$FOOTER_INPUT" = "false" ] && woolly check --help 2>&1 | grep -q -- '--no-footer'; then
+        if [ "$FOOTER_INPUT" = "false" ] && grep -q -- '--no-footer' <<<"$help"; then
           args+=(--no-footer)
+        fi
+        # Woolly 0.21.0 and later mark each stale line in the pull request.
+        if [ "$ANNOTATIONS_INPUT" != "false" ] && grep -q -- '--annotations-file' <<<"$help"; then
+          args+=(--annotations-file "$annotations")
         fi
         set +e
         woolly check "${args[@]}" > "$report"
@@ -179,6 +191,8 @@ runs:
         } >> "$GITHUB_OUTPUT"
         cat "$report" >> "$GITHUB_STEP_SUMMARY"
         cat "$report"
+        # Each line is a workflow command Woolly wrote with its text escaped.
+        if [ -s "$annotations" ]; then cat "$annotations"; fi
 
     - name: Comment on the pull request
       if: inputs.comment == 'true' && github.event.pull_request.number
