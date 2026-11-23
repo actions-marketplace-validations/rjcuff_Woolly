@@ -235,6 +235,8 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'Follow',
     links: [
+      { label: 'Star on GitHub', href: githubUrl },
+      { label: 'Product Hunt', href: 'https://www.producthunt.com/products/woolly' },
       { label: 'LinkedIn', href: linkedinUrl },
     ],
   },
