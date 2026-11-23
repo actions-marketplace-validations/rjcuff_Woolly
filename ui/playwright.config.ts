@@ -17,7 +17,6 @@ if (!process.env.WOOLLY_TEST_HOME) {
   process.env.WOOLLY_TEST_TOKEN = token;
 }
 const home = process.env.WOOLLY_TEST_HOME;
-const token = process.env.WOOLLY_TEST_TOKEN;
 
 export default defineConfig({
   testDir: './e2e',
@@ -25,7 +24,6 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: `http://127.0.0.1:${port}`,
-    extraHTTPHeaders: { Authorization: `Bearer ${token}` },
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },

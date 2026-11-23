@@ -11,17 +11,47 @@ import (
 // A grounded fact points at where it came from in the code, so Woolly can
 // tell when the code changes underneath it.
 
-// Fact types. A project fact has at most one.
+// Memory types. A memory has at most one. The first five are kinds of
+// project fact; the last three are kinds of memory agents keep about a user
+// or a task.
 const (
 	TypeDecision   = "decision"
 	TypeConvention = "convention"
 	TypeGotcha     = "gotcha"
 	TypeBug        = "bug"
 	TypeHardware   = "hardware"
+	// TypePreference is how someone likes things done.
+	TypePreference = "preference"
+	// TypeProcedure is how to do something, step by step.
+	TypeProcedure = "procedure"
+	// TypeEpisode is something that happened, like a session or an incident.
+	TypeEpisode = "episode"
 )
 
-// Types lists every fact type.
-var Types = []string{TypeDecision, TypeConvention, TypeGotcha, TypeBug, TypeHardware}
+// Types lists every memory type.
+var Types = []string{TypeDecision, TypeConvention, TypeGotcha, TypeBug, TypeHardware, TypePreference, TypeProcedure, TypeEpisode}
+
+// ProjectType reports whether t is a kind of project fact, which belongs
+// under a heading in woolly.md.
+func ProjectType(t string) bool {
+	k, _ := NormalizeType(t)
+	switch k {
+	case TypeDecision, TypeConvention, TypeGotcha, TypeBug, TypeHardware:
+		return true
+	}
+	return false
+}
+
+// NormalizeTypes keeps the known types in a list, normalized.
+func NormalizeTypes(ts []string) []string {
+	var out []string
+	for _, t := range ts {
+		if k, ok := NormalizeType(t); ok {
+			out = append(out, k)
+		}
+	}
+	return out
+}
 
 // NormalizeType returns a known fact type, accepting plurals and any case.
 // It returns "" and false for anything else.
@@ -340,6 +370,8 @@ func (s *Store) SetSources(id string, refs []Ref, commit string) (Memory, error)
 	if m.Commit == "" {
 		m.Commit = commit
 	}
+	// A newer time lets sync carry the new sources to other devices.
+	m.UpdatedAt = time.Now().UTC()
 	if err := s.write(m); err != nil {
 		return Memory{}, err
 	}

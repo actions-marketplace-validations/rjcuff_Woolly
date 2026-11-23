@@ -430,6 +430,7 @@ func cmdRecall(args []string) error {
 	all := fs.Bool("all", false, "include superseded and conflicting memories")
 	asJSON := fs.Bool("json", false, "print JSON")
 	project := fs.String("project", "", "search your memories plus this project's, leaving other projects out")
+	explain := fs.Bool("explain", false, "show how each result was scored")
 	pos, err := parse(fs, args)
 	if err != nil {
 		return err
@@ -451,6 +452,15 @@ func cmdRecall(args []string) error {
 	}
 	for _, r := range results {
 		fmt.Printf("%.2f  %s\n", r.Score, mcp.Line(r.Memory))
+		if *explain && r.Parts != nil {
+			p := r.Parts
+			if p.LinkedFrom != "" {
+				fmt.Printf("      linked from %s, at half its score\n", p.LinkedFrom)
+			} else {
+				fmt.Printf("      keyword %.2f, meaning %.2f, x fresh %.2f, x confidence %.2f, x use %.2f, x status %.1f\n",
+					p.Keyword, p.Semantic, p.Fresh, p.Confidence, p.Use, p.Status)
+			}
+		}
 	}
 	if mode == recall.ModeKeyword && os.Getenv("WOOLLY_NO_EMBED") == "" {
 		fmt.Fprintln(os.Stderr, "(keyword search; run 'woolly doctor' to enable semantic search)")
@@ -926,13 +936,25 @@ Memories are added to each chat. Facts you state are saved%s.
 }
 
 func cmdMCP(args []string) error {
+	fs := newFlags("mcp")
+	user := fs.String("user", "", "read and write this user's memories, like the memory API's user_id")
+	agent := fs.String("agent", "", "read and write this agent's memories, like the memory API's agent_id")
+	if _, err := parse(fs, args); err != nil {
+		return err
+	}
+	for name, v := range map[string]string{"--user": *user, "--agent": *agent} {
+		if v != "" && memory.CleanScopeID(v) == "" {
+			return fmt.Errorf("%s is blank", name)
+		}
+	}
 	a, err := open()
 	if err != nil {
 		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject(), Ground: groundRefs}
+	s := &mcp.Server{Store: a.store, Engine: a.engine, Version: version, Activity: a.log, Project: mcpProject(), Ground: groundRefs,
+		User: memory.CleanScopeID(*user), Agent: memory.CleanScopeID(*agent)}
 	if cwd, err := os.Getwd(); err == nil {
 		if r := share.Find(cwd); r != nil {
 			s.Root = r.Dir
@@ -988,6 +1010,15 @@ func cmdDoctor(args []string) error {
 	}
 	if conflicts > 0 {
 		fmt.Println("  run 'woolly conflicts' to review disagreeing memories")
+	}
+	if old, err := a.store.ReviewQueue(time.Now()); err == nil && len(old) > 0 {
+		fmt.Printf("  %s an AI guessed and nothing has used in 90 days. Still true? woolly review --old\n", plural(len(old), "memory", "memories"))
+	}
+	if problems := a.store.Problems(); len(problems) > 0 {
+		fmt.Printf("  %s Woolly couldn't read fully. Fix or remove by hand:\n", plural(len(problems), "file", "files"))
+		for _, p := range problems {
+			fmt.Println("    " + p)
+		}
 	}
 	if ok, err := a.ollama.HasModel(ctx, a.ollama.ChatModel); err == nil && ok {
 		fmt.Printf("  woolly learn: ready (%s)\n", a.ollama.ChatModel)

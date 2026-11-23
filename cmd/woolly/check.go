@@ -438,6 +438,7 @@ func (a *app) staleLine(project string) string {
 	if err != nil || project == "" {
 		return ""
 	}
+	stale = memory.Personal(stale)
 	since := a.lastBrief(project, time.Now().UTC())
 	var fresh []memory.Memory
 	for _, m := range stale {

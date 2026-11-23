@@ -214,16 +214,24 @@ class Woolly:
         )
 
     def recall(
-        self, query: str, limit: int = 5, include_history: bool = False, project: Optional[str] = None
+        self,
+        query: str,
+        limit: int = 5,
+        include_history: bool = False,
+        project: Optional[str] = None,
+        type: Optional[List[str]] = None,
     ) -> List[Memory]:
         """Find the memories most relevant to ``query``, best first.
 
         With ``project``, search the user's memories plus that project's, and
-        leave other projects out.
+        leave other projects out. ``type`` keeps only memories of those types,
+        like ``["preference"]`` or ``["procedure"]``.
         """
         body: Dict[str, Any] = {"query": query, "limit": limit, "include_all": include_history}
         if project:
             body["project"] = project
+        if type:
+            body["type"] = type
         r = self._request("POST", "/api/recall", body)
         return [Memory.from_json(x["memory"], score=x.get("score")) for x in r.get("results") or []]
 
@@ -324,6 +332,7 @@ class Woolly:
         project: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         infer: bool = True,
+        memory_type: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Add a conversation to memory, the way mem0's ``add`` does.
 
@@ -339,6 +348,8 @@ class Woolly:
         body: Dict[str, Any] = {"messages": messages, "infer": infer, **self._scope(user_id, agent_id, run_id, project)}
         if metadata:
             body["metadata"] = metadata
+        if memory_type:
+            body["memory_type"] = memory_type
         old, self.timeout = self.timeout, max(self.timeout, 120.0)
         try:
             return self._request("POST", "/v1/memories", body)
@@ -355,11 +366,18 @@ class Woolly:
         top_k: int = 5,
         threshold: float = 0.0,
         show_expired: bool = False,
+        type: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Search one user's, agent's or run's memories, best first. Each result has a ``score``."""
+        """Search one user's, agent's or run's memories, best first. Each result has a ``score``.
+
+        ``type`` keeps only memories of those types, like ``["procedure"]``.
+        """
+        filters: Dict[str, Any] = dict(self._scope(user_id, agent_id, run_id, project))
+        if type:
+            filters["type"] = type
         body = {
             "query": query,
-            "filters": self._scope(user_id, agent_id, run_id, project),
+            "filters": filters,
             "top_k": top_k,
             "threshold": threshold,
             "show_expired": show_expired,
@@ -383,6 +401,60 @@ class Woolly:
     def history(self, memory_id: str) -> Dict[str, Any]:
         """Every version of a memory, oldest first."""
         return self._request("GET", "/v1/memories/" + urllib.parse.quote(memory_id) + "/history")
+
+    def scoped_conflicts(
+        self, user_id: Optional[str] = None, agent_id: Optional[str] = None, run_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Conflicts in one user's, agent's or run's memories, each with the memory it disagrees with."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/conflicts" + ("?" + urllib.parse.urlencode(q) if q else "")
+        return self._request("GET", path)["results"]
+
+    def resolve_scoped(
+        self,
+        memory_id: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Keep one version of a conflict. Raises if it would replace something
+        more trusted; the user settles those on the review page."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/conflicts/" + urllib.parse.quote(memory_id) + "/resolve"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {})
+
+    def link(
+        self,
+        memory_id: str,
+        to: str,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Tie two related memories together. Searching then brings one along with the other."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/memories/" + urllib.parse.quote(memory_id) + "/links"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {"to": to})
+
+    def feedback(
+        self,
+        memory_id: str,
+        helpful: bool,
+        user_id: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Say whether a memory helped. Helpful memories rank a little higher
+        next time, unhelpful ones a little lower. Nothing is ever deleted."""
+        q = self._scope(user_id, agent_id, run_id)
+        path = "/v1/memories/" + urllib.parse.quote(memory_id) + "/feedback"
+        if q:
+            path += "?" + urllib.parse.urlencode(q)
+        return self._request("POST", path, {"helpful": helpful})
 
     def delete_all(
         self, user_id: Optional[str] = None, agent_id: Optional[str] = None, run_id: Optional[str] = None

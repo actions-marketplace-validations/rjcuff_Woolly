@@ -17,8 +17,28 @@ An AI that reads a malicious web page or document could be tricked into saving s
 
 Woolly stops this in two ways:
 
-- **Instruction-like text from an AI or an import is refused.** Text you type yourself is always saved.
+- **Instruction-like text from an AI, an app or an import is refused.** This holds even when an AI app or a script says the text came from you, and when an app edits a memory you saved. Text you type yourself, on the command line or the review page, is always saved.
 - **Memories are labeled as notes.** When an AI app recalls memories, Woolly tells it they are information about you, not instructions to follow.
+
+## AI apps can't overrule you
+
+When an AI app or a script says a fact came from you, Woolly can't check that, so it saves the fact a step below what you typed yourself, tagged `user-stated`. It still wins over a guess an AI made, but it never replaces a fact you saved. It waits as a conflict instead.
+
+AI apps and scripts also can't settle a conflict in favor of the less trusted version, or bring back a version you replaced. You settle those on the command line or the review page.
+
+This covers AI apps over MCP and apps using the API as documented. It isn't a wall against a program that runs as you and reads your token: see [What Woolly can't protect against](#what-woolly-cant-protect-against).
+
+## Agents you build get their own memory
+
+`woolly mcp --user alice` or `--agent support-bot` keeps that server inside one user's or agent's memory. It can't search, list, change, rate, link or forget your own memories, even by ID, and it can't read or write your session handoffs. Settling a conflict through `/v1/conflicts/{id}/resolve` returns 403 when an app would replace something more trusted.
+
+## Apps' users stay apart from you
+
+Apps you build on the [memory API](/docs/memory-api) save memories for their own users, agents and sessions. Those stay out of your personal AI apps and your profile, they are never written to a repo's shared `.woolly/woolly.md`, and a request scoped to one user can't read, change or delete another user's memory by its ID.
+
+## Usage stays on your device
+
+Woolly counts how often each memory is recalled, and keeps any helpful or unhelpful votes from AI apps, in `~/.woolly/usage.json`. It only nudges search ranking. It's never synced, sent anywhere or written into your memory files, and a vote never hides or deletes a memory.
 
 ## Nothing is deleted by accident
 

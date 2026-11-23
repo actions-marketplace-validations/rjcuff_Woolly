@@ -61,6 +61,10 @@ type Server struct {
 	// Searches then cover the user's memories plus this project's, and
 	// leave other projects out.
 	Project string
+	// User and Agent, when set, make this server read and write one user's
+	// or agent's memories instead of the user's own, the way the memory
+	// API's user_id and agent_id do.
+	User, Agent string
 
 	app   string    // the connected app, from initialize
 	seen  time.Time // when woolly.md last changed, as of the last sync
@@ -215,7 +219,7 @@ var tools = []map[string]any{
 			"source":     map[string]any{"type": "string", "enum": []string{"user", "agent"}, "description": `"user" if the user said it directly, "agent" if you inferred it. Default "agent".`},
 			"scope":      map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for facts about the codebase, "personal" for facts about the user. Default "auto": Woolly decides, and picks personal when unsure.`},
 			"section":    map[string]any{"type": "string", "enum": []string{"Overview", "Stack", "Conventions", "Decisions", "Gotchas", "Bugs", "Hardware", "Commands"}, "description": "For project memory, the heading it goes under. Woolly guesses if you leave it out."},
-			"type":       map[string]any{"type": "string", "enum": memory.Types, "description": "For project memory, what kind of fact it is. Sets the section too."},
+			"type":       map[string]any{"type": "string", "enum": memory.Types, "description": "What kind of memory it is. For project memory, decision, convention, gotcha, bug or hardware, which sets the section too. For anything, preference (how the user likes things), procedure (how to do something) or episode (something that happened)."},
 			"sources":    map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": `For project memory, the code the fact is about, relative to the repo root: "main/pins.h", "main/imu.c#imu_read_accel" (a function, type, macro or constant) or "main/pins.h:12-18" (lines). Woolly checks these against the code and flags the fact stale when they change.`},
 			"confidence": map[string]any{"type": "number", "minimum": 0, "maximum": 1, "description": "How sure you are, from 0 to 1. Leave it out if unsure."},
 			"project":    map[string]any{"type": "string", "description": "The project's name, if it isn't the current one."},
@@ -226,10 +230,12 @@ var tools = []map[string]any{
 		"title":       "Recall",
 		"description": "Search Woolly for anything relevant to a query: the user's personal memory plus the current project's memory, which may include notes from teammates. Returns current facts, best match first.",
 		"inputSchema": obj(map[string]any{
-			"query":   map[string]any{"type": "string", "description": "What you want to know, e.g. \"user's coding preferences\"."},
-			"limit":   map[string]any{"type": "integer", "minimum": 1, "maximum": 50, "description": "Max results (default 5)."},
-			"scope":   map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for only the project's memory, "personal" for only the user's. Default "auto": both.`},
-			"project": map[string]any{"type": "string", "description": "Search this project's memories plus the user's. Defaults to the current project when Woolly knows it."},
+			"query":     map[string]any{"type": "string", "description": "What you want to know, e.g. \"user's coding preferences\"."},
+			"limit":     map[string]any{"type": "integer", "minimum": 1, "maximum": 50, "description": "Max results (default 5)."},
+			"scope":     map[string]any{"type": "string", "enum": []string{"auto", "project", "personal"}, "description": `"project" for only the project's memory, "personal" for only the user's. Default "auto": both.`},
+			"project":   map[string]any{"type": "string", "description": "Search this project's memories plus the user's. Defaults to the current project when Woolly knows it."},
+			"max_chars": map[string]any{"type": "integer", "minimum": 200, "description": "Cap on the memories' text, to save context. Best matches are kept first."},
+			"type":      map[string]any{"type": "array", "items": map[string]any{"type": "string", "enum": memory.Types}, "description": `Only memories of these types, like ["preference"] or ["procedure"].`},
 		}, "query"),
 	},
 	{
@@ -279,6 +285,7 @@ var tools = []map[string]any{
 		"description": "List the user's memories, newest first.",
 		"inputSchema": obj(map[string]any{
 			"include_superseded": map[string]any{"type": "boolean", "description": "Also show replaced and conflicting memories."},
+			"limit":              map[string]any{"type": "integer", "minimum": 1, "maximum": 500, "description": "Max memories (default 50)."},
 		}),
 	},
 	{
@@ -286,6 +293,24 @@ var tools = []map[string]any{
 		"title":       "Forget",
 		"description": "Move a memory to the trash by id. Only do this when the user asks. The user can restore it.",
 		"inputSchema": obj(map[string]any{"id": map[string]any{"type": "string"}}, "id"),
+	},
+	{
+		"name":        "link_memories",
+		"title":       "Link memories",
+		"description": "Tie two related memories together, like a decision and the bug that caused it, or a procedure and the preference behind it. Recalling one then brings the other along.",
+		"inputSchema": obj(map[string]any{
+			"id": map[string]any{"type": "string", "description": "One memory's ID, from recall."},
+			"to": map[string]any{"type": "string", "description": "The other memory's ID."},
+		}, "id", "to"),
+	},
+	{
+		"name":        "rate_memory",
+		"title":       "Rate a memory",
+		"description": "Say whether a memory you recalled helped. Woolly ranks helpful memories a little higher next time and unhelpful ones a little lower. It never deletes anything. Use it when a memory was clearly right or clearly wrong for the task.",
+		"inputSchema": obj(map[string]any{
+			"id":      map[string]any{"type": "string", "description": "The memory's ID, from recall."},
+			"helpful": map[string]any{"type": "boolean", "description": "true if it helped, false if it was wrong or off topic."},
+		}, "id", "helpful"),
 	},
 	{
 		"name":        "resolve_conflict",
@@ -316,7 +341,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
 		}
-		if a.Scope == "" && (a.Type != "" || len(a.Sources) > 0) && (a.Project != "" || s.Project != "") && !share.LooksPersonal(a.Content) {
+		if a.Scope == "" && (memory.ProjectType(a.Type) || len(a.Sources) > 0) && (a.Project != "" || s.Project != "") && !share.LooksPersonal(a.Content) {
 			a.Scope = "project" // only project facts have a type or point at code
 		}
 		project, err := s.scopeFor(a.Scope, a.Project, a.Key, a.Content)
@@ -335,10 +360,16 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			src = parsed
 		}
-		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf}
+		in := memory.RememberInput{Content: a.Content, Key: a.Key, Tags: tags, Source: src, Via: s.appName(), Project: project, Commit: s.commit(project), Confidence: a.Conf, Untrusted: true, Type: a.Type, User: s.User, Agent: s.Agent}
 		if project != "" {
-			in.Type = a.Type
 			in.Sources = s.sources(project, a.Sources)
+		}
+		// A paraphrase of something already known isn't saved again.
+		if in.Key == "" {
+			if dup := s.nearCopy(ctx, in); dup != nil {
+				s.log("remember", []string{dup.ID}, "", 0)
+				return "Already known: " + dup.Content, nil
+			}
 		}
 		res, err := s.Store.Remember(in)
 		if err != nil {
@@ -353,10 +384,12 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 
 	case "recall":
 		var a struct {
-			Query   string `json:"query"`
-			Limit   int    `json:"limit"`
-			Project string `json:"project"`
-			Scope   string `json:"scope"`
+			Query    string   `json:"query"`
+			Limit    int      `json:"limit"`
+			Project  string   `json:"project"`
+			Scope    string   `json:"scope"`
+			MaxChars int      `json:"max_chars"`
+			Type     []string `json:"type"`
 		}
 		if err := json.Unmarshal(raw, &a); err != nil {
 			return "", fmt.Errorf("invalid arguments: %v", err)
@@ -370,7 +403,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if a.Scope == "project" || a.Scope == "personal" {
 			limit = 50 // filtered below
 		}
-		results, _, err := s.Engine.RecallIn(ctx, a.Query, limit, false, project)
+		results, _, err := s.Engine.RecallScoped(ctx, a.Query, limit, false, s.scope(project, a.Type))
 		if err != nil {
 			return "", err
 		}
@@ -387,11 +420,13 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			}
 			results = kept
 		}
+		results = recall.Fit(results, a.MaxChars)
 		ids := make([]string, len(results))
 		for i, r := range results {
 			ids[i] = r.Memory.ID
 		}
 		s.log("recall", ids, a.Query, len(results))
+		s.Store.Touch(ids...)
 		if len(results) == 0 {
 			return "No matching memories.", nil
 		}
@@ -409,13 +444,19 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 
 	case "get_profile":
 		s.pull()
-		mems, err := s.Store.List(false)
+		all, err := s.Store.List(false)
 		if err != nil {
 			return "", err
 		}
+		mems := s.mine(all)
 		s.log("profile", nil, "", len(mems))
+		shown := make([]string, len(mems))
+		for i, m := range mems {
+			shown[i] = m.ID
+		}
+		s.Store.Touch(shown...)
 		out := notesHeader
-		if h := handoff.Latest(s.Store, s.Project); h != nil {
+		if h := handoff.Latest(s.Store, s.Project); h != nil && !s.scoped() {
 			out += "# Where you left off\n\n" + h.Content + "\n\n"
 		}
 		decided, _ := decision.Section(mems, memory.NormalizeProject(s.Project))
@@ -428,6 +469,14 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 					lines = append(lines, "- "+m.Content)
 				}
 			}
+			var shown []string
+			for _, i := range recall.FitLines(lines, profileProjectChars) {
+				shown = append(shown, lines[i])
+			}
+			if len(shown) < len(lines) {
+				shown = append(shown, fmt.Sprintf("- (%d more. Use recall to search them.)", len(lines)-len(shown)))
+			}
+			lines = shown
 			if len(lines) > 0 {
 				out += fmt.Sprintf("\n## This project (%s)\n\n%s\n", p, strings.Join(lines, "\n"))
 			}
@@ -454,7 +503,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		res, err := s.Store.Remember(memory.RememberInput{
 			Content: decision.Format(a.Decision, a.Why, toStrings(a.Rejected)), Key: a.Key, Tags: []string{decision.Tag},
 			Source: memory.SourceAgent, Via: s.appName(), Project: project, Commit: s.commit(project),
-			Sources: s.sources(project, toStrings(a.Sources)),
+			Sources: s.sources(project, toStrings(a.Sources)), User: s.User, Agent: s.Agent,
 		})
 		if err != nil {
 			return "", err
@@ -479,16 +528,17 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			return "", err
 		}
 		s.pull()
-		mems, err := s.Store.List(true)
+		all, err := s.Store.List(true)
 		if err != nil {
 			return "", err
 		}
-		ans := why.Find(mems, s.Project, s.Root, t)
+		ans := why.Find(s.mine(all), s.Project, s.Root, t)
 		var ids []string
 		for _, m := range ans.Matches {
 			ids = append(ids, m.Memory.ID)
 		}
 		s.log("why", ids, a.Target, len(ids))
+		s.Store.Touch(ids...)
 		return why.Text(ans), nil
 
 	case "check_memory_files":
@@ -507,6 +557,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		if strings.TrimSpace(a.Note) == "" {
 			return "", errors.New("note is empty")
 		}
+		if s.scoped() {
+			return "", errors.New("handoffs are for the user's own sessions; this server keeps one user's or agent's memory")
+		}
 		m, err := handoff.Save(s.Store, s.Project, s.appName(), strings.TrimSpace(a.Note))
 		if err != nil {
 			return "", err
@@ -517,6 +570,7 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	case "list_memories":
 		var a struct {
 			IncludeSuperseded bool `json:"include_superseded"`
+			Limit             int  `json:"limit"`
 		}
 		_ = json.Unmarshal(raw, &a)
 		all, err := s.Store.List(a.IncludeSuperseded)
@@ -525,9 +579,17 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		var mems []memory.Memory
 		for i := range all {
-			if all[i].In(memory.NormalizeProject(s.Project)) {
+			if len(s.mine(all[i:i+1])) == 1 && all[i].In(memory.NormalizeProject(s.Project)) {
 				mems = append(mems, all[i])
 			}
+		}
+		limit := a.Limit
+		if limit <= 0 {
+			limit = 50
+		}
+		total := len(mems)
+		if total > limit {
+			mems = mems[:limit]
 		}
 		s.log("list", nil, "", len(mems))
 		if len(mems) == 0 {
@@ -538,6 +600,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		for _, m := range mems {
 			b.WriteString(Line(m) + "\n")
 		}
+		if total > len(mems) {
+			fmt.Fprintf(&b, "(%d more. Use recall to search them, or a higher limit.)\n", total-len(mems))
+		}
 		return b.String(), nil
 
 	case "forget":
@@ -545,6 +610,9 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 			ID string `json:"id"`
 		}
 		_ = json.Unmarshal(raw, &a)
+		if _, err := s.own(a.ID); err != nil {
+			return "", err
+		}
 		m, err := s.Store.Forget(a.ID)
 		if err != nil {
 			return "", err
@@ -555,12 +623,52 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 		}
 		return "Moved to trash (the user can restore it): " + m.Content, nil
 
+	case "link_memories":
+		var a struct {
+			ID string `json:"id"`
+			To string `json:"to"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		for _, id := range []string{a.ID, a.To} {
+			if _, err := s.own(id); err != nil {
+				return "", err
+			}
+		}
+		ma, mb, err := s.Store.Link(a.ID, a.To)
+		if err != nil {
+			return "", err
+		}
+		s.log("link", []string{ma.ID, mb.ID}, "", 0)
+		return fmt.Sprintf("Linked %q and %q.", ma.Content, mb.Content), nil
+
+	case "rate_memory":
+		var a struct {
+			ID      string `json:"id"`
+			Helpful *bool  `json:"helpful"`
+		}
+		_ = json.Unmarshal(raw, &a)
+		if a.Helpful == nil {
+			return "", errors.New("helpful is required")
+		}
+		if _, err := s.own(a.ID); err != nil {
+			return "", err
+		}
+		m, err := s.Store.Feedback(a.ID, *a.Helpful)
+		if err != nil {
+			return "", err
+		}
+		s.log("rate", []string{m.ID}, "", 0)
+		return "Thanks. Noted for next time.", nil
+
 	case "resolve_conflict":
 		var a struct {
 			KeepID string `json:"keep_id"`
 		}
 		_ = json.Unmarshal(raw, &a)
-		kept, replaced, err := s.Store.Resolve(a.KeepID)
+		if _, err := s.own(a.KeepID); err != nil {
+			return "", err
+		}
+		kept, replaced, err := s.Store.ResolveAs(a.KeepID, memory.SourceAgent)
 		if err != nil {
 			return "", err
 		}
@@ -569,6 +677,69 @@ func (s *Server) callTool(ctx context.Context, name string, raw json.RawMessage)
 	}
 	return "", fmt.Errorf("unknown tool %q", name)
 }
+
+// scope is what this server reads: the user's own memory, or the user or
+// agent it was started for.
+func (s *Server) scope(project string, types []string) memory.Scope {
+	return memory.Scope{Project: project, User: s.User, Agent: s.Agent, Personal: s.User == "" && s.Agent == "", Types: types}.Normalized()
+}
+
+// scoped reports whether this server keeps one user's or agent's memory
+// rather than the user's own.
+func (s *Server) scoped() bool { return s.User != "" || s.Agent != "" }
+
+// own looks up a memory this server may act on. Anything outside its scope
+// is reported as not found, so an ID can't reach someone else's memory.
+func (s *Server) own(id string) (memory.Memory, error) {
+	m, err := s.Store.Get(id)
+	if err != nil {
+		return memory.Memory{}, err
+	}
+	if len(s.mine([]memory.Memory{m})) == 0 {
+		return memory.Memory{}, memory.ErrNotFound
+	}
+	return m, nil
+}
+
+// mine keeps the memories this server may show.
+func (s *Server) mine(mems []memory.Memory) []memory.Memory {
+	sc := s.scope("", nil)
+	var out []memory.Memory
+	for i := range mems {
+		if sc.Matches(&mems[i]) {
+			out = append(out, mems[i])
+		}
+	}
+	return out
+}
+
+// nearCopy finds a current memory in the same place that says what in says
+// in nearly the same words, and adds in's tags to it.
+func (s *Server) nearCopy(ctx context.Context, in memory.RememberInput) *memory.Memory {
+	results, _, err := s.Engine.RecallScoped(ctx, in.Content, 3, false, s.scope(in.Project, nil))
+	if err != nil {
+		return nil
+	}
+	project := memory.NormalizeProject(in.Project)
+	for _, r := range results {
+		m := r.Memory
+		if m.Project != project || m.Key != "" || !recall.NearCopy(m.Content, in.Content) {
+			continue
+		}
+		// Note that it was said again: new tags, and a source at least as
+		// trusted. A claim isn't more trusted than what's there.
+		if _, err := s.Store.Remember(memory.RememberInput{Content: m.Content, Tags: in.Tags, Source: m.Source,
+			Project: m.Project, Via: in.Via, User: m.User, Agent: m.Agent, Session: m.Session,
+			Type: in.Type, Sources: in.Sources, Confidence: in.Confidence, Commit: in.Commit}); err != nil {
+			return nil
+		}
+		return &m
+	}
+	return nil
+}
+
+// profileProjectChars caps the project part of get_profile.
+const profileProjectChars = 4000
 
 func (s *Server) instructions() string {
 	if p := memory.NormalizeProject(s.Project); p != "" {

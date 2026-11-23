@@ -96,10 +96,11 @@ test('a new fact with the same key replaces the old one', async ({ page }) => {
   await expect(page.getByRole('listitem').filter({ hasText: 'Lives in Austin' }).first()).toContainText('Replaced');
 });
 
-test('resolves a conflict', async ({ page, request }) => {
+test('resolves a conflict', async ({ page }) => {
   const key = `code.indent_${unique()}`;
-  await request.post('/api/remember', { data: { content: 'Prefers tabs', key, source: 'user' } });
-  await request.post('/api/remember', { data: { content: 'Prefers spaces', key, source: 'agent' } });
+  // page.request carries the review page's cookie, so it speaks for the user.
+  await page.request.post('/api/remember', { data: { content: 'Prefers tabs', key, source: 'user' } });
+  await page.request.post('/api/remember', { data: { content: 'Prefers spaces', key, source: 'agent' } });
   await page.reload();
 
   await page.getByRole('button', { name: /Conflicts/ }).click();

@@ -21,8 +21,13 @@ func cmdReview(args []string) error {
 	list := fs.Bool("list", false, "only list stale facts")
 	confirm := fs.String("confirm", "", "mark this stale fact as still true")
 	retire := fs.String("retire", "", "mark this stale fact as no longer true")
+	old := fs.Bool("old", false, "list AI guesses nothing has used in 90 days")
+	keep := fs.String("keep", "", "keep this old guess; it won't be asked about for another 90 days")
 	if _, err := parse(fs, args); err != nil {
 		return err
+	}
+	if *old || *keep != "" {
+		return reviewOld(*keep)
 	}
 	cwd, _ := os.Getwd()
 	repo := share.Find(cwd)
@@ -181,6 +186,9 @@ func (rv *reviewer) confirm(m memory.Memory) error {
 
 func (rv *reviewer) edit(m memory.Memory, text string) error {
 	refs, head := rv.sources(m)
+	if rv.repo != nil && len(m.Sources) > 0 && len(refs) == 0 {
+		refs = []memory.Ref{} // its code is gone; don't carry the dead sources over
+	}
 	_, err := rv.a.store.Replace(m.ID, memory.RememberInput{
 		Content: text, Tags: m.Tags, Type: m.Type, Sources: refs, Commit: head,
 		Source: memory.SourceUser, Via: cli, Project: m.Project,
@@ -231,4 +239,38 @@ func ago(t time.Time) string {
 func interactive() bool {
 	st, err := os.Stdin.Stat()
 	return err == nil && st.Mode()&os.ModeCharDevice != 0
+}
+
+// reviewOld lists old guesses that may no longer be true, or keeps one.
+// Nothing here expires a memory on its own.
+func reviewOld(keep string) error {
+	a, err := open()
+	if err != nil {
+		return err
+	}
+	if keep != "" {
+		m, err := a.store.Get(keep)
+		if err != nil {
+			return err
+		}
+		a.store.Touch(m.ID)
+		fmt.Println("Kept: " + m.Content)
+		return nil
+	}
+	mems, err := a.store.ReviewQueue(time.Now())
+	if err != nil {
+		return err
+	}
+	if len(mems) == 0 {
+		fmt.Println("Nothing to check. Every AI guess was used or changed in the last 90 days.")
+		return nil
+	}
+	fmt.Printf("%s an AI guessed that nothing has used in 90 days. Still true?\n\n", plural(len(mems), "memory", "memories"))
+	for _, m := range mems {
+		fmt.Printf("  %s  %s\n", m.ID, m.Content)
+	}
+	fmt.Println("\nKeep one with: woolly review --keep <id>")
+	fmt.Println("Fix one on the review page: woolly ui")
+	fmt.Println("Drop one with: woolly forget <id>")
+	return nil
 }

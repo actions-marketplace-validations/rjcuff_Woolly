@@ -9,7 +9,7 @@ description: Everything the woolly command can do.
 | `woolly recall <query>` | Search your memories |
 | `woolly check` | Check this repo's facts, and the lines in CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, Claude Code's memory, Codex memories and claude-mem, against the code. Flags what went stale, and exits with status 1 when something did. `--fix` rewrites renamed names and moved paths in agent files, `--no-memory-files` checks only facts, `--markdown` prints a pull request comment, `--json` prints everything with a `summary` of the counts and a `state` of `new` or `before` on each finding, `--status-json` prints only counts and file:line pointers with no text, `--status-file <path>` writes that next to another format, and `--base <commit>` compares against that commit, so findings from before it count as already stale. See [Check your agent files](/docs/memory-files), [Stale facts](/docs/stale-facts) and [Pull request checks](/docs/pull-requests) |
 | `woolly welcome` | Show the mammoth and the three commands to start with, as the installer does |
-| `woolly review` | Confirm, fix or retire stale facts, one at a time. `--list` only lists them, and `--confirm <id>` or `--retire <id>` settle one |
+| `woolly review` | Confirm, fix or retire stale facts, one at a time. `--list` only lists them, and `--confirm <id>` or `--retire <id>` settle one. `--old` lists AI guesses nothing has used in 90 days, and `--keep <id>` keeps one |
 | `woolly why <file[:line\|#name]>` | The decisions, conventions and gotchas behind a file, a line or a function, and whether the code still backs each one up. See [Why is this code like this](/docs/why) |
 | `woolly caught` | The stale facts Woolly kept away from your agents in this repo. `--badge` prints a README badge with the count |
 | `woolly recap` | What Woolly did while you were away: what the last dream tidied and the lessons it learned. See [Dreaming](/docs/dreaming) |
@@ -37,10 +37,10 @@ description: Everything the woolly command can do.
 | `woolly service status` | Show whether the background service is running |
 | `woolly service uninstall` | Stop it and remove it from login |
 | `woolly serve` | Run the local HTTP API and review page. Add `--proxy` to run the proxy too |
-| `woolly mcp` | Run as an MCP server for AI apps |
+| `woolly mcp` | Run as an MCP server for AI apps. `--user <id>` and `--agent <name>` give an agent its own memory instead of yours |
 | `woolly proxy` | Give memory to Ollama and OpenAI or Anthropic apps. See [Proxy](/docs/proxy) |
 | `woolly update` | Update to the latest version. `--check` only checks |
-| `woolly doctor` | Check your setup |
+| `woolly doctor` | Check your setup, and list any memory files Woolly couldn't read |
 | `woolly version` | Print the version |
 
 IDs can be shortened to any unique prefix, like `woolly show 20261110-1500`.
@@ -74,6 +74,7 @@ woolly recall "where do I live" -n 3
 | `--all` | Include superseded and conflicting memories |
 | `--project` | Search your memories plus this project's, and leave other projects out |
 | `--json` | Print results as JSON |
+| `--explain` | Show how each result was scored: keyword and meaning match, then freshness, confidence, use and status |
 
 ## import
 

@@ -14,3 +14,8 @@ sdk/python/dist/
 __pycache__/
 *.egg-info/
 dist-app/
+
+# Private planning notes
+plans/
+ROADMAP.md
+roadmap.md

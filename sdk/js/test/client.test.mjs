@@ -169,3 +169,49 @@ test('add with a model needs Ollama, and dream still folds repeats', async () =>
   assert.equal(rep.merged, 1);
   assert.equal((await w.getAll({ userId: 'dave' })).length, 1);
 });
+
+test('memory kinds filter search and recall', async () => {
+  await w.add('Reset a password by emailing a link', { userId: 'erin', infer: false, memoryType: 'procedure' });
+  await w.add('Prefers password managers', { userId: 'erin', infer: false, memoryType: 'preference' });
+  const found = await w.search('password', { userId: 'erin', type: ['procedure'] });
+  assert.deepEqual(
+    found.map((m) => m.type),
+    ['procedure'],
+  );
+  assert.equal((await w.search('password', { userId: 'erin' })).length, 2);
+  await w.remember('Deploy by running make ship', { type: 'procedure' });
+  await w.remember('Likes deploy logs short', { type: 'preference' });
+  const mine = await w.recall('deploy', { type: ['preference'] });
+  assert.ok(mine.length > 0);
+  assert.ok(mine.every((m) => m.content.includes('logs short')));
+});
+
+test('feedback stays in scope', async () => {
+  const [added] = await w.add('Answers in haiku', { agentId: 'poet', infer: false });
+  await w.feedback(added.id, true, { agentId: 'poet' });
+  await w.feedback(added.id, false);
+  await assert.rejects(w.feedback(added.id, true, { agentId: 'someone-else' }), (e) => e instanceof WoollyError && e.status === 404);
+  await assert.rejects(w.feedback('nope', true), WoollyError);
+});
+
+test('links tie memories in one scope', async () => {
+  const [a] = await w.add('Frank resets by email', { userId: 'frank', infer: false });
+  const [b] = await w.add('Frank prefers SMS codes', { userId: 'frank', infer: false });
+  const [g] = await w.add('Gina prefers push', { userId: 'gina', infer: false });
+  assert.deepEqual(await w.link(a.id, b.id, { userId: 'frank' }), [b.id]);
+  const other = (await w.getAll({ userId: 'frank' })).find((m) => m.id === b.id);
+  assert.deepEqual(other?.links, [a.id]);
+  await assert.rejects(w.link(a.id, g.id, { userId: 'frank' }), (e) => e instanceof WoollyError && e.status === 404);
+  await assert.rejects(w.link(a.id, a.id, { userId: 'frank' }), WoollyError);
+});
+
+test('conflict inbox lists, and an app cannot overrule the user', async () => {
+  await w.remember('Editor is Helix', { key: 'user.editor.qa' });
+  const r = await w.remember('Editor is Zed', { key: 'user.editor.qa', source: 'agent' });
+  assert.equal(r.memory.status, 'conflict');
+  const mine = (await w.scopedConflicts()).filter((c) => c.memory.id === r.memory.id);
+  assert.equal(mine.length, 1);
+  assert.match(mine[0].conflicts_with?.memory ?? '', /Helix/);
+  assert.deepEqual(await w.scopedConflicts({ userId: 'nobody' }), []);
+  await assert.rejects(w.resolveScoped(r.memory.id), (e) => e instanceof WoollyError && e.status === 403);
+});

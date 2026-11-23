@@ -38,6 +38,21 @@ type Embedder interface {
 type Result struct {
 	Memory memory.Memory `json:"memory"`
 	Score  float64       `json:"score"`
+	// Parts says how the score was made, for woolly recall --explain.
+	Parts *ScoreParts `json:"score_parts,omitempty"`
+}
+
+// ScoreParts are the pieces of a result's score.
+type ScoreParts struct {
+	Keyword    float64 `json:"keyword"`
+	Semantic   float64 `json:"semantic,omitempty"`
+	Fresh      float64 `json:"fresh"`      // multiplier for how recently it changed
+	Confidence float64 `json:"confidence"` // multiplier for how sure Woolly is
+	Use        float64 `json:"use"`        // multiplier from use and feedback
+	Status     float64 `json:"status"`     // 0.5 when not current, else 1
+	// LinkedFrom is set when the memory came in through a link from a
+	// better match, at half that match's score.
+	LinkedFrom string `json:"linked_from,omitempty"`
 }
 
 // Engine runs recall queries against a store.
@@ -110,6 +125,7 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 		toks[i] = tokenize(docs[i])
 	}
 	kw := bm25(expand(tokenize(query)), toks)
+	qwords := tokenize(query)
 
 	mode := ModeKeyword
 	var sem []float64
@@ -122,29 +138,204 @@ func (e *Engine) RecallScoped(ctx context.Context, query string, limit int, incl
 	}
 
 	now := time.Now()
+	usage := e.store.Usage()
 	var out []Result
+	var outIdx []int
 	for i, m := range mems {
+		parts := &ScoreParts{Keyword: round(kw[i]), Status: 1}
 		score := kw[i]
+		// Keyword scores are relative to the best match, so the best one
+		// always scores 1. An absolute floor: a longer question has to share
+		// at least a quarter of its words with the memory.
+		thin := coverage(qwords, toks[i]) < 0.25
 		if mode == ModeHybrid {
-			if kw[i] == 0 && sem[i] < 0.5 {
+			parts.Semantic = round(sem[i])
+			// A weak meaning match needs a real keyword match to count.
+			if sem[i] < 0.5 && (kw[i] < 0.3 || thin) {
 				continue
 			}
 			score = 0.65*math.Max(sem[i], 0) + 0.35*kw[i]
-		} else if kw[i] == 0 {
+		} else if kw[i] == 0 || thin {
 			continue
 		}
 		ageDays := now.Sub(m.UpdatedAt).Hours() / 24
-		score *= 1 + 0.05*math.Exp(-ageDays/30) // slight preference for fresh memories
+		parts.Fresh = round(1 + 0.05*math.Exp(-ageDays/30)) // slight preference for fresh memories
+		parts.Confidence = round(0.8 + 0.2*m.Confidence())  // what you said beats a guess
+		parts.Use = round(1 + usage[m.ID].Prior())          // what helped before ranks a little higher
 		if m.Status != memory.StatusActive {
-			score *= 0.5
+			parts.Status = 0.5
 		}
-		out = append(out, Result{Memory: m, Score: math.Round(score*1000) / 1000})
+		score *= parts.Fresh * parts.Confidence * parts.Use * parts.Status
+		out = append(out, Result{Memory: m, Score: round(score), Parts: parts})
+		outIdx = append(outIdx, i)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Score > out[j].Score })
-	if len(out) > limit {
-		out = out[:limit]
+	out, outIdx = followLinks(mems, out, outIdx)
+	order := make([]int, len(out))
+	for i := range order {
+		order[i] = i
 	}
-	return out, mode, nil
+	sort.SliceStable(order, func(a, b int) bool { return out[order[a]].Score > out[order[b]].Score })
+
+	// Skip near copies of a better result, so the top few say different things.
+	var picked []Result
+	var pickedIdx []int
+	for _, k := range order {
+		i := outIdx[k]
+		dup := false
+		for _, j := range pickedIdx {
+			if similar(toks[i], toks[j]) && negated(docs[i]) == negated(docs[j]) {
+				dup = true
+				break
+			}
+		}
+		if dup {
+			continue
+		}
+		picked = append(picked, out[k])
+		pickedIdx = append(pickedIdx, i)
+		if len(picked) == limit {
+			break
+		}
+	}
+	return picked, mode, nil
+}
+
+func round(x float64) float64 { return math.Round(x*1000) / 1000 }
+
+// followLinks brings in memories linked from each match, one hop, at half
+// the match's score. A linked memory that already matched keeps the better
+// score. Only memories in the searched scope come in.
+func followLinks(mems []memory.Memory, out []Result, outIdx []int) ([]Result, []int) {
+	at := make(map[string]int, len(mems))
+	for i, m := range mems {
+		at[m.ID] = i
+	}
+	inOut := make(map[string]int, len(out))
+	for k, r := range out {
+		inOut[r.Memory.ID] = k
+	}
+	n := len(out)
+	for k := 0; k < n; k++ {
+		for _, id := range out[k].Memory.Links {
+			i, ok := at[id]
+			if !ok {
+				continue
+			}
+			score := round(out[k].Score * 0.5)
+			if j, ok := inOut[id]; ok {
+				if out[j].Score < score {
+					out[j].Score = score
+					out[j].Parts.LinkedFrom = out[k].Memory.ID
+				}
+				continue
+			}
+			inOut[id] = len(out)
+			out = append(out, Result{Memory: mems[i], Score: score,
+				Parts: &ScoreParts{Fresh: 1, Confidence: 1, Use: 1, Status: 1, LinkedFrom: out[k].Memory.ID}})
+			outIdx = append(outIdx, i)
+		}
+	}
+	return out, outIdx
+}
+
+// NearCopy reports whether two texts say the same thing in nearly the same
+// words, in the same order: they share at least 85% of their distinct words
+// and of their word pairs, ignoring case, punctuation and filler words. Word
+// order matters, so "tabs over spaces" is not a copy of "spaces over tabs".
+func NearCopy(a, b string) bool {
+	if negated(a) != negated(b) {
+		return false // "uses X" and "doesn't use X" are opposites
+	}
+	ta, tb := tokenize(a), tokenize(b)
+	return overlap(ta, tb) >= 0.85 && overlap(pairs(ta), pairs(tb)) >= 0.85
+}
+
+// negated reports whether text says "not": not, no, never, without, nor,
+// none, or a word ending in n't. Search ignores these words, but they flip a
+// fact's meaning, so near-copy checks look at them.
+func negated(text string) bool {
+	n := 0
+	for _, w := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && r != '\'' && r != '’'
+	}) {
+		w = strings.ReplaceAll(w, "’", "'")
+		switch {
+		case w == "not" || w == "no" || w == "never" || w == "without" || w == "nor" || w == "none" || w == "cannot",
+			strings.HasSuffix(w, "n't"),
+			w == "dont" || w == "doesnt" || w == "didnt" || w == "isnt" || w == "arent" || w == "wasnt" || w == "cant" || w == "wont":
+			n++
+		}
+	}
+	return n%2 == 1
+}
+
+// coverage is the share of the query's distinct words, or their synonyms,
+// that a memory has. Queries of one or two words always count as covered
+// when anything matched, so short searches work as before.
+func coverage(query, doc []string) float64 {
+	q := map[string]bool{}
+	for _, t := range query {
+		q[t] = true
+	}
+	if len(q) <= 2 {
+		return 1
+	}
+	have := map[string]bool{}
+	for _, t := range doc {
+		have[t] = true
+	}
+	hit := 0
+	for t := range q {
+		if have[t] {
+			hit++
+			continue
+		}
+		for _, s := range synonyms[t] {
+			if have[stem(s)] {
+				hit++
+				break
+			}
+		}
+	}
+	return float64(hit) / float64(len(q))
+}
+
+// pairs lists each word joined with the next, as a cheap sign of word order.
+func pairs(toks []string) []string {
+	if len(toks) < 2 {
+		return toks
+	}
+	out := make([]string, 0, len(toks)-1)
+	for i := 1; i < len(toks); i++ {
+		out = append(out, toks[i-1]+" "+toks[i])
+	}
+	return out
+}
+
+// similar reports whether two token lists are near copies: they share at
+// least 90% of their distinct words and word pairs, so word order counts.
+func similar(a, b []string) bool { return overlap(a, b) >= 0.9 && overlap(pairs(a), pairs(b)) >= 0.9 }
+
+// overlap is the share of distinct words two token lists have in common.
+func overlap(a, b []string) float64 {
+	if len(a) == 0 || len(b) == 0 {
+		return 0
+	}
+	sa, sb := map[string]bool{}, map[string]bool{}
+	for _, t := range a {
+		sa[t] = true
+	}
+	for _, t := range b {
+		sb[t] = true
+	}
+	inter := 0
+	for t := range sa {
+		if sb[t] {
+			inter++
+		}
+	}
+	union := len(sa) + len(sb) - inter
+	return float64(inter) / float64(union)
 }
 
 func docText(m memory.Memory) string {
@@ -205,10 +396,29 @@ func (e *Engine) vectors(ctx context.Context, mems []memory.Memory, docs []strin
 		e.cache.Entries[mems[i].ID] = cacheEntry{Hash: hashText(docPrefix + docs[i]), Vec: got[j]}
 	}
 	if len(missIdx) > 0 {
+		e.prune()
 		_ = e.cache.save(e.cachePath)
 	}
 	e.lastErr = nil
 	return vecs, got[len(got)-1], nil
+}
+
+// prune drops cached vectors of memories that no longer exist, so the cache
+// doesn't grow forever. Caller holds e.mu.
+func (e *Engine) prune() {
+	all, err := e.store.List(true)
+	if err != nil {
+		return
+	}
+	keep := make(map[string]bool, len(all))
+	for _, m := range all {
+		keep[m.ID] = true
+	}
+	for id := range e.cache.Entries {
+		if !keep[id] {
+			delete(e.cache.Entries, id)
+		}
+	}
 }
 
 // taskPrefixes returns the text an embedding model expects before a stored
@@ -260,11 +470,25 @@ func (c *cacheFile) save(path string) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	// A temp file of its own, so two processes saving at once never mix
+	// their writes.
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".embeddings-*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	_, werr := tmp.Write(data)
+	if cerr := tmp.Close(); werr != nil || cerr != nil {
+		os.Remove(tmp.Name())
+		if werr != nil {
+			return werr
+		}
+		return cerr
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		os.Remove(tmp.Name())
+		return err
+	}
+	return nil
 }
 
 func hashText(s string) string {

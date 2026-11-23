@@ -21,6 +21,10 @@ python3 bench/agentfiles/run.py
 
 Every flag is in [verdicts.json](https://github.com/rjcuff/woolly/blob/main/bench/agentfiles/verdicts.json) with a note on why it's right. Among them: TanStack Router's AGENTS.md names `useValueStable`, which a performance change removed, and LangChain.js's points at `libs/langchain-standard-tests/`, which moved to `internal/standard-tests/`. These maintainers keep their files up to date by hand, so expect more in a typical repo. See [Check your agent files](/docs/memory-files).
 
+## Quick check
+
+`make eval` runs a small, fixed recall test in keyword mode and a table of memory lifecycle cases, in under a second and with no Ollama. It fails if recall@5 on its questions drops below 0.75. It scores 0.79 today. Use it before and after changing how search ranks memories.
+
 ## LOCOMO
 
 Woolly comes with a [LOCOMO](https://github.com/snap-research/locomo) benchmark, the test of long conversation memory that mem0 and others report. It runs on your computer with Ollama, so you can check the numbers yourself.

@@ -131,6 +131,12 @@ func (d *Dreamer) Dream(ctx context.Context, o Options) (*Report, error) {
 			rep.Note = "the model stopped answering: " + err.Error()
 			return rep, nil
 		}
+		if err := d.summarizeEpisodes(ctx, o, rep, done, time.Now()); err != nil {
+			if ctx.Err() != nil {
+				return rep, err
+			}
+			rep.Note = "couldn't summarize episodes: " + err.Error()
+		}
 	}
 	if o.Learn && o.Scope.Project != "" && d.Learner != nil {
 		if err := d.learnLessons(ctx, o, rep); err != nil {
@@ -325,8 +331,9 @@ func (d *Dreamer) apply(rel, text string, a, b memory.Memory, o Options, rep *Re
 		rep.add(st)
 
 	case "contradiction":
+		// Whichever was stated or confirmed last is the newer fact.
 		older, newer := a, b
-		if a.CreatedAt.After(b.CreatedAt) {
+		if a.UpdatedAt.After(b.UpdatedAt) {
 			older, newer = b, a
 		}
 		done[a.ID], done[b.ID] = true, true

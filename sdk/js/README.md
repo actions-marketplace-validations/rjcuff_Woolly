@@ -51,7 +51,7 @@ await w.add(
 const memories = await w.search('where does she live?', { userId: 'alice' });
 ```
 
-Scope with `userId`, `agentId`, `runId` or `project`. Also `getAll`, `history` (every version of a memory), `deleteAll` and `dream`, which merges duplicates and settles facts that changed. Pass `infer: false` to `add` to save messages as they are, without a model. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
+Scope with `userId`, `agentId`, `runId` or `project`. Also `getAll`, `history` (every version of a memory), `deleteAll`, `link` (recall one memory, get a related one too), `feedback` (say whether a memory helped), `scopedConflicts` and `resolveScoped`, and `dream`, which merges duplicates and settles facts that changed. Pass `infer: false` to `add` to save messages as they are, without a model, and `memoryType: 'procedure'` (or `preference`, `episode`) to say what kind they are; `search` and `recall` take `type: [...]`. See [Memory API for agents](https://usewoolly.com/docs/memory-api).
 
 ## Learn from a conversation
 
@@ -66,7 +66,7 @@ await w.learn([
 
 ## Everything else
 
-`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. Pass `project` to `remember`, `recall` and `context` to keep notes about one codebase separate.
+`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. `resolve` throws if it would let a less trusted memory replace one you saved; settle those on the review page. Pass `project` to `remember`, `recall` and `context` to keep notes about one codebase separate.
 
 `new Woolly()` finds the server at `WOOLLY_HOST` (default `127.0.0.1:11435`) and reads the token from `WOOLLY_HOME` (default `~/.woolly`). The `app` you pass is shown on memories your app saves and in `woolly log`.
 

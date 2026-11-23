@@ -69,6 +69,22 @@ const memories = await w.search('where does she live?', { userId: 'alice' });
 
 Scope with `userId`, `agentId`, `runId` or `project`. Also `getAll`, `history` (every version of a memory), `deleteAll` and `dream`, which merges duplicates and settles facts that changed. Pass `infer: false` to `add` to save messages as they are, without a model. See [Memory API for agents](/docs/memory-api).
 
+Give memories a type and ask for just that kind, link related memories, and tell Woolly what helped:
+
+```ts
+await w.add('To reset a password, send the link from the admin page', { userId: 'alice', infer: false, memoryType: 'procedure' });
+const steps = await w.search('reset a password', { userId: 'alice', type: ['procedure'] });
+
+await w.link(steps[0].id, otherId, { userId: 'alice' }); // recall one, get both
+await w.feedback(steps[0].id, true, { userId: 'alice' }); // ranks it a little higher next time
+
+for (const c of await w.scopedConflicts({ userId: 'alice' })) {
+  await w.resolveScoped(c.memory.id, { userId: 'alice' }); // throws if it would replace something more trusted
+}
+```
+
+`recall` takes `type` too.
+
 ## Learn from a conversation
 
 With Ollama running, a local model picks out the facts worth keeping. See [Smart memory](/docs/learn).
@@ -81,7 +97,7 @@ const steps = await w.learn([
 
 ## Everything else
 
-`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. Pass `project` to keep notes about one codebase separate, see [Projects](/docs/projects).
+`list`, `get`, `update`, `forget`, `restore`, `trash`, `conflicts`, `resolve` and `profile`. `resolve` throws if it would let a less trusted memory replace one you saved; settle those on the review page. Pass `project` to keep notes about one codebase separate, see [Projects](/docs/projects).
 
 Errors are `WoollyError`, with `status` set to the HTTP status. When nothing answers at Woolly's address you get `WoollyNotRunning`.
 

@@ -97,8 +97,12 @@ type Memory struct {
 	StaleReason string     `json:"stale_reason,omitempty"`
 	StaleCommit string     `json:"stale_commit,omitempty"`
 	StaleAt     *time.Time `json:"stale_at,omitempty"`
+	// Links are IDs of related memories. Recalling one brings the others
+	// along, so an agent gets the whole picture.
+	Links []string `json:"links,omitempty"`
 
-	file string // path on disk; empty until saved
+	file      string // path on disk; empty until saved
+	badStatus string // a status in the file Woolly didn't know, if any
 }
 
 func (m *Memory) clone() Memory {
@@ -109,6 +113,7 @@ func (m *Memory) clone() Memory {
 		c.InvalidAt = &t
 	}
 	c.Sources = append([]Ref(nil), m.Sources...)
+	c.Links = append([]string(nil), m.Links...)
 	if m.StaleAt != nil {
 		t := *m.StaleAt
 		c.StaleAt = &t
@@ -136,6 +141,42 @@ type Scope struct {
 	Agent   string
 	Session string
 	Project string
+	// Personal leaves out memories that apps built on Woolly saved for one
+	// of their users, agents or sessions. The user's own AI apps set it, so
+	// what an app keeps about "alice" never shows up in their briefs.
+	Personal bool
+	// Types keeps only memories of these types, like "preference". Empty
+	// means any type.
+	Types []string
+}
+
+// filterTypes normalizes the types a scope asks for. An unknown type is kept
+// as given, so it matches nothing instead of turning the filter off.
+func filterTypes(ts []string) []string {
+	var out []string
+	for _, t := range ts {
+		if k, ok := NormalizeType(t); ok {
+			out = append(out, k)
+		} else if t = strings.TrimSpace(t); t != "" {
+			out = append(out, "unknown:"+t)
+		}
+	}
+	return out
+}
+
+// Unscoped reports whether the memory belongs to the user themselves rather
+// than to a user, agent or session of an app built on Woolly.
+func (m *Memory) Unscoped() bool { return m.User == "" && m.Agent == "" && m.Session == "" }
+
+// Personal returns the memories that belong to the user themselves.
+func Personal(mems []Memory) []Memory {
+	var out []Memory
+	for i := range mems {
+		if mems[i].Unscoped() {
+			out = append(out, mems[i])
+		}
+	}
+	return out
 }
 
 // CleanScopeID tidies a user, agent or session ID: one line, at most 128 characters.
@@ -150,19 +191,34 @@ func CleanScopeID(s string) string {
 // Normalized returns the scope with its IDs tidied.
 func (sc Scope) Normalized() Scope {
 	return Scope{
-		User:    CleanScopeID(sc.User),
-		Agent:   CleanScopeID(sc.Agent),
-		Session: CleanScopeID(sc.Session),
-		Project: NormalizeProject(sc.Project),
+		User:     CleanScopeID(sc.User),
+		Agent:    CleanScopeID(sc.Agent),
+		Session:  CleanScopeID(sc.Session),
+		Project:  NormalizeProject(sc.Project),
+		Personal: sc.Personal,
+		Types:    filterTypes(sc.Types),
 	}
 }
 
-// Empty reports whether the scope has no user, agent or session.
+// Empty reports whether the scope has no user, agent or session. It ignores
+// Personal: a personal scope still filters.
 func (sc Scope) Empty() bool { return sc.User == "" && sc.Agent == "" && sc.Session == "" }
 
 // Matches reports whether m is in the scope. A user, agent or session must
 // match exactly when set; the project follows In.
 func (sc Scope) Matches(m *Memory) bool {
+	if sc.Personal && !m.Unscoped() {
+		return false
+	}
+	if len(sc.Types) > 0 {
+		t, ok := TypeOf(*m), false
+		for _, want := range sc.Types {
+			ok = ok || t == want
+		}
+		if !ok {
+			return false
+		}
+	}
 	return (sc.User == "" || m.User == sc.User) &&
 		(sc.Agent == "" || m.Agent == sc.Agent) &&
 		(sc.Session == "" || m.Session == sc.Session) &&

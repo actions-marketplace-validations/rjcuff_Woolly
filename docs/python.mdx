@@ -85,6 +85,21 @@ memories = w.search("where does she live?", user_id="alice")["results"]
 
 Scope with `user_id`, `agent_id`, `run_id` or `project`. Also `get_all`, `history` (every version of a memory), `delete_all` and `dream`, which merges duplicates and settles facts that changed. Pass `infer=False` to `add` to save messages as they are, without a model. See [Memory API for agents](/docs/memory-api).
 
+Give memories a type and ask for just that kind, link related memories, and tell Woolly what helped:
+
+```python
+w.add("To reset a password, send the link from the admin page", user_id="alice", infer=False, memory_type="procedure")
+steps = w.search("reset a password", user_id="alice", type=["procedure"])["results"]
+
+w.link(steps[0]["id"], other_id, user_id="alice")      # recall one, get both
+w.feedback(steps[0]["id"], helpful=True, user_id="alice")  # ranks it a little higher next time
+
+for c in w.scoped_conflicts(user_id="alice"):          # disagreements waiting for a pick
+    w.resolve_scoped(c["memory"]["id"], user_id="alice")   # raises if it would replace something more trusted
+```
+
+`recall` takes `type` too.
+
 ## Learn from a conversation
 
 With Ollama running, `learn` reads a conversation and saves the facts worth keeping. It updates older facts and skips ones Woolly already knows. See [Smart memory](/docs/learn).
@@ -122,7 +137,7 @@ w.forget(memory_id)            # moves it to the trash
 w.restore(memory_id)
 w.trash()
 w.conflicts()
-w.resolve(memory_id)
+w.resolve(memory_id)           # raises if it would replace a fact you saved
 w.profile().markdown           # a summary of everything known
 ```
 

@@ -46,7 +46,7 @@ func TestHandshakeRememberRecall(t *testing.T) {
 	if v := resps[0]["result"].(map[string]any)["protocolVersion"]; v != "2025-06-18" {
 		t.Fatalf("protocolVersion = %v", v)
 	}
-	if n := len(resps[1]["result"].(map[string]any)["tools"].([]any)); n != 10 {
+	if n := len(resps[1]["result"].(map[string]any)["tools"].([]any)); n != 12 {
 		t.Fatalf("tools = %d", n)
 	}
 	if !strings.Contains(lines[3], "Prefers concise answers") || resps[3]["id"] != "four" {

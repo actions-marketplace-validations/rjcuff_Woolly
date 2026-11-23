@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -51,6 +53,9 @@ type Store struct {
 	mu   sync.Mutex
 	mems map[string]*Memory
 	fp   string // fingerprint of the directory at last load
+	// problems lists files that couldn't be read at last load, so a typo in
+	// a hand edit shows up instead of the memory quietly going missing.
+	problems []string
 
 	usageMu sync.Mutex // guards usage.json
 }
@@ -79,8 +84,9 @@ func (s *Store) fingerprint() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var n int
-	var latest time.Time
+	// Every file's name, size and time, so a rename or a sync tool that
+	// keeps an older time still counts as a change. ReadDir sorts by name.
+	h := sha256.New()
 	for _, e := range entries {
 		if e.IsDir() || !isMemoryFile(e.Name()) {
 			continue
@@ -89,12 +95,18 @@ func (s *Store) fingerprint() (string, error) {
 		if err != nil {
 			continue
 		}
-		n++
-		if info.ModTime().After(latest) {
-			latest = info.ModTime()
-		}
+		fmt.Fprintf(h, "%s:%d:%d;", e.Name(), info.Size(), info.ModTime().UnixNano())
 	}
-	return fmt.Sprintf("%d:%d", n, latest.UnixNano()), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Problems lists memory files Woolly couldn't read fully, with why. Fix or
+// remove them by hand; nothing else touches them.
+func (s *Store) Problems() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_ = s.refresh()
+	return append([]string(nil), s.problems...)
 }
 
 func (s *Store) load() error {
@@ -107,6 +119,7 @@ func (s *Store) load() error {
 		return err
 	}
 	mems := make(map[string]*Memory, len(entries))
+	var problems []string
 	for _, e := range entries {
 		if e.IsDir() || !isMemoryFile(e.Name()) {
 			continue
@@ -114,17 +127,22 @@ func (s *Store) load() error {
 		path := filepath.Join(s.dir, e.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
+			problems = append(problems, e.Name()+": "+err.Error())
 			continue
 		}
 		m, err := decode(data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "woolly: skipping %s: %v\n", e.Name(), err)
+			problems = append(problems, e.Name()+": "+err.Error())
 			continue
+		}
+		if m.badStatus != "" {
+			problems = append(problems, fmt.Sprintf("%s: unknown status %q, read as active", e.Name(), m.badStatus))
 		}
 		m.file = path
 		mems[m.ID] = m
 	}
-	s.mems, s.fp = mems, fp
+	s.mems, s.fp, s.problems = mems, fp, problems
 	return nil
 }
 
@@ -219,6 +237,23 @@ type RememberInput struct {
 	Sources []Ref
 	// Confidence is from 0 to 1. Zero means the default for the source.
 	Confidence float64
+	// Untrusted marks text that came through an AI or an app, whatever
+	// source it claims. It is always checked for instructions to an AI.
+	Untrusted bool
+}
+
+// UserStatedTag marks a fact an AI app or a script said came from the user.
+const UserStatedTag = "user-stated"
+
+// claimed is the source Woolly saves for what a caller claims. Woolly can't
+// check that untrusted text really came from the user, so a claim of "user"
+// is saved one step down, as import, tagged so it's clear who said what. It
+// still beats an AI's guess but never replaces what the user saved.
+func claimed(src Source, untrusted bool, tags []string) (Source, []string) {
+	if untrusted && src == SourceUser {
+		return SourceImport, append(append([]string(nil), tags...), UserStatedTag)
+	}
+	return src, tags
 }
 
 // RememberResult reports what Remember did.
@@ -244,12 +279,13 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 	if src.Rank() == 0 {
 		return nil, fmt.Errorf("unknown source %q (use user, import or agent)", src)
 	}
+	src, in.Tags = claimed(src, in.Untrusted, in.Tags)
 	if err := checkSensitive(content, in.AllowSensitive); err != nil {
 		return nil, err
 	}
 	// Anything you type yourself is trusted. Text from an AI or an import
 	// could have come from a malicious web page or document.
-	if src != SourceUser && secrets.LooksLikeInstructions(content) {
+	if (src != SourceUser || in.Untrusted) && secrets.LooksLikeInstructions(content) {
 		return nil, &InjectionError{}
 	}
 	key := NormalizeKey(in.Key)
@@ -323,7 +359,9 @@ func (s *Store) Remember(in RememberInput) (*RememberResult, error) {
 				continue
 			}
 			same = append(same, ex)
-			if ex.Status == StatusActive && ex.Source.Rank() > src.Rank() &&
+			// A stale fact the user stated still outranks a guess: it waits for
+			// their review, not for an agent to replace it.
+			if (ex.Status == StatusActive || ex.Status == StatusStale) && ex.Source.Rank() > src.Rank() &&
 				(stronger == nil || ex.UpdatedAt.After(stronger.UpdatedAt)) {
 				stronger = ex
 			}
@@ -411,6 +449,8 @@ type UpdateInput struct {
 	Sources        *[]Ref
 	Confidence     *float64
 	AllowSensitive bool
+	// Untrusted text is checked for instructions to an AI, as in Remember.
+	Untrusted bool
 }
 
 // Update edits a memory in place. If the memory is current and has a key,
@@ -432,6 +472,9 @@ func (s *Store) Update(id string, in UpdateInput) (Memory, error) {
 		}
 		if err := checkSensitive(c, in.AllowSensitive); err != nil {
 			return Memory{}, err
+		}
+		if in.Untrusted && secrets.LooksLikeInstructions(c) {
+			return Memory{}, &InjectionError{}
 		}
 		m.Content = c
 	}
@@ -490,6 +533,35 @@ func (s *Store) Forget(id string) (Memory, error) {
 		return Memory{}, err
 	}
 	delete(s.mems, m.ID)
+	// A conflict with a memory that's gone has nothing left to settle, and
+	// a link to it leads nowhere.
+	for _, ex := range s.mems {
+		linked := hasID(ex.Links, m.ID)
+		if ex.ConflictsWith != m.ID && !linked {
+			continue
+		}
+		if ex.ConflictsWith == m.ID {
+			ex.ConflictsWith = ""
+			if ex.Status == StatusConflict {
+				ex.Status = StatusActive
+				// Another current fact for the same key: wait on it instead.
+				for _, other := range s.mems {
+					if other.ID != ex.ID && ex.Key != "" && other.Key == ex.Key && sameSlot(other, ex) &&
+						(other.Status == StatusActive || other.Status == StatusStale) {
+						ex.Status, ex.ConflictsWith = StatusConflict, other.ID
+						break
+					}
+				}
+			}
+		}
+		if linked {
+			ex.Links = removeID(ex.Links, m.ID)
+		}
+		ex.UpdatedAt = m.UpdatedAt
+		if err := s.write(ex); err != nil {
+			return Memory{}, err
+		}
+	}
 	return m.clone(), nil
 }
 
@@ -525,6 +597,9 @@ func (s *Store) Trash() ([]Memory, error) {
 func (s *Store) Restore(id string) (Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, err
+	}
 	trash := s.trashDir()
 	entries, err := os.ReadDir(trash)
 	if err != nil {
@@ -532,10 +607,21 @@ func (s *Store) Restore(id string) (Memory, error) {
 	}
 	var match string
 	for _, e := range entries {
+		if strings.TrimSuffix(e.Name(), ".md") == id {
+			match = e.Name() // an exact ID wins over longer names
+		}
+	}
+	for _, e := range entries {
+		if match != "" {
+			break
+		}
 		name := strings.TrimSuffix(e.Name(), ".md")
-		if name == id || (id != "" && strings.HasPrefix(name, id)) {
-			if match != "" && name != id {
-				return Memory{}, fmt.Errorf("id prefix %q matches more than one memory", id)
+		if id != "" && strings.HasPrefix(name, id) {
+			for _, f := range entries {
+				g := strings.TrimSuffix(f.Name(), ".md")
+				if g != name && strings.HasPrefix(g, id) {
+					return Memory{}, fmt.Errorf("id prefix %q matches more than one memory", id)
+				}
 			}
 			match = e.Name()
 		}
@@ -552,7 +638,43 @@ func (s *Store) Restore(id string) (Memory, error) {
 	if err != nil {
 		return Memory{}, err
 	}
+	if _, err := os.Stat(filepath.Join(s.dir, match)); err == nil || s.mems[m.ID] != nil {
+		return Memory{}, fmt.Errorf("memory %s already exists", m.ID)
+	}
 	m.UpdatedAt = time.Now().UTC()
+	// While it was in the trash, a newer fact may have taken its key. Then it
+	// comes back as a conflict for the user to settle, never as a second
+	// current fact.
+	if (m.Status == StatusActive || m.Status == StatusStale) && m.Key != "" {
+		for _, ex := range s.mems {
+			if (ex.Status == StatusActive || ex.Status == StatusStale) && ex.Key == m.Key && sameSlot(ex, m) {
+				m.Status = StatusConflict
+				m.ConflictsWith = ex.ID
+				break
+			}
+		}
+	}
+	// A conflict partner forgotten meanwhile leaves nothing to settle.
+	if m.Status == StatusConflict && s.mems[m.ConflictsWith] == nil {
+		m.Status, m.ConflictsWith = StatusActive, ""
+	}
+	// Links: drop ones to memories that are gone, and put back the other
+	// side of the rest, which Forget removed.
+	var links []string
+	for _, id := range m.Links {
+		other, ok := s.mems[id]
+		if !ok {
+			continue
+		}
+		links = append(links, id)
+		if !hasID(other.Links, m.ID) {
+			other.Links = append(other.Links, m.ID)
+			if err := s.write(other); err != nil {
+				return Memory{}, err
+			}
+		}
+	}
+	m.Links = links
 	if err := writeFile(filepath.Join(s.dir, match), encode(m)); err != nil {
 		return Memory{}, err
 	}
@@ -593,9 +715,20 @@ func (s *Store) EmptyTrash() (int, error) {
 	return n, nil
 }
 
+// ErrOutranked is returned when an AI tries to make a memory win over one
+// that a more trusted source saved.
+var ErrOutranked = errors.New("not resolved: the other memory comes from a more trusted source, or this version was replaced or retired, so only the user can choose it")
+
 // Resolve makes the given memory the current fact for its key and marks every
-// other live memory with that key as superseded by it.
+// other live memory with that key as superseded by it. It is for the user,
+// through the command line or the review page.
 func (s *Store) Resolve(id string) (Memory, []Memory, error) {
+	return s.ResolveAs(id, SourceUser)
+}
+
+// ResolveAs is Resolve on behalf of actor. Anyone but the user may only pick
+// a memory at least as trusted as each memory it would replace.
+func (s *Store) ResolveAs(id string, actor Source) (Memory, []Memory, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.refresh(); err != nil {
@@ -604,6 +737,22 @@ func (s *Store) Resolve(id string) (Memory, []Memory, error) {
 	keep, err := s.find(id)
 	if err != nil {
 		return Memory{}, nil, err
+	}
+	if actor != SourceUser {
+		// Only the user brings back a version that was replaced or retired.
+		if !keep.Live() {
+			return Memory{}, nil, ErrOutranked
+		}
+		for _, ex := range s.mems {
+			if ex.ID == keep.ID || !ex.Live() || ex.Source.Rank() <= keep.Source.Rank() {
+				continue
+			}
+			paired := ex.ID == keep.ConflictsWith || ex.ConflictsWith == keep.ID
+			sameKey := keep.Key != "" && ex.Key == keep.Key && sameSlot(ex, keep)
+			if paired || sameKey {
+				return Memory{}, nil, ErrOutranked
+			}
+		}
 	}
 	replaced, err := s.resolveLocked(keep, time.Now().UTC())
 	if err != nil {
@@ -670,7 +819,9 @@ func (s *Store) ListIn(sc Scope, includeAll bool) ([]Memory, error) {
 
 // Replace saves in as the newer version of the memory with ID old: the old
 // one is kept as history, marked superseded from now on. The new memory
-// takes the old one's scope unless in sets its own.
+// takes the old one's scope, key, metadata, sources, type and commit unless
+// in sets its own, and keeps the old tags along with in's. An edit from a
+// less trusted source than the old version is saved as a conflict instead.
 func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 	prev, err := s.Get(old)
 	if err != nil {
@@ -691,12 +842,48 @@ func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 	if in.Metadata == nil {
 		in.Metadata = prev.Metadata
 	}
+	// A new version is about the same code, so it keeps what ties the old
+	// one to it; without this, a merged or edited fact never goes stale.
+	if in.Sources == nil {
+		in.Sources = prev.Sources
+	}
+	if in.Type == "" {
+		in.Type = prev.Type
+	}
+	if in.Commit == "" {
+		in.Commit = prev.Commit
+	}
+	src := in.Source
+	if src == "" {
+		src = SourceUser
+	}
+	src, _ = claimed(src, in.Untrusted, nil)
+	// A more trusted source restating a guess is sure of it: the old
+	// confidence belonged to the guess.
+	if in.Confidence == 0 && src.Rank() <= prev.Source.Rank() {
+		in.Confidence = prev.Conf
+	}
+	in.Tags = mergeTags(prev.Tags, in.Tags)
 	res, err := s.Remember(in)
 	if err != nil {
 		return nil, err
 	}
 	if res.Memory.ID == prev.ID {
 		return res, nil // the same text again
+	}
+	// A less trusted edit never replaces the old version: it waits as a
+	// conflict for the user to settle.
+	if src.Rank() < prev.Source.Rank() {
+		if res.Memory.Status != StatusConflict {
+			m, err := s.MarkConflict(res.Memory.ID, prev.ID)
+			if err != nil {
+				return nil, err
+			}
+			res.Memory = m
+		}
+		p := prev
+		res.ConflictsWith = &p
+		return res, nil
 	}
 
 	s.mu.Lock()
@@ -718,7 +905,46 @@ func (s *Store) Replace(old string, in RememberInput) (*RememberResult, error) {
 		return nil, err
 	}
 	res.Superseded = append(res.Superseded, ex.clone())
+	if err := s.relinkLocked(prev.ID, res.Memory.ID); err != nil {
+		return nil, err
+	}
+	if m, ok := s.mems[res.Memory.ID]; ok {
+		res.Memory = m.clone()
+	}
 	return res, nil
+}
+
+// relinkLocked moves every link from the memory old to its new version:
+// the new version takes old's links, and memories that pointed at old point
+// at the new version. Caller holds s.mu.
+func (s *Store) relinkLocked(old, now string) error {
+	o, n := s.mems[old], s.mems[now]
+	if o == nil || n == nil {
+		return nil
+	}
+	for _, id := range o.Links {
+		if id != now && !hasID(n.Links, id) {
+			n.Links = append(n.Links, id)
+		}
+	}
+	if len(o.Links) > 0 {
+		if err := s.write(n); err != nil {
+			return err
+		}
+	}
+	for _, ex := range s.mems {
+		if ex.ID == now || !hasID(ex.Links, old) {
+			continue
+		}
+		ex.Links = removeID(ex.Links, old)
+		if ex.ID != old && !hasID(ex.Links, now) {
+			ex.Links = append(ex.Links, now)
+		}
+		if err := s.write(ex); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Expire marks a memory as no longer true, with nothing to replace it. It
@@ -805,6 +1031,12 @@ func (s *Store) Supersede(old, by string) (Memory, error) {
 	if o.ID == b.ID {
 		return Memory{}, errors.New("a memory can't replace itself")
 	}
+	if !b.Live() {
+		return Memory{}, fmt.Errorf("memory %s is no longer current", b.ID)
+	}
+	if b.SupersededBy == o.ID {
+		return Memory{}, errors.New("these two memories would replace each other")
+	}
 	now := time.Now().UTC()
 	o.Status = StatusSuperseded
 	o.SupersededBy = b.ID
@@ -818,11 +1050,25 @@ func (s *Store) Supersede(old, by string) (Memory, error) {
 }
 
 // Merge saves in as one memory that replaces every memory in ids, which are
-// kept as history. The new memory takes the scope of the first one unless in
-// sets its own.
+// kept as history. The new memory takes the scope, type, commit and
+// confidence of the first one unless in sets its own. Its sources and tags
+// are in's plus those of every memory merged.
 func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
 	if len(ids) < 2 {
 		return nil, errors.New("merging needs at least two memories")
+	}
+	// The merged memory points at everything its parts pointed at.
+	refs := append([]Ref(nil), in.Sources...)
+	for _, id := range ids {
+		m, err := s.Get(id)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, m.Sources...)
+		in.Tags = mergeTags(in.Tags, m.Tags)
+	}
+	if len(refs) > 0 {
+		in.Sources = refs
 	}
 	res, err := s.Replace(ids[0], in)
 	if err != nil {
@@ -837,8 +1083,72 @@ func (s *Store) Merge(ids []string, in RememberInput) (*RememberResult, error) {
 			return nil, err
 		}
 		res.Superseded = append(res.Superseded, m)
+		s.mu.Lock()
+		err = s.relinkLocked(m.ID, res.Memory.ID)
+		if cur, ok := s.mems[res.Memory.ID]; ok {
+			res.Memory = cur.clone()
+		}
+		s.mu.Unlock()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
+}
+
+// Link ties two memories together both ways, so recalling one brings the
+// other along. Linking twice changes nothing.
+func (s *Store) Link(a, b string) (Memory, Memory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.refresh(); err != nil {
+		return Memory{}, Memory{}, err
+	}
+	ma, err := s.find(a)
+	if err != nil {
+		return Memory{}, Memory{}, err
+	}
+	mb, err := s.find(b)
+	if err != nil {
+		return Memory{}, Memory{}, err
+	}
+	if ma.ID == mb.ID {
+		return Memory{}, Memory{}, errors.New("a memory can't link to itself")
+	}
+	if !sameSlot(&Memory{User: ma.User, Agent: ma.Agent, Session: ma.Session}, &Memory{User: mb.User, Agent: mb.Agent, Session: mb.Session}) {
+		return Memory{}, Memory{}, errors.New("only memories with the same user, agent and run can be linked")
+	}
+	now := time.Now().UTC()
+	for _, p := range [][2]*Memory{{ma, mb}, {mb, ma}} {
+		if hasID(p[0].Links, p[1].ID) {
+			continue
+		}
+		p[0].Links = append(p[0].Links, p[1].ID)
+		p[0].UpdatedAt = now
+		if err := s.write(p[0]); err != nil {
+			return Memory{}, Memory{}, err
+		}
+	}
+	return ma.clone(), mb.clone(), nil
+}
+
+func hasID(ids []string, id string) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+func removeID(ids []string, id string) []string {
+	var out []string
+	for _, x := range ids {
+		if x != id {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // MarkConflict flags the memory id as disagreeing with the memory with, so
@@ -856,6 +1166,9 @@ func (s *Store) MarkConflict(id, with string) (Memory, error) {
 	w, err := s.find(with)
 	if err != nil {
 		return Memory{}, err
+	}
+	if m.ID == w.ID {
+		return Memory{}, errors.New("a memory can't conflict with itself")
 	}
 	m.Status = StatusConflict
 	m.ConflictsWith = w.ID
