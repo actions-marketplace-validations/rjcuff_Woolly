@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The README leads with `woolly check` and lists the Woolly Team plans.
+- The Woolly Team founding pilot has ended. The team page FAQ now points to the Free plan as the way to try it.
+
 ## 0.20.1
 
 A fix so AI apps can't overrule what you saved, and Woolly Team's subscription terms.
