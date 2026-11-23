@@ -5,7 +5,7 @@ description: A CLAUDE.md that keeps itself up to date. Commit your project's mem
 
 Every AI coding tool starts each session knowing nothing about your codebase. Teams fix this by hand with a CLAUDE.md or AGENTS.md that goes out of date.
 
-`woolly init` keeps the project's memory in the repo instead, in `.woolly/woolly.md`. Every teammate's agent reads it and adds to it through Woolly: Claude Code, Cursor, Codex, Gemini CLI, opencode, VS Code and anything else you [connect](/docs/connect).
+`woolly init` keeps the project's memory in the repo instead, in `.woolly/woolly.md`. Every teammate's agent reads it and adds to it through Woolly, whether that's Claude Code, Cursor, Codex, Gemini CLI, opencode, VS Code and anything else you [connect](/docs/connect).
 
 ```sh
 cd ~/code/acme
@@ -51,7 +51,7 @@ It reads `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`
 
 The headings are Overview, Stack, Conventions, Decisions, Gotchas and Commands. Bugs and Hardware show up when they have facts, and a Notes heading shows up for facts that fit none of them.
 
-The comment at the end of each line is how Woolly tracks it: a short ID, the key if it has one, and the app that saved it. A fact that points at code also has `src=`, and a fact whose code changed has `stale=` with the commit that changed it, so teammates see it in the diff.
+The comment at the end of each line is how Woolly tracks it. It holds a short ID, the key if it has one, and the app that saved it. A fact that points at code also has `src=`, and a fact whose code changed has `stale=` with the commit that changed it, so teammates see it in the diff.
 
 ```md
 - The IMU's chip select is GPIO 5 <!-- id=1a2b3c4d src=main/pins.h:12-18 stale=9b1e2f0 -->
@@ -93,7 +93,7 @@ Facts get replaced, not piled up:
 
 ## Decisions are saved when a session ends
 
-When a Claude Code session ends in a repo with `woolly.md`, Woolly reads the session with your local model and saves the decisions in it under Decisions: the choice, why, and what was turned down. It skips finished tasks and anything said without a reason, and doesn't save the same decision twice.
+When a Claude Code session ends in a repo with `woolly.md`, Woolly reads the session with your local model and saves the decisions in it under Decisions, with the choice, why, and what was turned down. It skips finished tasks and anything said without a reason, and doesn't save the same decision twice.
 
 This needs Claude Code [connected](/docs/connect#memory-that-loads-by-itself) and [Ollama](/docs/ollama) running. New decisions show up in `git diff`, so the team sees them before they're committed. Turn it off for a repo with:
 

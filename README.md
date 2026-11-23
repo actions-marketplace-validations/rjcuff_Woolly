@@ -8,11 +8,12 @@ Woolly flags lines in CLAUDE.md, AGENTS.md, Cursor rules and agent memory that a
 
 [![Release](https://img.shields.io/github/v/release/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
+[![CI](https://github.com/rjcuff/woolly/actions/workflows/ci.yml/badge.svg)](https://github.com/rjcuff/woolly/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/stargazers)
 
 [Website](https://usewoolly.com) · [Docs](https://usewoolly.com/docs) · [Download for Mac and Windows](https://usewoolly.com/download) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Glama](https://glama.ai/mcp/servers/@rjcuff/woolly)
 
-![Woolly saving notes for two projects, Claude Code loading only the acme notes at startup, and woolly log showing what each app did](docs/demo.gif)
+![woolly check flagging three lines in a drone repo's CLAUDE.md after a refactor, then woolly check --fix rewriting the renamed function and moved file](docs/demo.gif)
 
 </div>
 
@@ -24,7 +25,7 @@ cd your-repo
 woolly check
 ```
 
-No setup, no account, no model. Woolly reads CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, Claude Code's auto memory, Codex memories and claude-mem, and flags every line that names a function, file or script the code no longer has, with the commit that changed it.
+No setup, no account, no model. Woolly reads CLAUDE.md and the files it imports, AGENTS.md, Claude Code rules, skills and subagents, Cursor, Windsurf and Cline rules, Copilot instructions, Claude Code's auto memory, Codex memories and claude-mem, and flags every line that names a function, file or script the code no longer has, with the commit that changed it.
 
 ```
 Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b0427.
@@ -119,15 +120,17 @@ Run it in a repo and commit `.woolly/`. The first time, it brings in what your C
 
 One flat price per organization, no per-seat fees. The open source check stays free in every plan.
 
-## Fast on a laptop
+## Tested on real repos
 
-On a sample of the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark, Woolly had the answer in its top 20 results for 83.2% of 382 questions, 95.6% for questions about dates and time, in a median of 19 ms. It runs entirely on a laptop with Ollama. [Run it yourself](https://usewoolly.com/docs/benchmark)
+We ran `woolly check` on the agent files of 20 well-known open source repos, 2,990 lines in all. It flagged 11 lines in 4 repos, and all 11 named code that really was gone. The median check took 0.67 seconds. [Run it yourself](bench/RESULTS.md)
+
+On 50 scripted changes to a small drone firmware repo, Woolly flagged 28 of the 30 facts that went stale, with no false alarms. Its search also does well on the [LOCOMO](https://github.com/snap-research/locomo) long-conversation benchmark. [Benchmarks](https://usewoolly.com/docs/benchmark)
 
 ## Questions
 
 **Do I need Ollama?** No. Woolly works on its own, and stale detection never needs a model. With Ollama running, it also searches by meaning and picks out decisions and gotchas when a session ends.
 
-**How is this different from other memory tools?** Most remember what a conversation said. Woolly also checks it against the code. Every project fact cites its source, and when the code changes, the fact is flagged instead of trusted. It runs on your own machine with no cloud, works with every agent at once, and uses a local model only.
+**How is this different from other memory tools?** Most remember what a conversation said. Woolly also checks it against the code. Every project fact cites its source, and when the code changes, the fact is flagged instead of trusted. It runs on your own machine with no cloud, works with every agent at once, and uses a local model only. Some agents can now audit their own instruction files with a model, inside one session. Woolly needs no model, names the commit that broke each line, fixes renames with `--fix`, runs in CI on every pull request, and also reads Codex memories and claude-mem.
 
 **Is this a memory API for my app?** It has one, shaped like mem0's, with [JavaScript](https://usewoolly.com/docs/javascript) and [Python](https://usewoolly.com/docs/python) packages. But Woolly is built first for your own coding agents. If you're adding memory to a product with thousands of users, a hosted memory API is the better fit.
 

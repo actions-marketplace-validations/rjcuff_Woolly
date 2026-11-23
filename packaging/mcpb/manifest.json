@@ -3,8 +3,8 @@
   "name": "woolly",
   "display_name": "Woolly",
   "version": "VERSION",
-  "description": "One memory for all your AI apps. Local, private, open source.",
-  "long_description": "Woolly gives Claude, Cursor, Ollama and your own apps one shared memory that lives on your computer. Memories are plain Markdown files in ~/.woolly that you can read and edit. Newer facts replace older ones, passwords and keys are refused, and nothing ever leaves your computer.",
+  "description": "Project memory for coding agents that flags stale lines in CLAUDE.md, AGENTS.md and agent memory.",
+  "long_description": "Woolly gives Claude and your other coding agents one project memory that knows when it is wrong. Every fact points at the code it is about, and when that code changes, the fact is flagged instead of trusted. Woolly also checks CLAUDE.md, AGENTS.md and Cursor rules for lines that name code a commit removed. Memories are plain Markdown files you can read and edit, passwords and keys are refused, and nothing leaves your computer.",
   "author": { "name": "Ryan Cuff", "url": "https://github.com/rjcuff" },
   "homepage": "https://usewoolly.com",
   "documentation": "https://usewoolly.com/docs",
@@ -12,7 +12,7 @@
   "repository": { "type": "git", "url": "https://github.com/rjcuff/woolly" },
   "license": "MIT",
   "icon": "icon.png",
-  "keywords": ["memory", "local", "privacy", "ollama", "profile"],
+  "keywords": ["memory", "project memory", "stale", "claude.md", "agents.md", "local"],
   "server": {
     "type": "binary",
     "entry_point": "server/run.sh",
@@ -30,7 +30,13 @@
     { "name": "get_profile", "description": "A summary of what Woolly knows about the user" },
     { "name": "list_memories", "description": "List every current memory" },
     { "name": "forget", "description": "Move a memory to the trash" },
-    { "name": "resolve_conflict", "description": "Keep one version of a fact that disagrees" }
+    { "name": "resolve_conflict", "description": "Keep one version of a fact that disagrees" },
+    { "name": "decide", "description": "Save a decision with why and what was rejected" },
+    { "name": "why", "description": "The decisions and gotchas behind a file, line or function" },
+    { "name": "check_memory_files", "description": "Lines in CLAUDE.md, AGENTS.md and agent memory that name code that's gone" },
+    { "name": "handoff", "description": "Save where the work left off for the next session" },
+    { "name": "link_memories", "description": "Link two related memories" },
+    { "name": "rate_memory", "description": "Say whether a recalled memory helped" }
   ],
   "compatibility": { "platforms": ["darwin", "linux", "win32"] }
 }

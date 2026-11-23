@@ -13,7 +13,7 @@ When a pull request changes code that a line in CLAUDE.md, AGENTS.md, Cursor rul
 > | --- | --- | --- |
 > | `CLAUDE.md:12` | `- Handlers call requireUser first` | requireUser was renamed to requireSession in src/auth.ts in 229f599 (2026-11-20) |
 
-Each finding is evidence, not a verdict: the line, what it names, and the commit where that name, file, script or make target went away. A person decides whether the line is wrong. Woolly matches names against git history with no model, so it can miss a line whose meaning went stale while every name in it still exists.
+Each finding is evidence, not a verdict. It gives the line, what it names, and the commit where that name, file, script or make target went away. A person decides whether the line is wrong. Woolly matches names against git history with no model, so it can miss a line whose meaning went stale while every name in it still exists.
 
 Nobody on the team needs Woolly installed for this.
 
@@ -63,6 +63,7 @@ The Action needs nothing else, and it never pushes commits.
 3. It runs `woolly check --markdown --base <the pull request's base commit>`. Facts were true on the branch you're merging into, so that's what the change is compared against.
 4. It checks every line in the repo's agent files and reports the ones this change made stale. Lines that were already out of date are listed separately, folded away.
 5. It writes the report to the job summary. When something went stale, it comments on the pull request. If it commented before, it updates that comment instead of adding another.
+6. It marks each stale line in the pull request's Files changed view, next to the line, when that file is part of the change. Lines this change made stale are warnings, and lines that were already stale are notices.
 
 The comment quotes each stale line as code, so a line can't mention people, load images, add links or render HTML in the comment. A line that looks like it holds an API key, token or password is not quoted at all.
 
@@ -81,6 +82,7 @@ The comment quotes each stale line as code, so a line can't mention people, load
 | `base` | the pull request's base commit | The commit or branch to compare against. On a push, it defaults to the commit before the push |
 | `comment` | `true` | Comment on the pull request when something goes stale. `false` only writes the job summary |
 | `fail-on-stale` | `false` | Fail the job when the change makes something stale |
+| `annotations` | `true` | Mark each stale line in the pull request's changed files. `false` leaves them out. Needs Woolly 0.21.0 or later |
 | `footer` | `true` | End the comment with one line that links to Woolly. `false` leaves it out |
 | `token` | `github.token` | The token for commenting. It needs `pull-requests: write` |
 

@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Install Woolly, save a memory, and get it back.
+description: Install Woolly, check your agent files for stale lines, and give your agents project memory.
 ---
 
 ## Install Woolly
@@ -54,43 +54,41 @@ Check that it worked:
 woolly version
 ```
 
-## Save a memory
+## Check your agent files
 
 ```sh
-woolly remember "I prefer tabs over spaces" --key code.indent
+cd your-repo
+woolly check
 ```
 
-The `--key` names the fact. Use one for anything that can change, like where you live or which database a project uses.
-
-## Get it back
-
-```sh
-woolly recall "tabs or spaces"
-```
+Woolly reads CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions and your agents' memory, and flags every line that names a function, file or script the code no longer has, with the commit that changed it. It needs no setup and no model.
 
 ```txt
-1.05  [20261110-150029-92f9ddf6] I prefer tabs over spaces (key: code.indent; source: user; 2026-11-10)
-(keyword search; run 'woolly doctor' to enable semantic search)
+Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b0427.
+  .github/copilot-instructions.md:30  Also update: `src/shared/api.ts`, `src/shared/providers/providers.json`
+    src/shared/providers/providers.json was moved to apps/vscode/src/shared/providers/providers.json in 791d23899 (2026-05-25)
+1 line names code that's gone. Your agents still read it as true.
 ```
 
-With [Ollama](/docs/ollama) running, Woolly also searches by meaning, so "what indentation do I like" finds it too.
-## Connect your AI
+`woolly check --fix` rewrites renamed names and moved paths for you. See [Check your agent files](/docs/memory-files).
+
+## Check after every commit
+
+```sh
+woolly init --hooks
+```
+
+This starts project memory in `.woolly/`, brings in what your agent files already say, and checks again after every commit. Commit `.woolly/`, and every teammate's agents read and update the same notes. See [Project memory](/docs/project-memory).
+
+## Connect your agents
 
 ```sh
 woolly connect
 ```
 
-This adds Woolly to Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode, whichever you have. Now they can remember and recall on their own. See [Connect your apps](/docs/connect).
+This adds Woolly to Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex, Gemini CLI, LM Studio and opencode, whichever you have. Each session starts with the project's current facts and the lines that went stale, so the agent knows not to follow them. See [Connect your apps](/docs/connect).
 
-## Share project memory with your team
-
-In a git repo:
-
-```sh
-woolly init
-```
-
-Commit `.woolly/`, and every teammate's AI tools read and update the same notes about the project. See [Project memory](/docs/project-memory).
+To check pull requests too, add the [GitHub Action](/docs/pull-requests).
 
 ## Keep it running
 
@@ -99,3 +97,14 @@ woolly service install
 ```
 
 Woolly now runs in the background and starts when you log in, like Ollama. The review page, the API and the [proxy](/docs/proxy) are always ready. Stop it with `woolly service uninstall`.
+
+## Personal memory
+
+Woolly also keeps a few facts about you, on your computer, out of every repo.
+
+```sh
+woolly remember "I prefer tabs over spaces" --key code.indent
+woolly recall "tabs or spaces"
+```
+
+The `--key` names the fact, so a newer one replaces it. With [Ollama](/docs/ollama) running, Woolly also searches by meaning.

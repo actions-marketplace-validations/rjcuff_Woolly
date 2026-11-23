@@ -33,7 +33,29 @@ type File struct {
 }
 
 // repoFiles are the agent files read from the repo itself, relative to it.
-var repoFiles = []string{"CLAUDE.md", "CLAUDE.local.md", "AGENTS.md", "GEMINI.md", ".cursorrules", ".windsurfrules", ".github/copilot-instructions.md"}
+var repoFiles = []string{"CLAUDE.md", "CLAUDE.local.md", "AGENTS.md", "AGENTS.local.md", "AGENT.md", "GEMINI.md", "WARP.md", ".cursorrules", ".windsurfrules", ".clinerules", ".github/copilot-instructions.md"}
+
+// ruleGlobs are folders of agent rules, skills, commands and prompts that
+// agents load as instructions, relative to the repo.
+var ruleGlobs = []string{
+	".cursor/rules/*.md", ".cursor/rules/*.mdc",
+	".claude/rules/*.md", ".claude/rules/*/*.md",
+	".claude/commands/*.md", ".claude/commands/*/*.md",
+	".claude/agents/*.md",
+	".claude/skills/*/SKILL.md",
+	".github/instructions/*.instructions.md",
+	".windsurf/rules/*.md",
+	".clinerules/*.md",
+	".kiro/steering/*.md",
+}
+
+// maxRuleFiles caps how many files ruleGlobs and imports add, so a repo
+// with hundreds of prompts doesn't slow every check down.
+const maxRuleFiles = 200
+
+// maxImportDepth is how many hops of @imports are followed, like Claude
+// Code does.
+const maxImportDepth = 5
 
 // Env says where each tool keeps its memory. Tests point it at temporary
 // folders.
@@ -82,13 +104,20 @@ func Read(dir string, env Env, also ...string) (lines []Line, files []File, inRe
 	}
 
 	names := append([]string{}, repoFiles...)
-	if rules, err := filepath.Glob(filepath.Join(dir, ".cursor", "rules", "*")); err == nil {
-		sort.Strings(rules)
-		for _, p := range rules {
-			if strings.HasSuffix(p, ".md") || strings.HasSuffix(p, ".mdc") {
-				if rel, err := filepath.Rel(dir, p); err == nil {
-					names = append(names, filepath.ToSlash(rel))
-				}
+	globbed := 0
+	for _, pat := range ruleGlobs {
+		found, err := filepath.Glob(filepath.Join(dir, filepath.FromSlash(pat)))
+		if err != nil {
+			continue
+		}
+		sort.Strings(found)
+		for _, p := range found {
+			if globbed >= maxRuleFiles {
+				break
+			}
+			if rel, err := filepath.Rel(dir, p); err == nil {
+				names = append(names, filepath.ToSlash(rel))
+				globbed++
 			}
 		}
 	}
@@ -104,16 +133,40 @@ func Read(dir string, env Env, also ...string) (lines []Line, files []File, inRe
 		}
 		names = append(names, f)
 	}
-	for _, name := range names {
+	// Files that CLAUDE.md pulls in with @path are read too, as Claude Code
+	// does, up to maxImportDepth hops.
+	seenName := map[string]bool{}
+	for _, n := range names {
+		seenName[n] = true
+	}
+	depth := map[string]int{}
+	for i := 0; i < len(names); i++ {
+		name := names[i]
 		b, ok := readSmall(filepath.Join(dir, filepath.FromSlash(name)))
 		if !ok {
 			continue
 		}
 		inRepo = append(inRepo, name)
 		add(sourceOf(name), name, splitLines(sourceOf(name), name, filepath.Join(dir, filepath.FromSlash(name)), string(b)))
+		base := name[strings.LastIndex(name, "/")+1:]
+		if base != "CLAUDE.md" && base != "CLAUDE.local.md" && depth[name] == 0 {
+			continue
+		}
+		if depth[name] >= maxImportDepth {
+			continue
+		}
+		for _, imp := range imports(name, string(b)) {
+			if seenName[imp] || globbed >= maxRuleFiles {
+				continue
+			}
+			seenName[imp] = true
+			depth[imp] = depth[name] + 1
+			names = append(names, imp)
+			globbed++
+		}
 	}
 	// Agent settings, skills and prompts aren't the code the notes are about.
-	inRepo = append(inRepo, ".woolly", ".agents", ".claude", ".cursor", ".codex", ".gemini", ".windsurf")
+	inRepo = append(inRepo, ".woolly", ".agents", ".claude", ".cursor", ".codex", ".gemini", ".windsurf", ".clinerules", ".kiro", ".github/instructions")
 
 	// Claude Code's auto memory for this folder.
 	if env.ClaudeDir != "" {
@@ -173,8 +226,25 @@ func readSmall(p string) ([]byte, bool) {
 }
 
 func sourceOf(name string) string {
-	if strings.HasPrefix(name, ".cursor/") || name == ".cursorrules" {
+	switch {
+	case strings.HasPrefix(name, ".cursor/") || name == ".cursorrules":
 		return "Cursor rules"
+	case strings.HasPrefix(name, ".claude/rules/"):
+		return "Claude Code rules"
+	case strings.HasPrefix(name, ".claude/commands/"):
+		return "Claude Code commands"
+	case strings.HasPrefix(name, ".claude/agents/"):
+		return "Claude Code subagents"
+	case strings.HasPrefix(name, ".claude/skills/"):
+		return "Claude Code skills"
+	case strings.HasPrefix(name, ".github/instructions/"):
+		return "Copilot instructions"
+	case strings.HasPrefix(name, ".windsurf/"):
+		return "Windsurf rules"
+	case name == ".clinerules" || strings.HasPrefix(name, ".clinerules/"):
+		return "Cline rules"
+	case strings.HasPrefix(name, ".kiro/"):
+		return "Kiro steering"
 	}
 	// AGENTS.md files in subfolders count as more AGENTS.md.
 	switch base := name[strings.LastIndex(name, "/")+1:]; base {
@@ -185,6 +255,47 @@ func sourceOf(name string) string {
 }
 
 var notAlnum = regexp.MustCompile(`[^A-Za-z0-9]`)
+
+// importRe finds @path imports, like "@AGENTS.md" or "See @docs/style.md".
+// The @ has to start the line or follow a space, so emails don't count.
+var importRe = regexp.MustCompile(`(?:^|\s)@([A-Za-z0-9_./-]+\.md)\b`)
+
+// imports lists the Markdown files a memory file pulls in with @path,
+// relative to the repo. Paths outside the repo, home paths and ones inside
+// code blocks or code spans are left out.
+func imports(name, text string) []string {
+	from := ""
+	if i := strings.LastIndex(name, "/"); i >= 0 {
+		from = name[:i]
+	}
+	var out []string
+	fence := false
+	for _, ln := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		t := strings.TrimSpace(ln)
+		if strings.HasPrefix(t, "```") || strings.HasPrefix(t, "~~~") {
+			fence = !fence
+			continue
+		}
+		if fence {
+			continue
+		}
+		t = codeSpan.ReplaceAllString(t, "")
+		for _, m := range importRe.FindAllStringSubmatch(t, -1) {
+			p := m[1]
+			if strings.HasPrefix(p, "/") {
+				continue
+			}
+			p = filepath.ToSlash(filepath.Clean(filepath.Join(from, p)))
+			if p == ".." || strings.HasPrefix(p, "../") {
+				continue
+			}
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+var codeSpan = regexp.MustCompile("`[^`]*`")
 
 // claudeKey is the folder name Claude Code keeps a project's memory under:
 // its path with every character that isn't a letter or digit made a dash.

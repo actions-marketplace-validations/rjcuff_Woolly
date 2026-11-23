@@ -98,7 +98,7 @@ http://127.0.0.1:11435/mcp
 
 It has the same tools as `woolly mcp`. Every request needs the token from `~/.woolly/token`, sent as `Authorization: Bearer <token>`. Like the rest of the local API, it only answers on your computer and refuses requests from websites.
 
-To give the app one user's or agent's memories, add them to the address, like `http://127.0.0.1:11435/mcp?agent=support-bot` or `?user=alice`. Add `?project=acme` to search one project's notes along with yours. This keeps an app you trust in its own lane, but it isn't a lock: anything with the token can leave the scope off the address and reach all of your memories. Only give the token to apps you'd trust with everything.
+To give the app one user's or agent's memories, add them to the address, like `http://127.0.0.1:11435/mcp?agent=support-bot` or `?user=alice`. Add `?project=acme` to search one project's notes along with yours. This keeps an app you trust in its own lane, but it isn't a lock. Anything with the token can leave the scope off the address and reach all of your memories. Only give the token to apps you'd trust with everything.
 
 Over HTTP Woolly doesn't know which folder the app works in, so it can't check facts against your code. The `why` and `check_memory_files` tools aren't offered, and code sources an app gives with a fact are left off rather than saved unchecked. Use `woolly mcp` in the repo for those.
 

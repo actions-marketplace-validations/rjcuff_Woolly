@@ -1,8 +1,8 @@
 # woolly-ai
 
-Python client for [Woolly](https://usewoolly.com), the local memory for your AI tools.
+Python client for the local memory API of [Woolly](https://usewoolly.com), project memory for coding agents that knows when a fact goes stale.
 
-Woolly keeps memories about the user on their own computer, keeps facts current, and shares them with every AI tool. This package lets your Python app use that memory.
+Use it to give the agents you build memory that stays on your computer. Save preferences, decisions and episodes, search them, and rate what helped.
 
 ## Install
 

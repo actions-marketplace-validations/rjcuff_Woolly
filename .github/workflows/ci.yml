@@ -86,6 +86,10 @@ jobs:
           [ -s "$STATUS_FILE" ] || fail "status-file output is empty"
           grep -q '"schema": "woolly.check.status/v1"' "$STATUS_FILE" || fail "status JSON has no schema"
           if grep -qE 'requireUser|octocat|oldHelper' "$STATUS_FILE"; then fail "status JSON has text in it"; fi
+          ann="$RUNNER_TEMP/woolly-annotations.txt"
+          [ "$(grep -c '^::warning file=CLAUDE.md,line=[23],title=Stale agent note::' "$ann")" = 2 ] || fail "want 2 warning annotations on CLAUDE.md"
+          [ "$(grep -c '^::notice file=CLAUDE.md,line=1,' "$ann")" = 1 ] || fail "want 1 notice annotation for the line stale before"
+          if grep -q 'octocat' "$ann"; then fail "annotations quote the line's text"; fi
 
       - name: Run the Action with fail-on-stale
         id: failing

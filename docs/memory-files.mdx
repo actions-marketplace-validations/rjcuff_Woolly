@@ -3,7 +3,7 @@ title: Check your agent files
 description: Woolly checks CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's memory, Codex memories and claude-mem against the code, and flags lines that name a function, file or script that's gone.
 ---
 
-Your agents already read a pile of notes: CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's auto memory, Codex memories, claude-mem. None of them check whether the notes are still true. When a refactor renames a function or moves a file, the note keeps saying the old thing, and your agent follows it.
+Your agents already read a pile of notes, like CLAUDE.md, AGENTS.md, Cursor rules, Claude Code's auto memory, Codex memories and claude-mem. None of them check whether the notes are still true. When a refactor renames a function or moves a file, the note keeps saying the old thing, and your agent follows it.
 
 `woolly check` reads all of them and checks every line against the code. You don't need to set anything up or move your notes into Woolly.
 
@@ -23,13 +23,16 @@ Checked 56 lines in AGENTS.md and .github/copilot-instructions.md against 20b042
 
 | Tool | Where |
 | --- | --- |
-| Claude Code | `CLAUDE.md`, `CLAUDE.local.md`, and its auto memory in `~/.claude/projects/<this folder>/memory` |
-| Codex, Cursor, Amp and others | `AGENTS.md` |
+| Claude Code | `CLAUDE.md`, `CLAUDE.local.md`, files they import with `@path`, rules in `.claude/rules`, skills in `.claude/skills/*/SKILL.md`, commands in `.claude/commands`, subagents in `.claude/agents`, and its auto memory in `~/.claude/projects/<this folder>/memory` |
+| Codex, Cursor, Amp and others | `AGENTS.md`, `AGENTS.local.md` and `AGENT.md` |
 | Codex memories | `~/.codex/memories` (or `CODEX_HOME`), only files that mention this repo |
 | Cursor | `.cursorrules` and `.cursor/rules/*.mdc` |
+| Cline | `.clinerules`, as a file or a folder |
+| Kiro | `.kiro/steering/*.md` |
+| Warp | `WARP.md` |
 | Gemini CLI | `GEMINI.md` |
-| Windsurf | `.windsurfrules` |
-| GitHub Copilot | `.github/copilot-instructions.md` |
+| Windsurf | `.windsurfrules` and `.windsurf/rules/*.md` |
+| GitHub Copilot | `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md` |
 | claude-mem | its 500 newest observations for this project, read with the `sqlite3` command when it's installed |
 
 Woolly's own section in CLAUDE.md and AGENTS.md is skipped, since those lines are [project facts](/docs/stale-facts) that are checked already.
@@ -46,6 +49,8 @@ A line is flagged when it names something that **was in the code** and **isn't a
 | A make target, like `make release` | The Makefile doesn't have it now, and used to. |
 
 Lines that say something is gone, like "Don't use legacyMixer" or "`fetchUser` was renamed", aren't flagged.
+
+Imports are followed the way Claude Code does, relative to the file that imports them and up to five hops deep. Imports in code blocks, paths in your home folder and paths outside the repo are skipped.
 
 ## Fix it
 
@@ -76,6 +81,25 @@ With `woolly connect` and `woolly init --hooks`, every commit checks the files a
 
 The [GitHub Action](/docs/pull-requests) reports lines in the repo's agent files that a pull request makes stale, apart from the ones that were already out of date. Check out with `fetch-depth: 0` so Woolly can read history.
 
+## In your editor
+
+`woolly check --format compact` prints each finding as `path:line: message`. In VS Code, add a task with a problem matcher and the findings land in the Problems panel.
+
+```json
+{
+  "label": "woolly check",
+  "type": "shell",
+  "command": "woolly check --format compact",
+  "problemMatcher": {
+    "owner": "woolly",
+    "fileLocation": ["relative", "${workspaceFolder}"],
+    "pattern": { "regexp": "^(.+):(\\d+): (.+)$", "file": 1, "line": 2, "message": 3 }
+  }
+}
+```
+
+In Vim, run `:cexpr system('woolly check --format compact')`.
+
 ## Options
 
 | Flag | What it does |
@@ -84,3 +108,6 @@ The [GitHub Action](/docs/pull-requests) reports lines in the repo's agent files
 | `--json` | Print everything as JSON, under `memory_files` |
 | `--markdown` | Print a pull request comment |
 | `--no-memory-files` | Check only Woolly's own facts |
+| `--format compact` | Print one `path:line: message` line per finding, for editors, Vim's quickfix list and problem matchers |
+| `--format github` | Print GitHub Actions annotations, so each finding shows on its line in a pull request |
+| `--annotations-file <path>` | Also write the GitHub annotations to a file, next to another format |

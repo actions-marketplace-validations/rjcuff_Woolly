@@ -46,6 +46,10 @@ type statusFinding struct {
 
 // buildStatus turns a check into a status. Agent file lines count only when
 // they come from a file git tracks in dir.
+// personalSources keep memory outside the repo, so their findings never
+// count as the repo's, even if the repo has a file with the same name.
+var personalSources = map[string]bool{"Claude Code memory": true, "Codex memory": true, "claude-mem": true}
+
 func buildStatus(dir string, rep checkReport, base string) checkStatus {
 	var s checkStatus
 	s.Schema = StatusSchema
@@ -71,8 +75,7 @@ func buildStatus(dir string, rep checkReport, base string) checkStatus {
 	}
 	// Memory outside the repo never counts, even if the repo happens to
 	// have a file with the same name.
-	personal := map[string]bool{"Claude Code memory": true, "Codex memory": true, "claude-mem": true}
-	inRepo := func(source, file string) bool { return !personal[source] && tracked[file] }
+	inRepo := func(source, file string) bool { return !personalSources[source] && tracked[file] }
 	for _, f := range rep.Memory.Files {
 		if inRepo(f.Source, f.File) {
 			s.Checked.Files++

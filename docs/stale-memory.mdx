@@ -17,7 +17,7 @@ A stale note is worse than no note. With no note, the agent goes and looks. With
 
 We ran `woolly check` on the agent files of 20 well-known open source repos, including TanStack Router, LangChain.js, the Anthropic and OpenAI SDKs, Cline, Codex, Gemini CLI and Vite. These are repos with careful maintainers and agent files that are clearly kept up to date by hand.
 
-Woolly checked 2,990 lines and flagged 11, in 4 of the 20 repos. All 11 were right: each line names a function, file or folder the code no longer has. Some examples:
+Woolly checked 2,990 lines and flagged 11, in 4 of the 20 repos. All 11 were right. Each line names a function, file or folder the code no longer has. Some examples:
 
 - TanStack Router's `packages/AGENTS.md` tells agents that React's `useValueStable` uses `deepEqual`. A performance change, "fewer hooks per Link", removed `useValueStable` in September.
 - LangChain.js's AGENTS.md lists the standard test suite in `libs/langchain-standard-tests/`. It moved to `internal/standard-tests/` in January.
@@ -26,7 +26,7 @@ Woolly checked 2,990 lines and flagged 11, in 4 of the 20 repos. All 11 were rig
 
 One in five repos, maintained by people who care, had at least one. A repo where nobody tends the agent files will have more.
 
-The benchmark is in the repo, so you can run it yourself: `python3 bench/agentfiles/run.py`. Each finding is saved with the line, what changed and the commit that changed it. Every one was checked against the repo, and the verdicts are in [verdicts.json](https://github.com/rjcuff/woolly/blob/main/bench/agentfiles/verdicts.json).
+The benchmark is in the repo, so you can run it yourself with `python3 bench/agentfiles/run.py`. Each finding is saved with the line, what changed and the commit that changed it. Every one was checked against the repo, and the verdicts are in [verdicts.json](https://github.com/rjcuff/woolly/blob/main/bench/agentfiles/verdicts.json).
 
 ## Invalidation needs the code
 

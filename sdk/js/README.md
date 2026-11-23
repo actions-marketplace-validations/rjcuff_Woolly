@@ -1,12 +1,12 @@
 # woolly-ai
 
-JavaScript and TypeScript client for [Woolly](https://usewoolly.com), one local memory shared by all your AI tools. Everything stays on your computer.
+JavaScript and TypeScript client for the local memory API of [Woolly](https://usewoolly.com), project memory for coding agents that knows when a fact goes stale. Use it to give the agents you build memory that stays on your computer.
 
 ```sh
 npm install woolly-ai
 ```
 
-You need Woolly running: [download the Mac app](https://usewoolly.com/download) or run `woolly serve`.
+You need Woolly running. [Download the Mac or Windows app](https://usewoolly.com/download) or run `woolly serve`.
 
 ```ts
 import { Woolly } from 'woolly-ai';

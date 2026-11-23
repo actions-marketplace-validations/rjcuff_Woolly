@@ -30,38 +30,57 @@ type Step = {
   tidy?: (out: string) => string;
 };
 
-// IDs and dates make lines long; drop them so the demo reads at a glance.
-const short = (out: string) => out.replace(/\[\d{8}-\d{6}-[0-9a-f]{8}\] /g, '').replace(/; \d{4}-\d{2}-\d{2}\)/g, ')');
+// A drone firmware repo whose CLAUDE.md was right when it was written. Then a
+// refactor renamed a function, moved a file and renamed a script, and
+// nobody touched CLAUDE.md.
+const repo = join(home, 'code', 'drone');
+mkdirSync(join(repo, 'main'), { recursive: true });
+mkdirSync(join(repo, 'src', 'control'), { recursive: true });
+const git = (...args: string[]) =>
+  execFileSync('git', args, {
+    cwd: repo,
+    env: { ...process.env, GIT_AUTHOR_NAME: 'demo', GIT_AUTHOR_EMAIL: 'demo@example.com', GIT_COMMITTER_NAME: 'demo', GIT_COMMITTER_EMAIL: 'demo@example.com' },
+    stdio: 'pipe',
+  });
+const put = (name: string, text: string) => writeFileSync(join(repo, name), text);
+git('init', '-q', '-b', 'main');
+put('main/imu.c', 'int imu_init(void) { return 0; }\nint imu_read_accel(int16_t *out) { return read_raw(out); }\n');
+put('src/flight.ts', 'export const mixer = 1;\n');
+put('package.json', '{"scripts": {"lint": "eslint .", "dev": "vite"}}\n');
+put(
+  'CLAUDE.md',
+  [
+    '# Drone firmware',
+    '',
+    '- Call imu_init before anything else',
+    '- imu_read_accel returns raw counts; divide by 16384 for g',
+    '- Flight control lives in src/flight.ts',
+    '- Run `npm run lint` before you push',
+    '- Unplug the battery before flashing',
+    '',
+  ].join('\n'),
+);
+git('add', '.');
+git('commit', '-q', '-m', 'first flight');
+put('main/imu.c', 'int imu_init(void) { return 0; }\nint imu_read_accel_g(float *out) { return read_scaled(out); }\n');
+put('package.json', '{"scripts": {"check": "eslint .", "dev": "vite"}}\n');
+git('mv', 'src/flight.ts', 'src/control/flight.ts');
+git('add', '.');
+git('commit', '-q', '-m', 'refactor imu and tooling');
 
-// A git repo called acme, so Woolly knows which project it's in.
-const acme = join(home, 'code', 'acme');
-mkdirSync(join(acme, '.git'), { recursive: true });
-
-const cursorSaves = [
-  { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'cursor-vscode', version: '1' } } },
-  { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'remember', arguments: { content: 'acme deploys with Fly', project: 'acme' } } },
-].map((m) => JSON.stringify(m)).join('\n') + '\n';
+// Commit hashes and dates make lines long; drop the dates so the demo reads at a glance.
+const short = (out: string) => out.replace(/ \(\d{4}-\d{2}-\d{2}\)/g, '').replace(/^.*woolly init --hooks.*\n?/m, '');
 
 const steps: Step[] = [
-  { shown: 'woolly remember "I prefer short answers"', args: ['remember', 'I prefer short answers'], pause: 100, tidy: short },
-  { shown: 'woolly remember "acme uses Postgres 17" --project acme', args: ['remember', 'acme uses Postgres 17', '--project', 'acme'], pause: 100, tidy: short },
-  { shown: 'woolly remember "The notes app uses SQLite" --project notes', args: ['remember', 'The notes app uses SQLite', '--project', 'notes'], pause: 200, tidy: short },
-  {
-    note: '# Open Claude Code in ~/code/acme. Before you type, it already has:',
-    args: ['context', '--app', 'claude-code'],
-    input: JSON.stringify({ cwd: acme, hook_event_name: 'SessionStart' }),
-    pause: 420,
-    clear: true,
-    tidy: (o) => o.replace(/^Notes about the user.*\n\n/, ''),
-  },
-  { note: '# Later, Cursor saves a fact for acme on its own.', args: ['mcp'], input: cursorSaves, cwd: acme, pause: 120, clear: true, tidy: () => '' },
-  { shown: 'woolly log', args: ['log'], pause: 450, tidy: (o) => o.replace(/^[A-Z][a-z]{2} \d{2} \d{2}:\d{2}  /gm, '') },
+  { note: '# A refactor renamed a function, moved a file and renamed a script.', args: ['version'], pause: 60, tidy: () => '' },
+  { shown: 'woolly check', args: ['check'], cwd: repo, pause: 420, tidy: short },
+  { shown: 'woolly check --fix', args: ['check', '--fix'], cwd: repo, pause: 450, clear: true, tidy: short },
 ];
 
 function run(step: Step): string {
   try {
     return execFileSync(bin, step.args, {
-      env: { ...process.env, WOOLLY_HOME: home, WOOLLY_NO_EMBED: '1' },
+      env: { ...process.env, HOME: home, WOOLLY_HOME: join(home, '.woolly'), WOOLLY_NO_EMBED: '1', NO_COLOR: '1' },
       encoding: 'utf8',
       cwd: step.cwd ?? home,
       input: step.input ?? '',
@@ -77,6 +96,13 @@ const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').rep
 
 function colorize(line: string): string {
   const l = escape(line);
+  if (l.startsWith('fixed ')) return `<span class="green">fixed</span>${l.slice('fixed'.length)}`;
+  if (l.startsWith('Checked ')) return `<span class="bold">Checked</span>${l.slice('Checked'.length)}`;
+  if (/names? code that's gone/.test(l)) return `<span class="red">${l}</span>`;
+  if (l.startsWith('Every function')) return `<span class="green">${l}</span>`;
+  const where = l.match(/^(  )(\S+:\d+)(\s+)(.*)$/);
+  if (where) return `${where[1]}<span class="red">${where[2]}</span>${where[3]}${where[4]}`;
+  if (/^\s{4,}\S/.test(l)) return `<span class="muted">${l}</span>`;
   if (l.startsWith('woolly: not saved')) return `<span class="red">${l}</span>`;
   if (l.startsWith('Replaced older memory')) return `<span class="amber">${l}</span>`;
   if (l.startsWith('Remembered:')) return `<span class="green">Remembered:</span>${l.slice('Remembered:'.length)}`;

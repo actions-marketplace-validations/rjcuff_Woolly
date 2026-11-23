@@ -13,10 +13,13 @@ For anything bigger than a small fix, open an issue first so we can agree on the
 | `cmd/woolly`, `internal` | The Woolly program, written in Go |
 | `docs` | Documentation in MDX |
 | `ui` | The Woolly app's screens, built into the binary |
-| `app` | The Mac app (Tauri), which wraps the same screens |
+| `app` | The Mac and Windows app (Tauri), which wraps the same screens |
 | `sdk/python` | The `woolly-ai` Python package |
 | `sdk/js` | The `woolly-ai` JavaScript and TypeScript package |
+| `bench/agentfiles` | The stale agent file benchmark on 20 public repos |
 | `bench/locomo` | The LOCOMO benchmark |
+| `action.yml` | The GitHub Action that runs `woolly check` on pull requests |
+| `plugin`, `.claude-plugin` | The Claude Code plugin and its marketplace entry |
 | `web` | Website and docs site |
 | `scripts` | Install, release, demo and Homebrew scripts |
 | `packaging/homebrew` | The Homebrew formula, kept in step with the tap |
@@ -24,14 +27,21 @@ For anything bigger than a small fix, open an issue first so we can agree on the
 
 ## Setup
 
-You need Go 1.22 or newer. Node 22 is only needed for the website.
+For Go changes you only need Go. Use Go 1.26 on macOS, since recent macOS versions refuse binaries from older Go linkers. Go 1.22 or newer works elsewhere.
 
 ```sh
 git clone https://github.com/rjcuff/woolly
 cd woolly
 make build      # builds bin/woolly
-make test       # Go tests
-make check      # Go tests, site type check and browser tests (run before every commit)
+make test       # go vet and Go tests, enough for Go-only changes
+```
+
+`make check` runs everything, including the website, the review page and both SDKs. It also needs Node 22 and python3, plus a one-time setup.
+
+```sh
+(cd web && npm install && npx playwright install chromium)
+(cd ui && npm install)
+make check      # run before a pull request that touches more than Go
 ```
 
 Try your build without touching your real memories:
@@ -123,6 +133,10 @@ Open an issue with:
 - What you expected
 - What happened instead
 - The output of `woolly doctor`
+
+## Code of Conduct
+
+Everyone working on Woolly follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Security
 

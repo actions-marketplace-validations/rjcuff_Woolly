@@ -21,6 +21,9 @@ inputs:
   footer:
     description: End the comment with one line that links to Woolly. "false" leaves it out.
     default: "true"
+  annotations:
+    description: Mark each stale line in the pull request's changed files, next to the code. "false" leaves them out. Needs Woolly 0.21.0 or later.
+    default: "true"
   base:
     description: The commit or branch to compare against. Defaults to the pull request's base commit, or the commit before a push.
     default: ""
@@ -113,11 +116,13 @@ runs:
         # Facts were true on the branch this pull request merges into.
         BASE_INPUT: ${{ inputs.base }}
         FOOTER_INPUT: ${{ inputs.footer }}
+        ANNOTATIONS_INPUT: ${{ inputs.annotations }}
         EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       run: |
         report="$RUNNER_TEMP/woolly-report.md"
         status="$RUNNER_TEMP/woolly-status.json"
-        rm -f "$status"
+        annotations="$RUNNER_TEMP/woolly-annotations.txt"
+        rm -f "$status" "$annotations"
         BASE="${BASE_INPUT:-$EVENT_BASE}"
         args=(--markdown --no-backfill)
         if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ]; then
@@ -132,6 +137,10 @@ runs:
         # Woolly 0.20.0 and later can leave out the footer.
         if [ "$FOOTER_INPUT" = "false" ] && woolly check --help 2>&1 | grep -q -- '--no-footer'; then
           args+=(--no-footer)
+        fi
+        # Woolly 0.21.0 and later mark each stale line in the pull request.
+        if [ "$ANNOTATIONS_INPUT" != "false" ] && woolly check --help 2>&1 | grep -q -- '--annotations-file'; then
+          args+=(--annotations-file "$annotations")
         fi
         set +e
         woolly check "${args[@]}" > "$report"
@@ -179,6 +188,8 @@ runs:
         } >> "$GITHUB_OUTPUT"
         cat "$report" >> "$GITHUB_STEP_SUMMARY"
         cat "$report"
+        # Each line is a workflow command Woolly wrote with its text escaped.
+        if [ -s "$annotations" ]; then cat "$annotations"; fi
 
     - name: Comment on the pull request
       if: inputs.comment == 'true' && github.event.pull_request.number

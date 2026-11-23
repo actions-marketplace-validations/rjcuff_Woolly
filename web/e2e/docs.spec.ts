@@ -8,7 +8,7 @@ test('page has its own title and description', async ({ page }) => {
   await expect(page).toHaveTitle('Quickstart | Woolly Docs');
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',
-    'Install Woolly, save a memory, and get it back.',
+    'Install Woolly, check your agent files for stale lines, and give your agents project memory.',
   );
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://usewoolly.com/docs/quickstart');
 });
