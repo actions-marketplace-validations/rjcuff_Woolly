@@ -205,7 +205,8 @@ func TestResolveAsUnknownIDIsNotFound(t *testing.T) {
 
 func TestUntrustedUpdateWithPlainTextSaves(t *testing.T) {
 	s := newStore(t)
-	res, _ := s.Remember(RememberInput{Content: "Prefers tea"})
+	// An app's own memory: the user's are covered by TestUntrustedUpdateOfAUserMemory.
+	res, _ := s.Remember(RememberInput{Content: "Prefers tea", Source: SourceAgent})
 	c := "Prefers green tea"
 	m, err := s.Update(res.Memory.ID, UpdateInput{Content: &c, Untrusted: true})
 	if err != nil {
@@ -272,5 +273,26 @@ func TestReplaceByUserDoesNotInheritAgentConfidence(t *testing.T) {
 	}
 	if c := res.Memory.Confidence(); c < 1 {
 		t.Fatalf("user's rewrite has confidence %v (conf=%v copied from the agent's guess)", c, res.Memory.Conf)
+	}
+}
+
+func TestUntrustedUpdateOfAUserMemory(t *testing.T) {
+	s := newStore(t)
+	res, _ := s.Remember(RememberInput{Content: "Prefers tea", Key: "drink"})
+	c := "Prefers coffee"
+	m, err := s.Update(res.Memory.ID, UpdateInput{Content: &c, Untrusted: true})
+	if err != nil || m.ID == res.Memory.ID || m.Status != StatusConflict || m.ConflictsWith != res.Memory.ID {
+		t.Fatalf("untrusted text should wait as a conflict: %+v %v", m, err)
+	}
+	if got, _ := s.Get(res.Memory.ID); got.Content != "Prefers tea" || got.Status != StatusActive || got.Source != SourceUser {
+		t.Fatalf("user memory changed: %+v", got)
+	}
+	key := "breakfast"
+	if _, err := s.Update(res.Memory.ID, UpdateInput{Key: &key, Untrusted: true}); !errors.Is(err, ErrOutranked) {
+		t.Fatalf("untrusted key change: %v", err)
+	}
+	same := "Prefers tea"
+	if m, err := s.Update(res.Memory.ID, UpdateInput{Content: &same, Untrusted: true}); err != nil || m.ID != res.Memory.ID {
+		t.Fatalf("same text: %+v %v", m, err)
 	}
 }

@@ -198,3 +198,52 @@ func TestAPIRememberPlainTextFromAppStillSaves(t *testing.T) {
 		t.Fatalf("memory = %+v", out.Memory)
 	}
 }
+
+func TestAppPatchCantOverruleTheUser(t *testing.T) {
+	h, token, store := setupStore(t)
+	app := map[string]string{"Authorization": "Bearer " + token}
+	mine, _ := store.Remember(memory.RememberInput{Content: "Lives in Austin", Key: "user.location", Source: memory.SourceUser})
+
+	// New text for a memory the user saved waits as a conflict.
+	rec := do(h, "PATCH", "/api/memories/"+mine.Memory.ID, `{"content":"Lives in Denver"}`, app)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("app PATCH of user text: %d %s", rec.Code, rec.Body.String())
+	}
+	var got memory.Memory
+	json.Unmarshal(rec.Body.Bytes(), &got)
+	if got.ID == mine.Memory.ID || got.Status != memory.StatusConflict || got.Source == memory.SourceUser {
+		t.Fatalf("app edit should be a conflicting version: %+v", got)
+	}
+	if m, _ := store.Get(mine.Memory.ID); m.Status != memory.StatusActive || m.Content != "Lives in Austin" || m.Source != memory.SourceUser {
+		t.Fatalf("user memory changed: %+v", m)
+	}
+
+	// Other changes to the user's memory are refused.
+	for _, body := range []string{`{"key":"user.home"}`, `{"project":"other"}`, `{"tags":["x"]}`} {
+		if rec := do(h, "PATCH", "/api/memories/"+mine.Memory.ID, body, app); rec.Code != http.StatusForbidden {
+			t.Errorf("app PATCH %s: %d %s", body, rec.Code, rec.Body.String())
+		}
+	}
+
+	// An app can't take over the user's key with one of its own memories.
+	guess, _ := store.Remember(memory.RememberInput{Content: "Lives in Boston", Source: memory.SourceAgent})
+	rec = do(h, "PATCH", "/api/memories/"+guess.Memory.ID, `{"key":"user.location"}`, app)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("app PATCH key: %d %s", rec.Code, rec.Body.String())
+	}
+	if m, _ := store.Get(mine.Memory.ID); m.Status != memory.StatusActive {
+		t.Fatalf("app key replaced the user's fact: %+v", m)
+	}
+	if m, _ := store.Get(guess.Memory.ID); m.Status != memory.StatusConflict || m.ConflictsWith != mine.Memory.ID {
+		t.Fatalf("app memory should conflict with the user's: %+v", m)
+	}
+
+	// The review page is the user, and can change anything.
+	review := map[string]string{"Cookie": tokenCookie + "=" + token}
+	if rec := do(h, "PATCH", "/api/memories/"+mine.Memory.ID, `{"content":"Lives in Tampa","tags":["home"]}`, review); rec.Code != http.StatusOK {
+		t.Fatalf("review page PATCH: %d %s", rec.Code, rec.Body.String())
+	}
+	if m, _ := store.Get(mine.Memory.ID); m.Content != "Lives in Tampa" || m.Source != memory.SourceUser {
+		t.Fatalf("review page edit: %+v", m)
+	}
+}
