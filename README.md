@@ -10,6 +10,7 @@ Woolly flags lines in CLAUDE.md, AGENTS.md, Cursor rules and agent memory that a
 [![License: MIT](https://img.shields.io/badge/license-MIT-111111)](LICENSE)
 [![CI](https://github.com/rjcuff/woolly/actions/workflows/ci.yml/badge.svg)](https://github.com/rjcuff/woolly/actions/workflows/ci.yml)
 [![GitHub stars](https://img.shields.io/github/stars/rjcuff/woolly?color=111111)](https://github.com/rjcuff/woolly/stargazers)
+[![rjcuff/woolly MCP server](https://glama.ai/mcp/servers/rjcuff/woolly/badges/score.svg)](https://glama.ai/mcp/servers/rjcuff/woolly)
 
 [Website](https://usewoolly.com) · [Docs](https://usewoolly.com/docs) · [Download for Mac and Windows](https://usewoolly.com/download) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Glama](https://glama.ai/mcp/servers/@rjcuff/woolly)
 
